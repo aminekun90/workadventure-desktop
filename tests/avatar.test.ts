@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { downloadAvatar } from "../src/main/avatar.js";
+import { defaultWokaUrl, downloadAvatar } from "../src/main/avatar.js";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 const LAYER = "https://wa-beta.goyan.fr/resources/customisation/character_color/character_color2.png";
@@ -28,5 +28,11 @@ describe("downloadAvatar", () => {
     ["a payload that is not a URL list", { evil: true }, serve(PNG), /expected array/i],
   ])("rejects %s", async (_label, layerUrls, fetch, error) => {
     await expect(downloadAvatar({ layerUrls, isTrusted, fetch })).rejects.toThrow(error);
+  });
+});
+
+describe("defaultWokaUrl", () => {
+  it("points to WorkAdventure's default woka on the instance, space encoded", () => {
+    expect(defaultWokaUrl("https://wa.goyan.fr/")).toBe("https://wa.goyan.fr/resources/characters/pipoya/Male%2001-1.png");
   });
 });

@@ -1,6 +1,6 @@
-import { byId, query } from "../dom.js";
+import { byId } from "../dom.js";
 
-/** Shows the user's woka, one sprite sheet per layer stacked bottom to top, in place of the default character. */
+/** Shows the woka, one sprite sheet per layer stacked bottom to top. */
 export function showAvatar(layers: readonly string[]): void {
   const avatar = byId("avatar", HTMLDivElement);
   avatar.replaceChildren(
@@ -10,5 +10,4 @@ export function showAvatar(layers: readonly string[]): void {
       return layer;
     }),
   );
-  query(document, ".stage", HTMLDivElement).dataset["avatar"] = "true";
 }

@@ -102,7 +102,7 @@ h1 {
   color: var(--muted);
 }
 
-/* Pixel avatar on its tile */
+/* The woka on its tile */
 .stage {
   position: relative;
   display: grid;
@@ -110,29 +110,13 @@ h1 {
   width: 9rem;
 }
 
-.woka {
-  position: relative;
-  z-index: 1;
-  width: 6rem;
-  animation: bob 1.6s steps(2) infinite;
-}
-
 /* The user's woka: WorkAdventure sprite sheets are 3 frames x 4 directions of 32 px; row 0 faces the camera. */
 .avatar {
   position: relative;
   z-index: 1;
-  display: none;
   width: 8rem;
   height: 8rem;
   animation: bob 1.6s steps(2) infinite;
-}
-
-.stage[data-avatar="true"] .woka {
-  display: none;
-}
-
-.stage[data-avatar="true"] .avatar {
-  display: block;
 }
 
 .avatar span {
@@ -143,14 +127,6 @@ h1 {
   animation: walk 0.75s steps(3) infinite;
 }
 
-.woka .hair { fill: #2d2346; }
-.woka .skin { fill: #f6c9a4; }
-.woka .eye { fill: #14142b; }
-.woka .cheek { fill: #f59a9a; }
-.woka .hoodie { fill: var(--accent); }
-.woka .hoodie-shade { fill: var(--accent-strong); }
-.woka .legs { fill: #2f3466; }
-.woka .shoes { fill: #eceeff; }
 
 .shadow {
   width: 4rem;

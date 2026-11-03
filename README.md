@@ -15,7 +15,8 @@ embarque Chromium et **désactive toute mise en veille** (timers, rendu, fenêtr
 ./run.sh --help
 ```
 
-Prérequis : Node ≥ 22.21.1 et yarn. Le script installe les dépendances, compile et lance.
+Prérequis : Node ≥ 22.21.1 et yarn. Le script installe les dépendances, compile et lance. Depuis les sources,
+l'app utilise son propre profil (`WorkAdventure-dev`) : elle ne touche pas la session de l'app installée.
 Sous Windows, passer par Git Bash.
 
 ## Dans l'app
@@ -23,7 +24,13 @@ Sous Windows, passer par Git Bash.
 - **Barre du haut** : **Accueil** (retour au launcher, <kbd>⌘/Ctrl</kbd> <kbd>⇧</kbd> <kbd>L</kbd>), **Maps** (liste
   live de map-storage, sans les sauvegardes `-before-` ni les conversions `tmj-`), espace et hôte courants, recharger.
 - **Session conservée** entre deux lancements ; menu **Se déconnecter** pour tout effacer.
-- **Ton woka** s'affiche dans le launcher, capturé à chaque entrée en salle et au retour à l'accueil.
+- **Ton woka** s'affiche dans le launcher, capturé à chaque entrée en salle et au retour à l'accueil (woka par
+  défaut de WorkAdventure tant qu'aucun n'est capturé, récupéré sur l'instance : les sprites Pipoya ne peuvent pas
+  être redistribués dans ce dépôt).
+- **Notifications** natives pour les appels de proximité et les messages du chat, activées par défaut (réglage
+  « Notifications » de WorkAdventure). L'icône rebondit dans le Dock / la barre des tâches clignote ; un clic sur
+  une notification de message ramène la fenêtre et ouvre la conversation.
+- **À propos** : versions de l'app, d'Electron, de Chromium et de Node.
 - **Mises à jour** : vérifiées au lancement (statut affiché dans le launcher), toutes les 4 h et via le menu
   « Rechercher les mises à jour… ». Téléchargées en fond depuis la release GitHub, puis bouton « Redémarrer
   pour la vX » dans la barre et le launcher. Une version beta suit les betas, une stable les stables.
@@ -67,8 +74,9 @@ Points d'entrée pour modifier :
 
 ## Sécurité
 
-- La page WorkAdventure tourne **sans preload**, dans sa propre vue sous la barre : sandbox, `contextIsolation`,
-  aucun accès à Node ni à l'IPC.
+- La page WorkAdventure tourne dans sa propre vue sous la barre (sandbox, `contextIsolation`, aucun accès à Node).
+  Son preload (`src/preload/workadventure.cts`) n'expose que deux signaux **sans donnée** (attention, focus) et
+  corrige les notifications : Electron n'affiche pas celles d'un service worker, qu'utilise WorkAdventure pour le chat.
 - Navigation limitée à `*.goyan.fr` en https ; tout autre lien s'ouvre dans le navigateur par défaut.
 - Permissions en liste blanche, accordées uniquement aux domaines de confiance.
 - Chaque canal IPC n'accepte que sa page locale (launcher ou barre) et valide chaque payload (zod).

@@ -29,7 +29,10 @@ export function buildMenu({ onOpenLauncher, onSignOut, onCheckForUpdates }: Menu
             { role: "quit" },
           ],
         }
-      : { label: "Fichier", submenu: [...sessionItems, { type: "separator" }, { role: "quit" }] };
+      : {
+          label: "Fichier",
+          submenu: [{ label: "À propos de WorkAdventure", click: () => app.showAboutPanel() }, { type: "separator" }, ...sessionItems, { type: "separator" }, { role: "quit" }],
+        };
 
   return Menu.buildFromTemplate([appMenu, { role: "editMenu" }, { role: "viewMenu" }, { role: "windowMenu" }]);
 }

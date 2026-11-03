@@ -4,10 +4,11 @@ import { join } from "node:path";
 import { choiceLabel, choiceUrl, INSTANCES, instanceIdSchema, resolveStartup, type Choice, type Settings } from "../shared/config.js";
 import type { LauncherState } from "../shared/launcher-api.js";
 import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
-import { downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAvatar } from "./avatar.js";
+import { defaultWokaUrl, downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAvatar, type Avatar } from "./avatar.js";
 import { registerIpc } from "./ipc.js";
 import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
+import { configureAboutPanel } from "./about.js";
 import { buildMenu } from "./menu.js";
 import { createPolicy, isAllowedUrl } from "./navigation.js";
 import { installPermissionHandlers } from "./permissions.js";
@@ -21,6 +22,8 @@ app.commandLine.appendSwitch("disable-background-timer-throttling");
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 app.setName("WorkAdventure");
+// Running from sources uses its own profile: it never touches, nor locks, the installed app's session.
+if (!app.isPackaged) app.setPath("userData", join(app.getPath("appData"), "WorkAdventure-dev"));
 
 const settingsPath = join(app.getPath("userData"), "settings.json");
 const avatarPath = join(app.getPath("userData"), "avatar.json");
@@ -46,6 +49,7 @@ if (app.requestSingleInstanceLock()) {
 
 async function start(): Promise<void> {
   powerSaveBlocker.start("prevent-app-suspension");
+  configureAboutPanel();
   installPermissionHandlers(session.defaultSession, (url) => url.startsWith(LAUNCHER_URL) || isAllowedUrl(url, policy));
   persistSessionCookies(session.defaultSession, (url) => isAllowedUrl(url, policy));
   registerIpc({
@@ -113,6 +117,23 @@ async function refreshAvatar(content: WebContents): Promise<void> {
   }
 }
 
+/** Until a room has been visited, the launcher shows WorkAdventure's default woka; cached like a captured one. */
+async function fetchDefaultAvatar(instanceUrl: string): Promise<Avatar | undefined> {
+  try {
+    const instancePolicy = createPolicy(instanceUrl);
+    const avatar = await downloadAvatar({
+      layerUrls: [defaultWokaUrl(instanceUrl)],
+      isTrusted: (url) => isAllowedUrl(url, instancePolicy),
+      fetch: net.fetch,
+    });
+    if (avatar) saveAvatar(avatarPath, avatar);
+    return avatar;
+  } catch (error) {
+    logger.warn({ err: error, instanceUrl }, "Could not fetch the default avatar");
+    return undefined;
+  }
+}
+
 /** Clears cookies and site storage (Authentik session, WorkAdventure token), then back to the launcher. */
 async function signOut(): Promise<void> {
   await session.defaultSession.clearStorageData();
@@ -121,11 +142,12 @@ async function signOut(): Promise<void> {
   await openLauncher();
 }
 
-function launcherState(): LauncherState {
-  const avatar = loadAvatar(avatarPath);
+async function launcherState(): Promise<LauncherState> {
+  const settings = loadSettings(settingsPath);
+  const avatar = loadAvatar(avatarPath) ?? (await fetchDefaultAvatar(choiceUrl(settings.choice)));
   const state: LauncherState = {
     instances: instanceIdSchema.options.map((id) => ({ id, ...INSTANCES[id], host: new URL(INSTANCES[id].url).host })),
-    settings: loadSettings(settingsPath),
+    settings,
     version: app.getVersion(),
     ...(notice && { notice }),
     ...(avatar && { avatar: avatar.layers }),
