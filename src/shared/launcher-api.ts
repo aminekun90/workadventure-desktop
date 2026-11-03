@@ -1,4 +1,5 @@
 import type { Choice, InstanceId, Settings } from "./config.js";
+import type { UpdateApi } from "./update-api.js";
 
 export const LAUNCHER_CHANNELS = {
   getState: "launcher:get-state",
@@ -35,4 +36,5 @@ export interface LauncherApi {
   getState(): Promise<LauncherState>;
   probe(choice: Choice): Promise<ProbeResult>;
   launch(request: Settings): Promise<LaunchResult>;
+  update: UpdateApi;
 }

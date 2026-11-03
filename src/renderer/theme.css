@@ -53,6 +53,33 @@ kbd {
   background: var(--surface);
 }
 
+/* Shown by update-status.ts once an update is ready. */
+.update-pill {
+  height: 1.75rem;
+  padding: 0 0.8rem;
+  border: none;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--online), #1fb5a8);
+  color: #062217;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  animation: pill-in 0.4s var(--ease);
+}
+
+.update-pill[hidden] {
+  display: none;
+}
+
+.update-pill:hover {
+  filter: brightness(1.08);
+}
+
+@keyframes pill-in {
+  from { opacity: 0; transform: translateY(-0.25rem); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -2,6 +2,13 @@ appId: fr.goyan.workadventure
 productName: WorkAdventure
 directories:
   output: release
+# No spaces: GitHub renames them in release assets, which would break the update manifests.
+artifactName: ${productName}-${version}-${arch}.${ext}
+# Release assets + update manifests (latest*.yml / beta*.yml) read by electron-updater.
+publish:
+  provider: github
+  owner: aminekun90
+  repo: workadventure-desktop
 files:
   - dist/**
   - "!dist/**/*.map"

@@ -1,8 +1,9 @@
-import { app, Menu, net, powerSaveBlocker, session, type BrowserWindow, type WebContents } from "electron";
+import { app, BrowserWindow, Menu, net, powerSaveBlocker, session, type WebContents } from "electron";
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import { choiceLabel, choiceUrl, INSTANCES, instanceIdSchema, resolveStartup, type Choice, type Settings } from "../shared/config.js";
 import type { LauncherState } from "../shared/launcher-api.js";
+import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAvatar } from "./avatar.js";
 import { registerIpc } from "./ipc.js";
 import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
@@ -12,6 +13,7 @@ import { createPolicy, isAllowedUrl } from "./navigation.js";
 import { installPermissionHandlers } from "./permissions.js";
 import { persistSessionCookies } from "./session-persistence.js";
 import { loadSettings, saveSettings } from "./settings.js";
+import { applyUpdate, checkForUpdates, startUpdater } from "./updater.js";
 import { contentOf, createWorkAdventureWindow } from "./workadventure-window.js";
 
 // Chromium throttles hidden and occluded windows by default; WorkAdventure must stay live.
@@ -25,6 +27,7 @@ const avatarPath = join(app.getPath("userData"), "avatar.json");
 let policy = createPolicy(INSTANCES.prod.url);
 let currentWindow: BrowserWindow | undefined;
 let notice: string | undefined;
+let updateStatus: UpdateStatus = { state: "disabled" };
 
 if (app.requestSingleInstanceLock()) {
   app.on("second-instance", focusCurrentWindow);
@@ -45,8 +48,17 @@ async function start(): Promise<void> {
   powerSaveBlocker.start("prevent-app-suspension");
   installPermissionHandlers(session.defaultSession, (url) => url.startsWith(LAUNCHER_URL) || isAllowedUrl(url, policy));
   persistSessionCookies(session.defaultSession, (url) => isAllowedUrl(url, policy));
-  registerIpc({ getLauncherState: launcherState, launch, openLauncher });
-  Menu.setApplicationMenu(buildMenu({ onOpenLauncher: () => void openLauncher(), onSignOut: () => void signOut() }));
+  registerIpc({
+    getLauncherState: launcherState,
+    launch,
+    openLauncher,
+    getUpdateStatus: () => updateStatus,
+    applyUpdate: () => applyUpdate(updateStatus),
+  });
+  startUpdater(announceUpdateStatus);
+  Menu.setApplicationMenu(
+    buildMenu({ onOpenLauncher: () => void openLauncher(), onSignOut: () => void signOut(), onCheckForUpdates: checkForUpdates }),
+  );
 
   const startup = resolveStartup(
     {
@@ -120,6 +132,12 @@ function launcherState(): LauncherState {
   };
   notice = undefined;
   return state;
+}
+
+/** Local pages only: a window's own page is the launcher or the toolbar, never the remote WorkAdventure view. */
+function announceUpdateStatus(status: UpdateStatus): void {
+  updateStatus = status;
+  for (const window of BrowserWindow.getAllWindows()) window.webContents.send(UPDATE_CHANNELS.changed, status);
 }
 
 /** The new window opens before the old one closes, so `window-all-closed` never fires in between. */

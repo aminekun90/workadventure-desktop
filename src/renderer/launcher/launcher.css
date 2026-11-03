@@ -479,6 +479,12 @@ h2 {
 }
 
 /* Footer */
+.footer-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .footer {
   position: relative;
   display: flex;
