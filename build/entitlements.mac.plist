@@ -12,5 +12,8 @@
     <true/>
     <key>com.apple.security.device.audio-input</key>
     <true/>
+    <!-- Reads the track the Spotify app plays (src/main/spotify-player.ts), after the user allows it once. -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
   </dict>
 </plist>

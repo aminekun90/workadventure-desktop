@@ -30,6 +30,7 @@ mac:
   extendInfo:
     NSCameraUsageDescription: WorkAdventure utilise la caméra pour la vidéo de proximité et les réunions.
     NSMicrophoneUsageDescription: WorkAdventure utilise le micro pour l'audio de proximité et les réunions.
+    NSAppleEventsUsageDescription: WorkAdventure lit le morceau joué par Spotify pour le partager avec vos collègues, si vous l'activez.
 
 win:
   target: nsis

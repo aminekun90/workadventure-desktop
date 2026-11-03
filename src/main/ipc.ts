@@ -9,6 +9,7 @@ import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-window.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
+import { watchSpotify } from "./spotify-player.js";
 import { mediaSchema, statusSchema, unreadSchema, updateControls } from "./workadventure-controls.js";
 import { focusWindowOf, isWorkAdventureContent, reloadContent, requestAttention, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
@@ -128,6 +129,10 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.status, (event, payload: unknown) => {
     const status = statusSchema.safeParse(payload);
     if (status.success && isWorkAdventureContent(event.sender)) updateControls(event.sender, { status: status.data });
+  });
+  ipcMain.on(CONTENT_CHANNELS.spotifyWatch, (event, payload: unknown) => {
+    const watching = z.boolean().safeParse(payload);
+    if (watching.success && isWorkAdventureContent(event.sender)) watchSpotify(event.sender, { watching: watching.data });
   });
   ipcMain.on(CONTENT_CHANNELS.unread, (event, payload: unknown) => {
     const unread = unreadSchema.safeParse(payload);

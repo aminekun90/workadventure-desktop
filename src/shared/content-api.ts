@@ -1,7 +1,8 @@
 /**
  * What the WorkAdventure page and the main process exchange, through src/preload/workadventure.cts.
  * Page → main: payload-free signals, plus small state values read by the preload (validated in main).
- * Main → page: a fixed set of commands, run through WorkAdventure's own desktop API (`window.WAD`).
+ * Main → page: a fixed set of commands, run through WorkAdventure's own desktop API (`window.WAD`), and the
+ * track the local Spotify app plays, only while the page asks for it (WorkAdventure's Spotify sharing is on).
  */
 export const CONTENT_CHANNELS = {
   /** A notification was shown: bounce the Dock icon if the window is in the background. */
@@ -18,6 +19,10 @@ export const CONTENT_CHANNELS = {
   statusReady: "content:status-ready",
   /** Effective availability status: WorkAdventure enum name and its localized label. */
   status: "content:status",
+  /** Page → main: start (true) or stop (false) reading the Spotify app of this Mac (window.WAD.watchSpotifyTrack). */
+  spotifyWatch: "content:spotify-watch",
+  /** Main → page: the track Spotify plays, or null. */
+  spotifyTrack: "content:spotify-track",
   /** Main → page. */
   command: "content:command",
 } as const;
@@ -39,4 +44,12 @@ export interface AvailabilityStatus {
   name: string;
   /** Label in the user's language, e.g. "En réunion". */
   label: string;
+}
+
+/** What the Spotify app of this Mac plays (see src/main/spotify-player.ts). */
+export interface SpotifyTrack {
+  title: string;
+  artist: string;
+  /** https://open.spotify.com/track/… */
+  url: string;
 }

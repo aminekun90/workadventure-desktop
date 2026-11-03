@@ -1,7 +1,14 @@
 // Preload of the remote WorkAdventure page (see src/shared/content-api.ts for what may cross).
 // Sandboxed preloads can only require "electron": channel and command names are inlined, checked by type.
 import electron = require("electron");
-import type { AvailabilityStatus, ContentChannel, ContentCommand, MediaState, StatusRequest } from "../shared/content-api.js";
+import type {
+  AvailabilityStatus,
+  ContentChannel,
+  ContentCommand,
+  MediaState,
+  SpotifyTrack,
+  StatusRequest,
+} from "../shared/content-api.js";
 
 const { contextBridge, ipcRenderer, webFrame } = electron;
 const send = (channel: ContentChannel, payload?: unknown): void => ipcRenderer.send(channel, payload);
@@ -18,6 +25,7 @@ const UNREAD_CHECK_DELAY_MS = 500;
 // Only the members WorkAdventure actually calls are provided.
 const toggles: Partial<Record<"toggle-microphone" | "toggle-camera", () => void>> = {};
 let requestStatus: ((request: StatusRequest) => void) | undefined;
+let onSpotifyTrack: ((track: SpotifyTrack | null) => void) | undefined;
 
 contextBridge.exposeInMainWorld("WAD", {
   desktop: true,
@@ -37,6 +45,20 @@ contextBridge.exposeInMainWorld("WAD", {
     const status: AvailabilityStatus = { name, label };
     send("content:status", status);
   },
+  // Spotify sharing without an account: WorkAdventure calls it while sharing is on (fork, LocalSpotifyPlayer.ts).
+  watchSpotifyTrack: (callback: (track: SpotifyTrack | null) => void) => {
+    onSpotifyTrack = callback;
+    send("content:spotify-watch", true);
+    return () => {
+      if (onSpotifyTrack !== callback) return;
+      onSpotifyTrack = undefined;
+      send("content:spotify-watch", false);
+    };
+  },
+});
+
+ipcRenderer.on("content:spotify-track" satisfies ContentChannel, (_event, track: SpotifyTrack | null) => {
+  onSpotifyTrack?.(track);
 });
 
 ipcRenderer.on("content:command" satisfies ContentChannel, (_event, command: ContentCommand) => {
