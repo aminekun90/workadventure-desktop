@@ -9,7 +9,7 @@ import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-window.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
-import { mediaSchema, unreadSchema, updateControls } from "./workadventure-controls.js";
+import { mediaSchema, statusSchema, unreadSchema, updateControls } from "./workadventure-controls.js";
 import { focusWindowOf, isWorkAdventureContent, reloadContent, requestAttention, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
 const PROBE_TIMEOUT_MS = 4000;
@@ -121,6 +121,13 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.media, (event, payload: unknown) => {
     const media = mediaSchema.safeParse(payload);
     if (media.success && isWorkAdventureContent(event.sender)) updateControls(event.sender, { media: media.data });
+  });
+  ipcMain.on(CONTENT_CHANNELS.statusReady, (event) => {
+    if (isWorkAdventureContent(event.sender)) updateControls(event.sender, { statusReady: true });
+  });
+  ipcMain.on(CONTENT_CHANNELS.status, (event, payload: unknown) => {
+    const status = statusSchema.safeParse(payload);
+    if (status.success && isWorkAdventureContent(event.sender)) updateControls(event.sender, { status: status.data });
   });
   ipcMain.on(CONTENT_CHANNELS.unread, (event, payload: unknown) => {
     const unread = unreadSchema.safeParse(payload);

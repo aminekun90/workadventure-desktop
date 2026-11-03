@@ -6,8 +6,9 @@
   - page → main : des signaux (`attention`, `focus`, `controls-ready`) et de **petites valeurs lues par le
     preload** (état micro/caméra depuis le `localStorage`, nombre de non-lus depuis le DOM), **validées par
     zod** dans `workadventure-controls.ts` et ignorées si l'expéditeur n'est pas une vue WA connue ;
-  - main → page : une **liste fermée de commandes** (`CONTENT_COMMANDS`), exécutées par les bascules que WA
-    enregistre lui-même via `window.WAD`. Jamais de commande paramétrée, jamais de donnée renvoyée à la page.
+  - main → page : des **commandes typées et fermées** (`ContentCommand` : bascules micro/caméra, statut parmi
+    `STATUS_REQUESTS`), exécutées par les callbacks que WA enregistre lui-même via `window.WAD`. Jamais de
+    donnée renvoyée à la page.
 - Le code exécuté dans la page (`executeJavaScript`, shim de notifications) ne fait jamais sortir le
   jeton WA (`authToken`) : il reste dans la page.
 
