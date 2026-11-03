@@ -2,17 +2,18 @@ import { ipcMain, net, type IpcMainInvokeEvent } from "electron";
 import { z } from "zod";
 import { choiceSchema, choiceUrl, settingsSchema, type Settings } from "../shared/config.js";
 import { LAUNCHER_CHANNELS, type LaunchResult, type LauncherState, type ProbeResult } from "../shared/launcher-api.js";
+import { CONTENT_CHANNELS } from "../shared/content-api.js";
 import { TOOLBAR_CHANNELS } from "../shared/toolbar-api.js";
 import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
-import { reloadContent, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
+import { focusWindowOf, reloadContent, requestAttention, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
 const PROBE_TIMEOUT_MS = 4000;
 const anchorSchema = z.object({ x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });
 
 export interface IpcHandlers {
-  getLauncherState(): LauncherState;
+  getLauncherState(): Promise<LauncherState>;
   launch(request: Settings): Promise<void>;
   openLauncher(): Promise<void>;
   getUpdateStatus(): UpdateStatus;
@@ -24,6 +25,7 @@ export function registerIpc(handlers: IpcHandlers): void {
   registerLauncherChannels(handlers);
   registerToolbarChannels(handlers);
   registerUpdateChannels(handlers);
+  registerContentChannels();
 }
 
 function registerLauncherChannels(handlers: IpcHandlers): void {
@@ -80,6 +82,12 @@ function registerUpdateChannels(handlers: IpcHandlers): void {
     assertSender(event, LAUNCHER_URL, TOOLBAR_URL);
     return handlers.applyUpdate();
   });
+}
+
+/** Payload-free signals from the WorkAdventure page; senders that are not a WorkAdventure view are ignored. */
+function registerContentChannels(): void {
+  ipcMain.on(CONTENT_CHANNELS.attention, (event) => requestAttention(event.sender));
+  ipcMain.on(CONTENT_CHANNELS.focus, (event) => focusWindowOf(event.sender));
 }
 
 /** An unreachable server is a probe result, not a failure. */

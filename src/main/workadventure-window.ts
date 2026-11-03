@@ -1,4 +1,4 @@
-import { BrowserWindow, Menu, net, WebContentsView, type MenuItemConstructorOptions, type WebContents } from "electron";
+import { app, BrowserWindow, Menu, net, WebContentsView, type MenuItemConstructorOptions, type WebContents } from "electron";
 import { once } from "node:events";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { TOOLBAR_CHANNELS, type ToolbarState } from "../shared/toolbar-api.js";
@@ -9,6 +9,7 @@ import { BACKGROUND, framelessChrome, relayConsole, routeNavigation } from "./wi
 
 const TOOLBAR_HTML = fileURLToPath(new URL("../renderer/toolbar/index.html", import.meta.url));
 const TOOLBAR_PRELOAD = fileURLToPath(new URL("../preload/toolbar.cjs", import.meta.url));
+const WORKADVENTURE_PRELOAD = fileURLToPath(new URL("../preload/workadventure.cjs", import.meta.url));
 export const TOOLBAR_URL = pathToFileURL(TOOLBAR_HTML).href;
 
 /** Must match `.toolbar` height in src/renderer/toolbar/toolbar.css. */
@@ -22,8 +23,9 @@ interface WindowParts {
   origin: string;
 }
 
-/** Toolbar IPC arrives from the toolbar's WebContents: this finds the window and page it controls. */
+/** IPC arrives from a WebContents (toolbar or page): these find the window it belongs to. */
 const partsByToolbar = new WeakMap<WebContents, WindowParts>();
+const partsByContent = new WeakMap<WebContents, WindowParts>();
 
 export interface WorkAdventureTarget {
   url: string;
@@ -34,8 +36,8 @@ export interface WorkAdventureTarget {
 }
 
 /**
- * Two layers: the window's own page is our toolbar (local, with a preload), and WorkAdventure runs
- * below it in a separate view with no preload, so the remote page never reaches the main process.
+ * Two layers: the window's own page is our toolbar (local, full bridge), and WorkAdventure runs below
+ * it in a separate view whose preload only sends two payload-free signals (src/preload/workadventure.cts).
  */
 export async function createWorkAdventureWindow({ url, label, policy, onRoomLoaded }: WorkAdventureTarget): Promise<BrowserWindow> {
   const window = new BrowserWindow({
@@ -51,6 +53,7 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   });
   const content = new WebContentsView({
     webPreferences: {
+      preload: WORKADVENTURE_PRELOAD,
       // The whole point of this client: browsers suspend hidden tabs and drop the pusher connection.
       backgroundThrottling: false,
       sandbox: true,
@@ -58,7 +61,9 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
     },
   });
   window.contentView.addChildView(content);
-  partsByToolbar.set(window.webContents, { window, content: content.webContents, origin: new URL(url).origin });
+  const parts: WindowParts = { window, content: content.webContents, origin: new URL(url).origin };
+  partsByToolbar.set(window.webContents, parts);
+  partsByContent.set(content.webContents, parts);
   window.on("closed", () => content.webContents.close());
 
   routeNavigation(window.webContents, (target) => target === TOOLBAR_URL);
@@ -86,6 +91,28 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
 /** The WorkAdventure page of a window, if it is a WorkAdventure window. */
 export function contentOf(window: BrowserWindow): WebContents | undefined {
   return partsByToolbar.get(window.webContents)?.content;
+}
+
+/** A notification was shown: draw the eye to a background window (Dock bounce, taskbar flash). */
+export function requestAttention(content: WebContents): void {
+  const window = partsByContent.get(content)?.window;
+  if (!window || window.isFocused()) return;
+  if (process.platform === "darwin") {
+    app.dock?.bounce("informational");
+    return;
+  }
+  window.flashFrame(true);
+  window.once("focus", () => window.flashFrame(false));
+}
+
+/** A notification was clicked: the page cannot raise its window itself from inside a view. */
+export function focusWindowOf(content: WebContents): void {
+  const window = partsByContent.get(content)?.window;
+  if (!window) return;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+  if (process.platform === "darwin") app.focus({ steal: true });
 }
 
 export function reloadContent(toolbar: WebContents): void {

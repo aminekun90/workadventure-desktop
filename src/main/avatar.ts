@@ -6,6 +6,12 @@ const MAX_LAYER_BYTES = 256 * 1024;
 const FETCH_TIMEOUT_MS = 5000;
 
 /**
+ * WorkAdventure's default woka, served by every instance. Fetched rather than bundled: the Pipoya sprite
+ * license does not allow redistributing the raw images in this public repository.
+ */
+const DEFAULT_WOKA_PATH = "/resources/characters/pipoya/Male 01-1.png";
+
+/**
  * Runs inside the WorkAdventure page: resolves the woka layers picked by the user (ids in
  * localStorage) to their sprite sheet URLs, bottom layer first. The auth token never leaves the page.
  */
@@ -48,7 +54,11 @@ export async function downloadAvatar({ layerUrls, isTrusted, fetch }: AvatarSour
   return { layers: await Promise.all(urls.map((url) => downloadPng(url, fetch))) };
 }
 
-/** The last captured avatar; undefined until a room has been visited (the launcher then shows a default). */
+export function defaultWokaUrl(origin: string): string {
+  return new URL(DEFAULT_WOKA_PATH, origin).href;
+}
+
+/** The last captured avatar; undefined until one has been captured or the default fetched. */
 export function loadAvatar(filePath: string): Avatar | undefined {
   const result = avatarSchema.safeParse(readJsonFile(filePath));
   return result.success ? result.data : undefined;
