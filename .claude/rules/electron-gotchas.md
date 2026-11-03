@@ -1,5 +1,10 @@
 # Pièges Electron rencontrés (et leur parade)
 
+- **Batterie** : ne jamais remettre `backgroundThrottling: false`, `disable-renderer-backgrounding`,
+  `disable-backgrounding-occluded-windows` ni `powerSaveBlocker`. Ils faisaient redessiner le jeu à 120 i/s
+  fenêtre cachée et empêchaient le Mac de dormir (batterie vidée en 30 min). Pour la connexion, seuls comptent
+  `disable-background-timer-throttling` et `--disable-features=IntensiveWakeUpThrottling` (vérifié : fenêtre
+  réduite = 0 image/s, timers toujours actifs).
 - **Pas de top-level `await` dans `src/main/main.ts`** : Electron n'émet `ready` qu'une fois l'entrée ESM
   évaluée → `await app.whenReady()` au top-level = interblocage silencieux. Utiliser `.then(start)`.
 - **Preload sandboxé = CommonJS isolé** : `import x = require("electron")` seulement, aucun module local.
