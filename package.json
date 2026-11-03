@@ -1,0 +1,38 @@
+{
+  "name": "workadventure-desktop",
+  "version": "0.1.0",
+  "description": "Client desktop WorkAdventure (goyan.fr) — Chromium embarqué, jamais mis en veille en arrière-plan",
+  "private": true,
+  "type": "module",
+  "main": "dist/main/main.js",
+  "author": "Amine Bouzahar",
+  "license": "UNLICENSED",
+  "packageManager": "yarn@1.22.22",
+  "engines": {
+    "node": ">=22.21.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
+    "start": "./run.sh",
+    "lint": "eslint src tests",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "yarn lint && yarn typecheck && yarn test",
+    "package": "yarn build && electron-builder"
+  },
+  "dependencies": {
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
+    "eslint": "^10.14.0",
+    "typescript": "~5.9",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  }
+}

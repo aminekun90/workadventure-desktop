@@ -1,0 +1,63 @@
+/* Design tokens and base styles shared by the launcher and the toolbar. */
+:root {
+  color-scheme: dark;
+  --bg: #0b0d1a;
+  --bg-deep: #070814;
+  --bar: #10122a;
+  --surface: rgb(255 255 255 / 4%);
+  --surface-hover: rgb(255 255 255 / 7%);
+  --border: rgb(255 255 255 / 9%);
+  --text: #eceeff;
+  --muted: #9a9cc4;
+  --accent: #8b6cff;
+  --accent-strong: #6d4dff;
+  --accent-glow: rgb(139 108 255 / 45%);
+  --online: #3ee08f;
+  --offline: #ff6b7a;
+  --pending: #f5c451;
+  --radius: 0.875rem;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  font: 400 0.9375rem/1.5 var(--font);
+  color: var(--text);
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+kbd {
+  padding: 0.0625rem 0.375rem;
+  border: 0.0625rem solid var(--border);
+  border-radius: 0.375rem;
+  font: 500 0.75rem var(--mono);
+  background: var(--surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
