@@ -30,6 +30,13 @@ Sous Windows, passer par Git Bash.
 - **Notifications** natives pour les appels de proximité et les messages du chat, activées par défaut (réglage
   « Notifications » de WorkAdventure). L'icône rebondit dans le Dock / la barre des tâches clignote ; un clic sur
   une notification de message ramène la fenêtre et ouvre la conversation.
+- **Barre de menu macOS** (icône tasse) : couper/activer micro et caméra, messages non lus, changer de map,
+  afficher la fenêtre, revenir au launcher, ouvrir à l'ouverture de session, mises à jour, À propos.
+- **Raccourcis globaux**, même quand l'app n'est pas au premier plan : <kbd>⌘</kbd><kbd>⇧</kbd><kbd>M</kbd>
+  micro, <kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd> caméra.
+- **Écran verrouillé ou Mac en veille** : micro et caméra coupés automatiquement (jamais rallumés seuls).
+- **Messages non lus** affichés sur l'icône du Dock et à côté de l'icône de barre de menu.
+- **Liens `workadventure://`** : `workadventure://wa.goyan.fr/~/goyan/office.wam` ouvre cette salle dans l'app.
 - **À propos** : fenêtre dédiée (versions de l'app, d'Electron, de Chromium, de Node et du système, statut et
   recherche de mises à jour, notes de version, « Copier les infos » pour un rapport de bug).
 - **Mises à jour** : vérifiées au lancement (statut affiché dans le launcher), toutes les 4 h, 5 min après un

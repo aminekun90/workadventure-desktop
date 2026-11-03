@@ -2,9 +2,12 @@
 
 ## Isolation de la page WorkAdventure
 - La page WA est **distante** : `sandbox: true`, `contextIsolation: true`, pas de Node.
-- Son preload (`src/preload/workadventure.cts`) n'expose que des **signaux sans donnée**
-  (`requestAttention`, `focusWindow`). Ne jamais y ajouter une API qui renvoie des données ou exécute
-  une action paramétrée par la page.
+- Son preload (`src/preload/workadventure.cts`) suit `src/shared/content-api.ts` :
+  - page → main : des signaux (`attention`, `focus`, `controls-ready`) et de **petites valeurs lues par le
+    preload** (état micro/caméra depuis le `localStorage`, nombre de non-lus depuis le DOM), **validées par
+    zod** dans `workadventure-controls.ts` et ignorées si l'expéditeur n'est pas une vue WA connue ;
+  - main → page : une **liste fermée de commandes** (`CONTENT_COMMANDS`), exécutées par les bascules que WA
+    enregistre lui-même via `window.WAD`. Jamais de commande paramétrée, jamais de donnée renvoyée à la page.
 - Le code exécuté dans la page (`executeJavaScript`, shim de notifications) ne fait jamais sortir le
   jeton WA (`authToken`) : il reste dans la page.
 
@@ -24,6 +27,7 @@
 - Avatar : URLs https de `*.goyan.fr`, PNG, ≤ 256 Ko, sinon refus.
 - Mise à jour macOS : zip vérifié contre le **SHA-512 du manifeste** avant extraction.
 - Cookies rendus persistants : uniquement ceux des domaines de confiance, portée d'origine conservée.
+- Liens `workadventure://` : convertis en https et ouverts seulement s'ils visent un domaine de confiance.
 
 ## Divers
 - Jamais de secret en dur ni committé (dépôt public). `.env*` ignorés.
