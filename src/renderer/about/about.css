@@ -1,139 +1,103 @@
-/* About window. Tokens, sky and buttons live in ../theme.css. */
+/* About window. Tokens, buttons and skyline live in ../theme.css. */
 body {
-  background: radial-gradient(120% 80% at 50% 0%, #1d1f45 0%, var(--bg) 60%, var(--bg-deep) 100%);
-}
-
-/* The top strip drags the frameless window. */
-.titlebar {
-  position: fixed;
-  inset: 0 0 auto;
-  height: 2.5rem;
-  z-index: 2;
-  -webkit-app-region: drag;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background: linear-gradient(180deg, var(--night-deep) 0%, var(--night) 75%);
 }
 
 .about {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 100%;
-  padding: 3.25rem 2rem 1.5rem;
+  padding: 3rem 2rem 0;
   text-align: center;
 }
 
-/* App icon floating on a glow */
 .logo {
-  position: relative;
-  width: 6.5rem;
-  aspect-ratio: 1;
-  animation: float 4s ease-in-out infinite;
-}
-
-.logo::before {
-  content: "";
-  position: absolute;
-  inset: -1.5rem;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, var(--accent-glow), transparent);
-}
-
-.logo img {
-  position: relative;
-  width: 100%;
-  border-radius: 1.5rem;
-  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 45%), 0 0 0 0.0625rem rgb(255 255 255 / 10%);
+  width: 5.5rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 0 0 0.0625rem var(--line), 0 0.75rem 2rem rgb(0 0 0 / 40%);
   image-rendering: pixelated;
 }
 
 h1 {
-  margin-top: 1.25rem;
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  background: linear-gradient(120deg, #fff 20%, #c7b8ff 60%, #7ee8d3 100%);
-  background-clip: text;
-  color: transparent;
+  margin-top: 1rem;
+  font: 600 2rem/1 var(--font-pixel);
 }
 
-.badges {
+.version {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.badge {
-  padding: 0.15rem 0.6rem;
-  border: 0.0625rem solid var(--border);
-  border-radius: 1rem;
-  font: 500 0.75rem var(--mono);
-  background: var(--surface);
-}
-
-.channel[data-channel="beta"] {
-  border-color: rgb(245 196 81 / 40%);
-  color: var(--pending);
-  background: rgb(245 196 81 / 10%);
-}
-
-.channel[data-channel="stable"] {
-  border-color: rgb(62 224 143 / 40%);
-  color: var(--online);
-  background: rgb(62 224 143 / 10%);
-}
-
-.tagline {
-  margin-top: 0.75rem;
+  margin-top: 0.6rem;
   font-size: 0.875rem;
   color: var(--muted);
 }
 
-/* Engine versions */
+#version {
+  color: var(--text);
+}
+
+.channel {
+  padding: 0 0.45rem;
+  border-radius: var(--radius-s);
+  font: 500 0.8125rem/1.5 var(--font-pixel);
+}
+
+.channel[data-channel="beta"] {
+  color: var(--night);
+  background: var(--window-light);
+}
+
+.channel[data-channel="stable"] {
+  color: var(--night);
+  background: var(--online);
+}
+
+.tagline {
+  margin-top: 0.4rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* Versions, one line each: name on the left, value on the right */
 .specs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
   width: 100%;
   margin-top: 1.5rem;
+  border-top: 0.0625rem solid var(--line);
 }
 
 .specs div {
-  padding: 0.6rem 0.75rem;
-  border: 0.0625rem solid var(--border);
-  border-radius: 0.75rem;
-  text-align: left;
-  background: var(--surface);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 0.0625rem solid var(--line);
+  font-size: 0.875rem;
 }
 
 .specs dt {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--muted);
 }
 
 .specs dd {
-  margin: 0.15rem 0 0;
+  margin: 0;
   overflow: hidden;
-  font: 0.8125rem var(--mono);
   text-overflow: ellipsis;
   white-space: nowrap;
   user-select: text;
 }
 
-/* Update status and actions */
+/* Updates */
 .update {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  justify-items: center;
   gap: 0.6rem;
   margin-top: 1.25rem;
-  min-height: 1.75rem;
 }
 
 .update-text {
+  max-width: 22rem;
   font-size: 0.8125rem;
   color: var(--muted);
 }
@@ -142,23 +106,38 @@ h1 {
   display: none;
 }
 
-.links {
+.update-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.15rem;
   margin-top: 0.75rem;
 }
 
-.ghost[data-done="true"] {
-  border-color: var(--online);
-  color: var(--online);
-}
-
-.copyright {
-  margin-top: auto;
-  font-size: 0.75rem;
+.links .button {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 
-@keyframes float {
-  50% { transform: translateY(-0.3rem); }
+.links .button:hover {
+  color: var(--text);
+}
+
+/* Bottom: a slice of the launcher's skyline */
+.city .skyline {
+  height: 5rem;
+}
+
+.copyright {
+  padding: 0.4rem 0 0.8rem;
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--muted);
+  background: var(--night-deep);
 }

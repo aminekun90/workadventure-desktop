@@ -8,7 +8,7 @@ export const ABOUT_CHANNELS = {
 } as const;
 export type AboutChannel = (typeof ABOUT_CHANNELS)[keyof typeof ABOUT_CHANNELS];
 
-export const ABOUT_LINKS = ["release-notes", "repository"] as const;
+export const ABOUT_LINKS = ["release-notes", "repository", "logs"] as const;
 export type AboutLink = (typeof ABOUT_LINKS)[number];
 
 export interface AboutInfo {

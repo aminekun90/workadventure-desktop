@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' mediastream: blob:"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; media-src 'self' mediastream: blob:"
     />
     <title>WorkAdventure</title>
     <link rel="stylesheet" href="../theme.css" />
@@ -13,42 +13,36 @@
   </head>
   <body>
     <div class="titlebar" aria-hidden="true"></div>
-    <div class="sky" aria-hidden="true">
-      <span class="glow glow-a"></span>
-      <span class="glow glow-b"></span>
-      <span class="stars"></span>
-    </div>
 
     <main class="layout">
       <section class="hero">
         <div class="stage" aria-hidden="true">
           <div id="avatar" class="avatar"></div>
           <span class="shadow"></span>
-          <span class="tiles"></span>
         </div>
         <h1>WorkAdventure</h1>
-        <p class="tagline">Ton bureau virtuel, sans décrochage.</p>
+        <p class="tagline">Ton bureau virtuel, toujours allumé.</p>
 
         <div class="devices">
           <div class="preview" data-active="false">
             <video id="preview" autoplay muted playsinline></video>
-            <span class="preview-placeholder">Caméra coupée</span>
           </div>
           <div class="meter" aria-label="Niveau du micro"><span id="meter-level"></span></div>
-          <button id="devices" class="ghost" type="button">Tester caméra et micro</button>
+          <button id="devices" class="button" type="button">Tester caméra et micro</button>
         </div>
       </section>
 
-      <section class="panel">
-        <h2>Choisis ton espace</h2>
-        <div id="instances" class="instances" role="radiogroup" aria-label="Espace WorkAdventure"></div>
+      <section class="panel" aria-labelledby="panel-title">
+        <h2 id="panel-title">Choisis ton espace</h2>
+        <div id="instances" class="instances" role="radiogroup" aria-labelledby="panel-title"></div>
 
         <label class="card custom">
           <input type="radio" name="instance" value="custom" />
           <span class="card-body">
             <span class="card-head">
-              <span class="card-title">URL personnalisée</span>
-              <span class="status" data-state="idle"><span class="dot"></span><span class="status-text">—</span></span>
+              <span class="radio" aria-hidden="true"></span>
+              <span class="card-title">Autre adresse</span>
+              <span class="status" data-state="idle"><span class="dot"></span><span class="status-text"></span></span>
             </span>
             <input id="custom-url" class="url" type="url" placeholder="http://play.workadventure.localhost/" spellcheck="false" />
           </span>
@@ -60,7 +54,7 @@
           Rejoindre directement au prochain lancement
         </label>
 
-        <button id="enter" class="enter" type="button">
+        <button id="enter" class="button primary enter" type="button">
           <span class="enter-label">Entrer</span>
           <kbd>↵</kbd>
         </button>
@@ -68,22 +62,26 @@
       </section>
     </main>
 
-    <footer class="footer">
-      <span class="footer-start">
-        <span id="version"></span>
-        <span id="update-status" aria-live="polite"></span>
-        <button id="update" class="update-pill" type="button" hidden></button>
-      </span>
-      <span>Revenir ici à tout moment : <kbd id="shortcut">Ctrl ⇧ L</kbd></span>
-    </footer>
+    <div class="city">
+      <svg id="skyline" class="skyline" aria-hidden="true"></svg>
+      <footer class="footer">
+        <span class="footer-start">
+          <span id="version"></span>
+          <span id="update-status" aria-live="polite"></span>
+          <button id="update" class="update-pill" type="button" hidden></button>
+        </span>
+        <span>Revenir ici à tout moment <kbd id="shortcut">Ctrl ⇧ L</kbd></span>
+      </footer>
+    </div>
 
     <template id="instance-template">
       <label class="card">
         <input type="radio" name="instance" />
         <span class="card-body">
           <span class="card-head">
+            <span class="radio" aria-hidden="true"></span>
             <span class="card-title"></span>
-            <span class="status" data-state="pending"><span class="dot"></span><span class="status-text">…</span></span>
+            <span class="status" data-state="pending"><span class="dot"></span><span class="status-text"></span></span>
           </span>
           <span class="card-host"></span>
         </span>

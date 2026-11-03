@@ -2,7 +2,10 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'"
+    />
     <title>À propos de WorkAdventure</title>
     <link rel="stylesheet" href="../theme.css" />
     <link rel="stylesheet" href="about.css" />
@@ -10,22 +13,15 @@
   </head>
   <body>
     <div class="titlebar" aria-hidden="true"></div>
-    <div class="sky" aria-hidden="true">
-      <span class="glow glow-a"></span>
-      <span class="glow glow-b"></span>
-      <span class="stars"></span>
-    </div>
 
     <main class="about">
-      <div class="logo">
-        <img src="icon.png" alt="" />
-      </div>
+      <img class="logo" src="icon.png" alt="" />
       <h1>WorkAdventure</h1>
-      <p class="badges">
-        <span id="version" class="badge"></span>
-        <span id="channel" class="badge channel"></span>
+      <p class="version">
+        Version <span id="version"></span>
+        <span id="channel" class="channel"></span>
       </p>
-      <p class="tagline">Ton bureau virtuel, sans décrochage.</p>
+      <p class="tagline">Ton bureau virtuel, toujours allumé.</p>
 
       <dl class="specs">
         <div><dt>Electron</dt><dd id="electron"></dd></div>
@@ -35,18 +31,24 @@
       </dl>
 
       <section class="update" aria-label="Mises à jour">
-        <span id="update-status" class="update-text" aria-live="polite"></span>
-        <button id="update" class="update-pill" type="button" hidden></button>
-        <button id="check" class="ghost" type="button">Rechercher les mises à jour</button>
+        <p id="update-status" class="update-text" aria-live="polite"></p>
+        <div class="update-actions">
+          <button id="update" class="update-pill" type="button" hidden></button>
+          <button id="check" class="button" type="button">Rechercher les mises à jour</button>
+        </div>
       </section>
 
-      <nav class="links">
-        <button id="release-notes" class="ghost" type="button">Notes de version</button>
-        <button id="repository" class="ghost" type="button">GitHub</button>
-        <button id="copy" class="ghost" type="button">Copier les infos</button>
+      <nav class="links" aria-label="Liens">
+        <button id="release-notes" class="button quiet" type="button">Notes de version</button>
+        <button id="repository" class="button quiet" type="button">Code source</button>
+        <button id="logs" class="button quiet" type="button">Ouvrir les logs</button>
+        <button id="copy" class="button quiet" type="button">Copier les infos</button>
       </nav>
-
-      <footer id="copyright" class="copyright"></footer>
     </main>
+
+    <div class="city">
+      <svg id="skyline" class="skyline" aria-hidden="true"></svg>
+      <footer id="copyright" class="copyright"></footer>
+    </div>
   </body>
 </html>
