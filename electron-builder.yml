@@ -11,6 +11,8 @@ mac:
   category: public.app-category.business
   target: [dmg, zip]
   hardenedRuntime: true
+  # Ad-hoc signature until an Apple Developer ID is available: Apple Silicon refuses unsigned bundles.
+  identity: "-"
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
