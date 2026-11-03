@@ -94,12 +94,19 @@ export function isWorkAdventureContent(contents: WebContents): boolean {
 
 /** The WorkAdventure page of a window, if it is a WorkAdventure window. */
 export function contentOf(window: BrowserWindow): WebContents | undefined {
+  if (window.isDestroyed()) return undefined;
   return partsByToolbar.get(window.webContents)?.content;
+}
+
+/** The live window of a WorkAdventure page: a page can still send a last message while its window closes. */
+function liveWindowOf(content: WebContents): BrowserWindow | undefined {
+  const window = partsByContent.get(content)?.window;
+  return window && !window.isDestroyed() ? window : undefined;
 }
 
 /** A notification was shown: draw the eye to a background window (Dock bounce, taskbar flash). */
 export function requestAttention(content: WebContents): void {
-  const window = partsByContent.get(content)?.window;
+  const window = liveWindowOf(content);
   if (!window || window.isFocused()) return;
   if (process.platform === "darwin") {
     app.dock?.bounce("informational");
@@ -111,7 +118,7 @@ export function requestAttention(content: WebContents): void {
 
 /** A notification was clicked: the page cannot raise its window itself from inside a view. */
 export function focusWindowOf(content: WebContents): void {
-  const window = partsByContent.get(content)?.window;
+  const window = liveWindowOf(content);
   if (!window) return;
   if (window.isMinimized()) window.restore();
   window.show();
