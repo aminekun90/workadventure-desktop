@@ -12,6 +12,14 @@ const REASONS: readonly { pattern: RegExp; reason: string }[] = [
   { pattern: /\b5\d\d\b/, reason: "GitHub est momentanément indisponible" },
 ];
 
+/**
+ * A tag is pushed before CI has uploaded its update manifest: for a few minutes the newest release has no
+ * latest*.yml, and electron-updater fails with this code.
+ */
+export function isReleaseInProgress(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ERR_UPDATER_CHANNEL_FILE_NOT_FOUND";
+}
+
 export function describeUpdateError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return REASONS.find(({ pattern }) => pattern.test(message))?.reason ?? "erreur inattendue, détails dans les logs";
