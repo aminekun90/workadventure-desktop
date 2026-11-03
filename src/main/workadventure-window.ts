@@ -55,8 +55,6 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   const content = new WebContentsView({
     webPreferences: {
       preload: WORKADVENTURE_PRELOAD,
-      // The whole point of this client: browsers suspend hidden tabs and drop the pusher connection.
-      backgroundThrottling: false,
       sandbox: true,
       contextIsolation: true,
     },

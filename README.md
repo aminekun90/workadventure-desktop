@@ -4,7 +4,8 @@ Client desktop (Windows, macOS, Linux) pour l'instance WorkAdventure de goyan.fr
 
 **Pourquoi un client ?** Safari et les navigateurs mettent en veille les onglets en arrière-plan : le
 WebSocket vers le pusher décroche, on passe hors ligne et la page ne se reconnecte plus. Ce client
-embarque Chromium et **désactive toute mise en veille** (timers, rendu, fenêtres masquées, App Nap).
+embarque Chromium : la connexion et les timers restent actifs en arrière-plan, mais le rendu du jeu
+s'arrête quand la fenêtre est cachée et le Mac peut se mettre en veille (économie de batterie).
 
 ## Lancer
 
@@ -80,7 +81,7 @@ Points d'entrée pour modifier :
 - **Permissions accordées** (caméra, partage d'écran…) : `GRANTED_PERMISSIONS` dans `src/main/permissions.ts`
 - **Maps masquées** : `HIDDEN_MAP_PATTERNS` dans `src/main/maps.ts`
 - **Durée de session conservée** : `PERSISTED_DAYS` dans `src/main/session-persistence.ts`
-- **Anti-veille** : switches Chromium dans `src/main/main.ts`, `backgroundThrottling` dans `src/main/workadventure-window.ts`
+- **Arrière-plan** : switches Chromium en tête de `src/main/main.ts` (timers non bridés, rendu en pause si caché)
 
 ## Sécurité
 

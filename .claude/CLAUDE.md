@@ -2,7 +2,8 @@
 
 Client desktop Electron (Windows, macOS, Linux) de l'instance WorkAdventure de goyan.fr.
 Raison d'être : les navigateurs (Safari surtout) mettent en veille les onglets en arrière-plan et le
-WebSocket du pusher décroche. Ici Chromium est embarqué et **rien ne se met en veille**.
+WebSocket du pusher décroche. Ici Chromium est embarqué : **timers et connexion restent actifs** en arrière-plan,
+mais le rendu s'arrête quand la fenêtre est cachée et le Mac peut dormir (voir `electron-gotchas.md`, batterie).
 
 Dépôt public. Les règles détaillées sont dans `.claude/rules/` (chargées automatiquement) ;
 les procédures dans `.claude/skills/`.
@@ -42,7 +43,7 @@ Points d'entrée pour modifier :
 - domaines de confiance : `TRUSTED_DOMAINS` dans `src/main/navigation.ts`
 - permissions : `GRANTED_PERMISSIONS` dans `src/main/permissions.ts`
 - maps masquées : `HIDDEN_MAP_PATTERNS` dans `src/main/maps.ts`
-- anti-veille : switches Chromium dans `src/main/main.ts`, `backgroundThrottling` dans `workadventure-window.ts`
+- arrière-plan : switches Chromium en tête de `src/main/main.ts`
 
 ## Vérifier un changement d'interface
 

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, net, powerSaveBlocker, session, type WebContents } from "electron";
+import { app, BrowserWindow, Menu, net, session, type WebContents } from "electron";
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import { choiceLabel, choiceUrl, INSTANCES, instanceIdSchema, resolveStartup, type Choice, type Settings } from "../shared/config.js";
@@ -21,10 +21,11 @@ import { reportManualCheck } from "./update-dialog.js";
 import { applyUpdate, checkForUpdates, startUpdater } from "./updater.js";
 import { contentOf, createWorkAdventureWindow } from "./workadventure-window.js";
 
-// Chromium throttles hidden and occluded windows by default; WorkAdventure must stay live.
+// Keeps WorkAdventure connected in the background: its timers run at full rate even when the window is
+// hidden (no 1-per-minute "intensive" throttling). Rendering is still paused while hidden or covered:
+// the game canvas would otherwise redraw up to 120 times per second for nobody, draining the battery.
 app.commandLine.appendSwitch("disable-background-timer-throttling");
-app.commandLine.appendSwitch("disable-renderer-backgrounding");
-app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
+app.commandLine.appendSwitch("disable-features", "IntensiveWakeUpThrottling");
 app.setName("WorkAdventure");
 if (app.isPackaged) logToFile(logFilePath());
 // Running from sources uses its own profile: it never touches, nor locks, the installed app's session.
@@ -64,7 +65,6 @@ if (app.requestSingleInstanceLock()) {
 }
 
 async function start(): Promise<void> {
-  powerSaveBlocker.start("prevent-app-suspension");
   installPermissionHandlers(session.defaultSession, (url) => url.startsWith(LAUNCHER_URL) || isAllowedUrl(url, policy));
   persistSessionCookies(session.defaultSession, (url) => isAllowedUrl(url, policy));
   registerIpc({
