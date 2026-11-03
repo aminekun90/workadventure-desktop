@@ -9,7 +9,8 @@ import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-window.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
-import { focusWindowOf, reloadContent, requestAttention, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
+import { mediaSchema, unreadSchema, updateControls } from "./workadventure-controls.js";
+import { focusWindowOf, isWorkAdventureContent, reloadContent, requestAttention, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
 const PROBE_TIMEOUT_MS = 4000;
 const anchorSchema = z.object({ x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });
@@ -110,10 +111,21 @@ function registerUpdateChannels(handlers: IpcHandlers): void {
   });
 }
 
-/** Payload-free signals from the WorkAdventure page; senders that are not a WorkAdventure view are ignored. */
+/** From the remote WorkAdventure page: ignored unless the sender is a WorkAdventure view; values validated. */
 function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.attention, (event) => requestAttention(event.sender));
   ipcMain.on(CONTENT_CHANNELS.focus, (event) => focusWindowOf(event.sender));
+  ipcMain.on(CONTENT_CHANNELS.controlsReady, (event) => {
+    if (isWorkAdventureContent(event.sender)) updateControls(event.sender, { ready: true });
+  });
+  ipcMain.on(CONTENT_CHANNELS.media, (event, payload: unknown) => {
+    const media = mediaSchema.safeParse(payload);
+    if (media.success && isWorkAdventureContent(event.sender)) updateControls(event.sender, { media: media.data });
+  });
+  ipcMain.on(CONTENT_CHANNELS.unread, (event, payload: unknown) => {
+    const unread = unreadSchema.safeParse(payload);
+    if (unread.success && isWorkAdventureContent(event.sender)) updateControls(event.sender, { unread: unread.data });
+  });
 }
 
 /** An unreachable server is a probe result, not a failure. */

@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { TOOLBAR_CHANNELS, type ToolbarState } from "../shared/toolbar-api.js";
 import { logger } from "./logger.js";
 import { currentMapPath, fetchMaps, mapUrl } from "./maps.js";
+import { resetControls } from "./workadventure-controls.js";
 import { isAllowedUrl, type NavigationPolicy } from "./navigation.js";
 import { BACKGROUND, framelessChrome, relayConsole, routeNavigation } from "./window-common.js";
 
@@ -72,6 +73,7 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   keepContentBelowToolbar(window, content);
   reloadOnCrash(content.webContents);
   syncToolbar(window.webContents, content.webContents, label);
+  content.webContents.on("did-navigate", () => resetControls(content.webContents));
   content.webContents.on("did-stop-loading", () => {
     if (currentMapPath(content.webContents.getURL())) onRoomLoaded(content.webContents);
   });
@@ -86,6 +88,10 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   // Shown only once the server answered: until then the launcher stays up with its spinner.
   window.show();
   return window;
+}
+
+export function isWorkAdventureContent(contents: WebContents): boolean {
+  return partsByContent.has(contents);
 }
 
 /** The WorkAdventure page of a window, if it is a WorkAdventure window. */
@@ -125,6 +131,12 @@ export async function showMapMenu(toolbar: WebContents, anchor: { x: number; y: 
   if (!parts) return;
   const items = await mapMenuItems(parts);
   Menu.buildFromTemplate(items).popup({ window: parts.window, ...anchor });
+}
+
+/** Same map list as the toolbar's, for the menu bar item. */
+export async function mapMenuFor(content: WebContents): Promise<MenuItemConstructorOptions[]> {
+  const parts = partsByContent.get(content);
+  return parts ? mapMenuItems(parts) : [];
 }
 
 async function mapMenuItems({ content, origin }: WindowParts): Promise<MenuItemConstructorOptions[]> {
