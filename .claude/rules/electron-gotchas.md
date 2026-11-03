@@ -14,6 +14,10 @@
 - **macOS sans Developer ID** : signature ad hoc (`identity: "-"`) + entitlement
   `disable-library-validation`. Squirrel.Mac refuse ces mises à jour → installeur maison `mac-update.ts`.
   Les notifications ne sont autorisées que si l'app tourne depuis un dossier **Applications**.
+- **`window.WAD`** est l'API desktop prévue par WA (`play/src/front/Api/Desktop/index.ts`) : WA y enregistre
+  ses bascules micro/caméra au montage. On n'expose que les membres que WA appelle ; ne pas exposer
+  `getDesktopCapturerSources` sans implémenter tout le sélecteur (WA basculerait sur son propre picker).
+- **Fermer la fenêtre quitte l'app** (et donc la salle), même avec l'icône de barre de menu.
 - **Profil dev séparé** (`WorkAdventure-dev`) : depuis les sources, l'app ne touche ni ne verrouille la
   session de l'app installée (verrou d'instance unique par profil).
 - **`app.getPath("logs")`** dépend du nom de l'app : `app.setName()` avant tout appel.

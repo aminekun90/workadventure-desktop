@@ -12,7 +12,12 @@ publish:
 files:
   - dist/**
   - "!dist/**/*.map"
+  - assets/*.png
   - package.json
+# workadventure:// links open a room in the app (src/main/deep-links.ts).
+protocols:
+  - name: WorkAdventure
+    schemes: [workadventure]
 
 mac:
   category: public.app-category.business
