@@ -5,6 +5,9 @@
     <!-- Required by V8 under the hardened runtime. -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
+    <!-- Ad-hoc signing: frameworks carry no Team ID, so library validation would block them. Drop with a Developer ID. -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
     <key>com.apple.security.device.camera</key>
     <true/>
     <key>com.apple.security.device.audio-input</key>
