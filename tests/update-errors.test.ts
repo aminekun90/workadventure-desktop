@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeUpdateError } from "../src/main/update-errors.js";
+import { describeUpdateError, isReleaseInProgress } from "../src/main/update-errors.js";
 
 describe("describeUpdateError", () => {
   it.each([
@@ -18,5 +18,18 @@ describe("describeUpdateError", () => {
 
   it("points to the logs for anything else", () => {
     expect(describeUpdateError(new Error("Cannot parse releases feed"))).toBe("erreur inattendue, détails dans les logs");
+  });
+});
+
+describe("isReleaseInProgress", () => {
+  it("recognizes a release whose update manifest is not uploaded yet", () => {
+    const error = Object.assign(new Error("Cannot find latest-mac.yml in the latest release artifacts"), {
+      code: "ERR_UPDATER_CHANNEL_FILE_NOT_FOUND",
+    });
+    expect(isReleaseInProgress(error)).toBe(true);
+  });
+
+  it("does not hide real failures", () => {
+    expect(isReleaseInProgress(new Error("net::ERR_INTERNET_DISCONNECTED"))).toBe(false);
   });
 });

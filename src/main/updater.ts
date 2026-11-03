@@ -2,7 +2,7 @@ import { app, net, shell } from "electron";
 import updaterPackage, { type UpdateInfo } from "electron-updater";
 import type { UpdateStatus } from "../shared/update-api.js";
 import { logger } from "./logger.js";
-import { describeUpdateError } from "./update-errors.js";
+import { describeUpdateError, isReleaseInProgress } from "./update-errors.js";
 import { installOnQuit, pickZip, prepareUpdate, replaceableBundle, type PreparedUpdate } from "./mac-update.js";
 
 const { autoUpdater } = updaterPackage;
@@ -42,6 +42,12 @@ export function startUpdater(onChange: (status: UpdateStatus) => void): void {
   autoUpdater.on("error", (error) => {
     clearTimeout(retryTimer);
     retryTimer = setTimeout(checkForUpdates, RETRY_AFTER_FAILURE_MINUTES * 60 * 1000);
+    // The new tag is visible while CI still builds its installers: nothing to install yet, not a failure.
+    if (isReleaseInProgress(error)) {
+      logger.info("A release is being published, checking again shortly");
+      onChange({ state: "up-to-date" });
+      return;
+    }
     onChange({ state: "failed", reason: describeUpdateError(error), retryInMinutes: RETRY_AFTER_FAILURE_MINUTES });
   });
   autoUpdater.on("update-available", (info) => {
