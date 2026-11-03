@@ -33,6 +33,7 @@ function describe(status: UpdateStatus): string {
     case "downloading":
       return `Téléchargement de la v${status.version} · ${status.percent} %`;
     case "disabled":
+      return "Mises à jour désactivées (version de développement)";
     case "ready":
       return "";
   }

@@ -4,9 +4,11 @@ export interface MenuActions {
   onOpenLauncher: () => void;
   onSignOut: () => void;
   onCheckForUpdates: () => void;
+  onShowAbout: () => void;
 }
 
-export function buildMenu({ onOpenLauncher, onSignOut, onCheckForUpdates }: MenuActions): Menu {
+export function buildMenu({ onOpenLauncher, onSignOut, onCheckForUpdates, onShowAbout }: MenuActions): Menu {
+  const about: MenuItemConstructorOptions = { label: "À propos de WorkAdventure", click: onShowAbout };
   const sessionItems: MenuItemConstructorOptions[] = [
     { label: "Revenir au launcher", accelerator: "CmdOrCtrl+Shift+L", click: onOpenLauncher },
     { label: "Se déconnecter", click: onSignOut },
@@ -18,7 +20,7 @@ export function buildMenu({ onOpenLauncher, onSignOut, onCheckForUpdates }: Menu
       ? {
           label: app.name,
           submenu: [
-            { role: "about" },
+            about,
             { type: "separator" },
             ...sessionItems,
             { type: "separator" },
@@ -31,7 +33,7 @@ export function buildMenu({ onOpenLauncher, onSignOut, onCheckForUpdates }: Menu
         }
       : {
           label: "Fichier",
-          submenu: [{ label: "À propos de WorkAdventure", click: () => app.showAboutPanel() }, { type: "separator" }, ...sessionItems, { type: "separator" }, { role: "quit" }],
+          submenu: [about, { type: "separator" }, ...sessionItems, { type: "separator" }, { role: "quit" }],
         };
 
   return Menu.buildFromTemplate([appMenu, { role: "editMenu" }, { role: "viewMenu" }, { role: "windowMenu" }]);

@@ -5,7 +5,7 @@ import type { UpdateApi, UpdateChannel, UpdateStatus } from "../shared/update-ap
 
 const invoke = <T,>(channel: LauncherChannel, ...args: unknown[]): Promise<T> => electron.ipcRenderer.invoke(channel, ...args);
 
-// Same in both preloads: a sandboxed preload cannot import a local module.
+// Same in every local-page preload: a sandboxed preload cannot import a local module.
 const update: UpdateApi = {
   get: () => electron.ipcRenderer.invoke("update:get" satisfies UpdateChannel),
   apply: () => electron.ipcRenderer.invoke("update:apply" satisfies UpdateChannel),

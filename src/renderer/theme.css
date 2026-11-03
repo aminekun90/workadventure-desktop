@@ -53,6 +53,86 @@ kbd {
   background: var(--surface);
 }
 
+/* Animated night sky shared by the launcher and the About window: <div class="sky"> with .glow-a, .glow-b, .stars. */
+.sky {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 3%) 0.0625rem, transparent 0.0625rem),
+    linear-gradient(90deg, rgb(255 255 255 / 3%) 0.0625rem, transparent 0.0625rem);
+  background-size: 2rem 2rem;
+  mask-image: radial-gradient(80% 70% at 30% 40%, black, transparent);
+}
+
+.glow {
+  position: absolute;
+  width: 28rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(5rem);
+  opacity: 0.55;
+  animation: drift 18s var(--ease) infinite alternate;
+}
+
+.glow-a {
+  top: -10rem;
+  left: -6rem;
+  background: var(--accent-strong);
+}
+
+.glow-b {
+  right: -10rem;
+  bottom: -12rem;
+  background: #1fb5a8;
+  animation-delay: -9s;
+}
+
+.stars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0.125rem;
+  height: 0.125rem;
+  background: white;
+  box-shadow:
+    6rem 4rem #fff8, 14rem 9rem #fff6, 22rem 3rem #fffa, 31rem 12rem #fff5, 40rem 6rem #fff8,
+    48rem 14rem #fff6, 55rem 4rem #fff9, 60rem 20rem #fff4, 9rem 22rem #fff5, 26rem 30rem #fff4,
+    44rem 26rem #fff7, 58rem 34rem #fff5, 4rem 36rem #fff6, 36rem 38rem #fff4;
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  to { transform: translate(4rem, 3rem) scale(1.15); }
+}
+
+@keyframes twinkle {
+  to { opacity: 0.4; }
+}
+
+/* Secondary button. */
+.ghost {
+  padding: 0.45rem 0.9rem;
+  border: 0.0625rem solid var(--border);
+  border-radius: 2rem;
+  font-size: 0.8125rem;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.ghost:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
 /* Shown by update-status.ts once an update is ready. */
 .update-pill {
   height: 1.75rem;

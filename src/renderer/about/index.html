@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'" />
+    <title>À propos de WorkAdventure</title>
+    <link rel="stylesheet" href="../theme.css" />
+    <link rel="stylesheet" href="about.css" />
+    <script type="module" src="main.js"></script>
+  </head>
+  <body>
+    <div class="titlebar" aria-hidden="true"></div>
+    <div class="sky" aria-hidden="true">
+      <span class="glow glow-a"></span>
+      <span class="glow glow-b"></span>
+      <span class="stars"></span>
+    </div>
+
+    <main class="about">
+      <div class="logo">
+        <img src="icon.png" alt="" />
+      </div>
+      <h1>WorkAdventure</h1>
+      <p class="badges">
+        <span id="version" class="badge"></span>
+        <span id="channel" class="badge channel"></span>
+      </p>
+      <p class="tagline">Ton bureau virtuel, sans décrochage.</p>
+
+      <dl class="specs">
+        <div><dt>Electron</dt><dd id="electron"></dd></div>
+        <div><dt>Chromium</dt><dd id="chromium"></dd></div>
+        <div><dt>Node</dt><dd id="node"></dd></div>
+        <div><dt>Système</dt><dd id="system"></dd></div>
+      </dl>
+
+      <section class="update" aria-label="Mises à jour">
+        <span id="update-status" class="update-text" aria-live="polite"></span>
+        <button id="update" class="update-pill" type="button" hidden></button>
+        <button id="check" class="ghost" type="button">Rechercher les mises à jour</button>
+      </section>
+
+      <nav class="links">
+        <button id="release-notes" class="ghost" type="button">Notes de version</button>
+        <button id="repository" class="ghost" type="button">GitHub</button>
+        <button id="copy" class="ghost" type="button">Copier les infos</button>
+      </nav>
+
+      <footer id="copyright" class="copyright"></footer>
+    </main>
+  </body>
+</html>

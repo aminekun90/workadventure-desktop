@@ -8,7 +8,7 @@ import { defaultWokaUrl, downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAva
 import { registerIpc } from "./ipc.js";
 import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
-import { configureAboutPanel } from "./about.js";
+import { showAboutWindow } from "./about-window.js";
 import { buildMenu } from "./menu.js";
 import { createPolicy, isAllowedUrl } from "./navigation.js";
 import { installPermissionHandlers } from "./permissions.js";
@@ -52,7 +52,6 @@ if (app.requestSingleInstanceLock()) {
 
 async function start(): Promise<void> {
   powerSaveBlocker.start("prevent-app-suspension");
-  configureAboutPanel();
   installPermissionHandlers(session.defaultSession, (url) => url.startsWith(LAUNCHER_URL) || isAllowedUrl(url, policy));
   persistSessionCookies(session.defaultSession, (url) => isAllowedUrl(url, policy));
   registerIpc({
@@ -61,10 +60,11 @@ async function start(): Promise<void> {
     openLauncher,
     getUpdateStatus: () => updateStatus,
     applyUpdate: () => applyUpdate(updateStatus),
+    checkForUpdates,
   });
   startUpdater(announceUpdateStatus);
   Menu.setApplicationMenu(
-    buildMenu({ onOpenLauncher: () => void openLauncher(), onSignOut: () => void signOut(), onCheckForUpdates: checkForUpdatesFromMenu }),
+    buildMenu({ onOpenLauncher: () => void openLauncher(), onSignOut: () => void signOut(), onCheckForUpdates: checkForUpdatesFromMenu, onShowAbout: () => void showAboutWindow() }),
   );
 
   const startup = resolveStartup(

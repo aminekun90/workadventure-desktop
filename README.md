@@ -30,7 +30,8 @@ Sous Windows, passer par Git Bash.
 - **Notifications** natives pour les appels de proximité et les messages du chat, activées par défaut (réglage
   « Notifications » de WorkAdventure). L'icône rebondit dans le Dock / la barre des tâches clignote ; un clic sur
   une notification de message ramène la fenêtre et ouvre la conversation.
-- **À propos** : versions de l'app, d'Electron, de Chromium et de Node.
+- **À propos** : fenêtre dédiée (versions de l'app, d'Electron, de Chromium, de Node et du système, statut et
+  recherche de mises à jour, notes de version, « Copier les infos » pour un rapport de bug).
 - **Mises à jour** : vérifiées au lancement (statut affiché dans le launcher), toutes les 4 h et via le menu
   « Rechercher les mises à jour… ». Téléchargées en fond depuis la release GitHub, puis bouton « Redémarrer
   pour la vX » dans la barre et le launcher. Une version beta suit les betas, une stable les stables.
