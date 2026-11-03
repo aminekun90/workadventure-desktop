@@ -22,7 +22,11 @@ export async function reportManualCheck(
       await show({ type: "info", message: "WorkAdventure est à jour", detail: `Version ${app.getVersion()}` });
       return;
     case "failed":
-      await show({ type: "warning", message: "Impossible de vérifier les mises à jour", detail: "Vérifie ta connexion, puis réessaie." });
+      await show({
+        type: "warning",
+        message: "Impossible de vérifier les mises à jour",
+        detail: `Cause : ${status.reason}.\nNouvel essai automatique dans ${status.retryInMinutes} min.`,
+      });
       return;
     case "downloading":
       await show({

@@ -29,7 +29,7 @@ function describe(status: UpdateStatus): string {
     case "up-to-date":
       return "À jour";
     case "failed":
-      return "Vérification des mises à jour impossible";
+      return `Vérification impossible : ${status.reason}. Nouvel essai dans ${status.retryInMinutes} min.`;
     case "downloading":
       return `Téléchargement de la v${status.version} · ${status.percent} %`;
     case "disabled":

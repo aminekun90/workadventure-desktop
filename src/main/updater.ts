@@ -2,11 +2,14 @@ import { app, net, shell } from "electron";
 import updaterPackage, { type UpdateInfo } from "electron-updater";
 import type { UpdateStatus } from "../shared/update-api.js";
 import { logger } from "./logger.js";
+import { describeUpdateError } from "./update-errors.js";
 import { installOnQuit, pickZip, prepareUpdate, replaceableBundle, type PreparedUpdate } from "./mac-update.js";
 
 const { autoUpdater } = updaterPackage;
 
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+/** A failed check (network blip, proxy) is retried soon rather than at the next 4-hour check. */
+const RETRY_AFTER_FAILURE_MINUTES = 5;
 const RELEASES_URL = "https://github.com/aminekun90/workadventure-desktop/releases/tag";
 
 /**
@@ -16,6 +19,8 @@ const RELEASES_URL = "https://github.com/aminekun90/workadventure-desktop/releas
 const IS_MAC = process.platform === "darwin";
 
 /** The macOS update being downloaded or ready: a later check finding the same version reuses it. */
+let retryTimer: ReturnType<typeof setTimeout> | undefined;
+
 let macUpdate: { version: string; status: UpdateStatus; prepared?: PreparedUpdate } | undefined;
 
 /** Checks GitHub releases at launch, then every few hours; reports each step to `onChange`. */
@@ -34,7 +39,11 @@ export function startUpdater(onChange: (status: UpdateStatus) => void): void {
   let incomingVersion = "";
   autoUpdater.on("checking-for-update", () => onChange({ state: "checking" }));
   autoUpdater.on("update-not-available", () => onChange({ state: "up-to-date" }));
-  autoUpdater.on("error", () => onChange({ state: "failed" }));
+  autoUpdater.on("error", (error) => {
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(checkForUpdates, RETRY_AFTER_FAILURE_MINUTES * 60 * 1000);
+    onChange({ state: "failed", reason: describeUpdateError(error), retryInMinutes: RETRY_AFTER_FAILURE_MINUTES });
+  });
   autoUpdater.on("update-available", (info) => {
     incomingVersion = info.version;
     if (!IS_MAC) {
@@ -59,6 +68,7 @@ export function startUpdater(onChange: (status: UpdateStatus) => void): void {
 /** Also wired to the "Rechercher les mises à jour…" menu item. */
 export function checkForUpdates(): void {
   if (!app.isPackaged) return;
+  clearTimeout(retryTimer);
   // Failures are reported through the "error" event (and logged by electron-updater): nothing to add here.
   autoUpdater.checkForUpdates().catch(() => undefined);
 }

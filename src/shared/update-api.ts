@@ -13,8 +13,8 @@ export type UpdateStatus =
   | { state: "disabled" }
   | { state: "checking" }
   | { state: "up-to-date" }
-  /** Offline or GitHub unreachable: retried at the next check. */
-  | { state: "failed" }
+  /** Offline, proxy, GitHub down…: `reason` is shown to the user; retried after `retryInMinutes`. */
+  | { state: "failed"; reason: string; retryInMinutes: number }
   | { state: "downloading"; version: string; percent: number }
   | { state: "ready"; version: string; action: UpdateAction };
 
