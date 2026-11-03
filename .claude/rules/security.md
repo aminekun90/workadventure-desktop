@@ -7,8 +7,9 @@
     preload** (état micro/caméra depuis le `localStorage`, nombre de non-lus depuis le DOM), **validées par
     zod** dans `workadventure-controls.ts` et ignorées si l'expéditeur n'est pas une vue WA connue ;
   - main → page : des **commandes typées et fermées** (`ContentCommand` : bascules micro/caméra, statut parmi
-    `STATUS_REQUESTS`), exécutées par les callbacks que WA enregistre lui-même via `window.WAD`. Jamais de
-    donnée renvoyée à la page.
+    `STATUS_REQUESTS`), exécutées par les callbacks que WA enregistre lui-même via `window.WAD`. Seule
+    donnée renvoyée à la page : le morceau joué par Spotify (`spotify-player.ts`), uniquement pendant que WA
+    le demande (partage Spotify activé), lu seulement si Spotify tourne déjà.
 - Le code exécuté dans la page (`executeJavaScript`, shim de notifications) ne fait jamais sortir le
   jeton WA (`authToken`) : il reste dans la page.
 
