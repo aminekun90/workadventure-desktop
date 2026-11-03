@@ -1,6 +1,7 @@
 import { app, BrowserWindow, clipboard, shell } from "electron";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AboutInfo, AboutLink } from "../shared/about-api.js";
+import { logFilePath } from "./paths.js";
 import { BACKGROUND, framelessChrome, IS_MAC, relayConsole, routeNavigation } from "./window-common.js";
 
 const ABOUT_HTML = fileURLToPath(new URL("../renderer/about/index.html", import.meta.url));
@@ -19,8 +20,8 @@ export async function showAboutWindow(): Promise<void> {
     return;
   }
   const window = new BrowserWindow({
-    width: 440,
-    height: 620,
+    width: 480,
+    height: 660,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -55,6 +56,11 @@ export function aboutInfo(): AboutInfo {
 }
 
 export async function openAboutLink(link: AboutLink): Promise<void> {
+  if (link === "logs") {
+    // Running from sources logs to the terminal only: show the folder the installed app writes to.
+    shell.showItemInFolder(logFilePath());
+    return;
+  }
   const url = link === "release-notes" ? `${REPOSITORY_URL}/releases/tag/v${app.getVersion()}` : REPOSITORY_URL;
   await shell.openExternal(url);
 }

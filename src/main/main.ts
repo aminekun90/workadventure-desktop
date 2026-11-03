@@ -7,10 +7,11 @@ import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { defaultWokaUrl, downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAvatar, type Avatar } from "./avatar.js";
 import { registerIpc } from "./ipc.js";
 import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
-import { logger } from "./logger.js";
+import { logger, logToFile } from "./logger.js";
 import { showAboutWindow } from "./about-window.js";
 import { buildMenu } from "./menu.js";
 import { createPolicy, isAllowedUrl } from "./navigation.js";
+import { logFilePath } from "./paths.js";
 import { installPermissionHandlers } from "./permissions.js";
 import { persistSessionCookies } from "./session-persistence.js";
 import { loadSettings, saveSettings } from "./settings.js";
@@ -23,6 +24,7 @@ app.commandLine.appendSwitch("disable-background-timer-throttling");
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 app.setName("WorkAdventure");
+if (app.isPackaged) logToFile(logFilePath());
 // Running from sources uses its own profile: it never touches, nor locks, the installed app's session.
 if (!app.isPackaged) app.setPath("userData", join(app.getPath("appData"), "WorkAdventure-dev"));
 

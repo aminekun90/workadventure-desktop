@@ -8,8 +8,8 @@ export const LAUNCHER_URL = pathToFileURL(LAUNCHER_HTML).href;
 
 export async function createLauncherWindow(): Promise<BrowserWindow> {
   const window = new BrowserWindow({
-    width: 1040,
-    height: 680,
+    width: 1200,
+    height: 780,
     minWidth: 1040,
     minHeight: 680,
     show: false,

@@ -42,7 +42,7 @@ export function setupDeviceCheck({ onError }: { onError: (message: string) => vo
     capture = { stream, audio, frame: requestAnimationFrame(drawLevel) };
     video.srcObject = stream;
     preview.dataset["active"] = "true";
-    button.textContent = "Couper";
+    button.textContent = "Arrêter le test";
   };
 
   button.addEventListener("click", () => {

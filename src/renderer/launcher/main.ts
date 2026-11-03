@@ -2,6 +2,7 @@ import { showAvatar } from "./avatar.js";
 import { api } from "./bridge.js";
 import { setupDeviceCheck } from "./devices.js";
 import { byId } from "../dom.js";
+import { drawSkyline } from "../skyline.js";
 import { createInstancePicker } from "./instances.js";
 import { mountUpdateStatus } from "../update-status.js";
 
@@ -17,6 +18,7 @@ picker.select(state.settings.choice);
 skipToggle.checked = state.settings.skipLauncher;
 byId("version", HTMLSpanElement).textContent = `v${state.version}`;
 byId("shortcut", HTMLElement).textContent = api.platform === "darwin" ? "⌘ ⇧ L" : "Ctrl ⇧ L";
+drawSkyline(byId("skyline", SVGSVGElement));
 mountUpdateStatus(api.update);
 if (state.avatar) showAvatar(state.avatar);
 if (state.notice) showError(state.notice);

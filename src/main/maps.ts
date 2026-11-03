@@ -38,7 +38,7 @@ export function listedMaps({ maps }: z.infer<typeof mapsResponseSchema>): MapEnt
     .map(([path, { metadata }]) => ({ path, name: metadata?.name ?? path }));
   const isShared = (name: string): boolean => named.filter((map) => map.name === name).length > 1;
   return named
-    .map(({ path, name }) => ({ path, label: isShared(name) ? `${name} · ${path.split("/")[0]}` : name }))
+    .map(({ path, name }) => ({ path, label: isShared(name) ? `${name} (${path.split("/")[0]})` : name }))
     .toSorted((a, b) => a.label.localeCompare(b.label, "fr"));
 }
 

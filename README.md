@@ -32,7 +32,8 @@ Sous Windows, passer par Git Bash.
   une notification de message ramène la fenêtre et ouvre la conversation.
 - **À propos** : fenêtre dédiée (versions de l'app, d'Electron, de Chromium, de Node et du système, statut et
   recherche de mises à jour, notes de version, « Copier les infos » pour un rapport de bug).
-- **Mises à jour** : vérifiées au lancement (statut affiché dans le launcher), toutes les 4 h et via le menu
+- **Mises à jour** : vérifiées au lancement (statut affiché dans le launcher), toutes les 4 h, 5 min après un
+  échec (la cause est affichée : réseau, proxy, GitHub…) et via le menu
   « Rechercher les mises à jour… ». Téléchargées en fond depuis la release GitHub, puis bouton « Redémarrer
   pour la vX » dans la barre et le launcher. Une version beta suit les betas, une stable les stables.
   - Windows (NSIS) et Linux (AppImage) : electron-updater.
@@ -93,5 +94,10 @@ Points d'entrée pour modifier :
 | Linux | AppImage et .deb ; sur Ubuntu ≥ 23.10, `run.sh` indique la commande pour activer la sandbox Chromium |
 
 Icône : `build/icon.png`, logo WorkAdventure servi par l'instance (`/static/images/favicons/icon-512x512.png`).
+Police des titres : Pixelify Sans, SIL Open Font License (`src/renderer/fonts/OFL.txt`).
+Logs de l'app installée : `~/Library/Logs/WorkAdventure/main.log` (macOS), bouton « Ouvrir les logs » dans À propos.
+
+Contribuer avec Claude Code : `.claude/` contient le contexte du projet, ses règles (sécurité, design, Git,
+pièges Electron) et deux procédures (`release`, `verify-ui`) ; outils de vérification dans `scripts/dev/`.
 
 Les installeurs ne sont pas encore signés (Gatekeeper / SmartScreen avertiront au premier lancement).

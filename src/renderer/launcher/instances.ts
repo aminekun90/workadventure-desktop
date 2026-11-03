@@ -85,13 +85,13 @@ function setupCustomCard(): { input: HTMLInputElement; radio: HTMLInputElement; 
 }
 
 function probeCustomUrl(url: string, status: HTMLSpanElement): void {
-  if (!url.trim()) return showStatus(status, "idle", "—");
+  if (!url.trim()) return showStatus(status, "idle", "");
   if (!isHttpUrl(url)) return showStatus(status, "offline", "URL invalide");
   void probeInto(status, { kind: "custom", url });
 }
 
 async function probeInto(status: HTMLSpanElement, choice: Choice): Promise<void> {
-  showStatus(status, "pending", "…");
+  showStatus(status, "pending", "Vérification…");
   const result = await api.probe(choice).catch((): ProbeResult => ({ online: false }));
   showStatus(status, result.online ? "online" : "offline", describe(result));
 }

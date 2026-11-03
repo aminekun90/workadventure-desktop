@@ -14,8 +14,8 @@ describe("listedMaps", () => {
 
   it("hides backups and generated conversions, tells same-name maps apart, sorts by label", () => {
     expect(listedMaps({ maps })).toEqual([
-      { path: "carte-equipe/office.wam", label: "Bureau vierge · carte-equipe" },
-      { path: "carte-test/office.wam", label: "Bureau vierge · carte-test" },
+      { path: "carte-equipe/office.wam", label: "Bureau vierge (carte-equipe)" },
+      { path: "carte-test/office.wam", label: "Bureau vierge (carte-test)" },
       { path: "goyan-garden/office.wam", label: "jardin beta" },
       { path: "goyan/office.wam", label: "Modern Office" },
       { path: "sans-nom/office.wam", label: "sans-nom/office.wam" },
