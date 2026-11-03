@@ -21,6 +21,7 @@
     "package": "yarn build && electron-builder"
   },
   "dependencies": {
+    "electron-updater": "^6.8.11",
     "pino": "^10.4.0",
     "zod": "^4.6.7"
   },

@@ -24,6 +24,23 @@ Sous Windows, passer par Git Bash.
   live de map-storage, sans les sauvegardes `-before-` ni les conversions `tmj-`), espace et hôte courants, recharger.
 - **Session conservée** entre deux lancements ; menu **Se déconnecter** pour tout effacer.
 - **Ton woka** s'affiche dans le launcher, capturé à chaque entrée en salle et au retour à l'accueil.
+- **Mises à jour** : vérifiées au lancement (statut affiché dans le launcher), toutes les 4 h et via le menu
+  « Rechercher les mises à jour… ». Téléchargées en fond depuis la release GitHub, puis bouton « Redémarrer
+  pour la vX » dans la barre et le launcher. Une version beta suit les betas, une stable les stables.
+  - Windows (NSIS) et Linux (AppImage) : electron-updater.
+  - macOS : Squirrel.Mac exige un Developer ID, donc `src/main/mac-update.ts` télécharge le zip, vérifie son
+    SHA-512, l'extrait à côté de l'app et la remplace au redémarrage. Si l'app n'est pas dans un dossier
+    modifiable (lancée depuis le DMG), le bouton propose de télécharger le DMG.
+
+## Publier une version
+
+```bash
+npm pkg set version=0.2.0-beta.1   # suffixe -beta.n → pre-release, sans suffixe → release stable
+git commit -am "chore(release): 0.2.0-beta.1" && git tag v0.2.0-beta.1 && git push --follow-tags
+```
+
+La CI construit les 3 OS, envoie installeurs et manifestes (`latest*.yml`) sur une release brouillon, puis la
+publie une fois complète : les apps installées la voient à leur prochaine vérification.
 
 ## Développer
 

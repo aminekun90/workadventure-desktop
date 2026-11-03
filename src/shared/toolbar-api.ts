@@ -1,3 +1,5 @@
+import type { UpdateApi } from "./update-api.js";
+
 export const TOOLBAR_CHANNELS = {
   openLauncher: "toolbar:open-launcher",
   reload: "toolbar:reload",
@@ -21,4 +23,5 @@ export interface ToolbarApi {
   /** Opens the map menu at the given point of the window (CSS pixels). */
   showMaps(anchor: { x: number; y: number }): Promise<void>;
   onState(listener: (state: ToolbarState) => void): void;
+  update: UpdateApi;
 }

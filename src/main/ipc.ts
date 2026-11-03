@@ -3,6 +3,7 @@ import { z } from "zod";
 import { choiceSchema, choiceUrl, settingsSchema, type Settings } from "../shared/config.js";
 import { LAUNCHER_CHANNELS, type LaunchResult, type LauncherState, type ProbeResult } from "../shared/launcher-api.js";
 import { TOOLBAR_CHANNELS } from "../shared/toolbar-api.js";
+import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
 import { reloadContent, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
@@ -14,12 +15,15 @@ export interface IpcHandlers {
   getLauncherState(): LauncherState;
   launch(request: Settings): Promise<void>;
   openLauncher(): Promise<void>;
+  getUpdateStatus(): UpdateStatus;
+  applyUpdate(): Promise<void>;
 }
 
 /** Payloads come from a renderer: each channel only answers its own bundled page, and validates input. */
 export function registerIpc(handlers: IpcHandlers): void {
   registerLauncherChannels(handlers);
   registerToolbarChannels(handlers);
+  registerUpdateChannels(handlers);
 }
 
 function registerLauncherChannels(handlers: IpcHandlers): void {
@@ -65,6 +69,19 @@ function registerToolbarChannels(handlers: IpcHandlers): void {
   });
 }
 
+/** Update status is shown by both local pages. */
+function registerUpdateChannels(handlers: IpcHandlers): void {
+  ipcMain.handle(UPDATE_CHANNELS.get, (event) => {
+    assertSender(event, LAUNCHER_URL, TOOLBAR_URL);
+    return handlers.getUpdateStatus();
+  });
+
+  ipcMain.handle(UPDATE_CHANNELS.apply, (event) => {
+    assertSender(event, LAUNCHER_URL, TOOLBAR_URL);
+    return handlers.applyUpdate();
+  });
+}
+
 /** An unreachable server is a probe result, not a failure. */
 async function probe(url: string): Promise<ProbeResult> {
   const startedAt = performance.now();
@@ -76,6 +93,7 @@ async function probe(url: string): Promise<ProbeResult> {
   }
 }
 
-function assertSender(event: IpcMainInvokeEvent, expectedUrl: string): void {
-  if (event.senderFrame?.url !== expectedUrl) throw new Error(`IPC refused: sender is not ${expectedUrl}`);
+function assertSender(event: IpcMainInvokeEvent, ...allowedUrls: string[]): void {
+  const senderUrl = event.senderFrame?.url;
+  if (!senderUrl || !allowedUrls.includes(senderUrl)) throw new Error(`IPC refused: sender is not one of ${allowedUrls.join(", ")}`);
 }
