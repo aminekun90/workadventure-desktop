@@ -238,6 +238,10 @@ function checkForUpdatesFromMenu(): void {
 function replaceCurrentWindow(next: BrowserWindow): void {
   const previous = currentWindow;
   currentWindow = next;
+  // Closed by the user or on quit: forget it, late messages from its page must not reach a destroyed window.
+  next.once("closed", () => {
+    if (currentWindow === next) currentWindow = undefined;
+  });
   previous?.close();
 }
 
