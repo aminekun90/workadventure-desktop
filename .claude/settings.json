@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn check)",
+      "Bash(yarn lint)",
+      "Bash(yarn typecheck)",
+      "Bash(yarn test)",
+      "Bash(yarn build)",
+      "Bash(yarn -s check)",
+      "Bash(yarn -s lint)",
+      "Bash(yarn -s typecheck)",
+      "Bash(yarn -s build)",
+      "Bash(npx vitest run:*)",
+      "Bash(./run.sh:*)",
+      "Bash(node scripts/dev/cdp-eval.mjs:*)",
+      "Bash(node scripts/dev/cdp-shot.mjs:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh release view:*)",
+      "Bash(gh release list:*)"
+    ]
+  }
+}
