@@ -1,7 +1,16 @@
 import { Menu, nativeImage, Tray, type MenuItemConstructorOptions } from "electron";
+import type { StatusRequest } from "../shared/content-api.js";
 import { fileURLToPath } from "node:url";
 import { SHORTCUTS } from "./system.js";
 import type { ControlsState } from "./workadventure-controls.js";
+
+/** Same choices and wording as WorkAdventure's status menu (fr-FR), keyed by its enum names. */
+const STATUS_CHOICES: readonly { request: StatusRequest; name: string; label: string }[] = [
+  { request: "online", name: "ONLINE", label: "En ligne" },
+  { request: "busy", name: "BUSY", label: "Occupé" },
+  { request: "do-not-disturb", name: "DO_NOT_DISTURB", label: "Ne pas déranger" },
+  { request: "back-in-a-moment", name: "BACK_IN_A_MOMENT", label: "De retour bientôt" },
+];
 
 /** "Template" suffix: macOS tints the icon for light and dark menu bars (assets/tray.svg is its source). */
 const ICON = fileURLToPath(new URL("../../assets/trayTemplate.png", import.meta.url));
@@ -17,6 +26,7 @@ export interface MenuBarState {
 export interface MenuBarActions {
   toggleMicrophone: () => void;
   toggleCamera: () => void;
+  setStatus: (status: StatusRequest) => void;
   showWindow: () => void;
   openLauncher: () => void;
   setOpenAtLogin: (openAtLogin: boolean) => void;
@@ -44,6 +54,7 @@ function menuTemplate({ space, controls, maps, openAtLogin }: MenuBarState, acti
   const unread = controls?.unread ?? 0;
   return [
     { label: space ? `Dans l'espace ${space}` : "Pas encore dans un espace", enabled: false },
+    { label: `Statut : ${controls?.status?.label ?? ""}`, enabled: false, visible: controls?.status !== undefined },
     { type: "separator" },
     {
       label: controls?.media.microphone ? "Couper le micro" : "Activer le micro",
@@ -58,6 +69,16 @@ function menuTemplate({ space, controls, maps, openAtLogin }: MenuBarState, acti
       registerAccelerator: false,
       enabled: ready,
       click: actions.toggleCamera,
+    },
+    {
+      label: "Statut",
+      enabled: controls?.statusReady ?? false,
+      submenu: STATUS_CHOICES.map(({ request, name, label }) => ({
+        label,
+        type: "radio",
+        checked: controls?.status?.name === name,
+        click: () => actions.setStatus(request),
+      })),
     },
     {
       label: unread === 1 ? "1 message non lu" : `${unread} messages non lus`,

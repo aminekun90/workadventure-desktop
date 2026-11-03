@@ -1,7 +1,7 @@
 // Preload of the remote WorkAdventure page (see src/shared/content-api.ts for what may cross).
 // Sandboxed preloads can only require "electron": channel and command names are inlined, checked by type.
 import electron = require("electron");
-import type { ContentChannel, ContentCommand, MediaState } from "../shared/content-api.js";
+import type { AvailabilityStatus, ContentChannel, ContentCommand, MediaState, StatusRequest } from "../shared/content-api.js";
 
 const { contextBridge, ipcRenderer, webFrame } = electron;
 const send = (channel: ContentChannel, payload?: unknown): void => ipcRenderer.send(channel, payload);
@@ -16,7 +16,8 @@ const UNREAD_CHECK_DELAY_MS = 500;
 // WorkAdventure looks for `window.WAD` at startup (Api/Desktop/index.ts) and registers its own microphone
 // and camera toggles: the main process triggers them, so WorkAdventure stays the only one touching media.
 // Only the members WorkAdventure actually calls are provided.
-const toggles: Partial<Record<ContentCommand, () => void>> = {};
+const toggles: Partial<Record<"toggle-microphone" | "toggle-camera", () => void>> = {};
+let requestStatus: ((request: StatusRequest) => void) | undefined;
 
 contextBridge.exposeInMainWorld("WAD", {
   desktop: true,
@@ -27,9 +28,21 @@ contextBridge.exposeInMainWorld("WAD", {
   onCameraToggle: (callback: () => void) => {
     toggles["toggle-camera"] = callback;
   },
+  // Status members only exist in WorkAdventure builds carrying goyan/workadventure#62.
+  onStatusRequest: (callback: (request: StatusRequest) => void) => {
+    requestStatus = callback;
+    send("content:status-ready");
+  },
+  reportStatus: (name: string, label: string) => {
+    const status: AvailabilityStatus = { name, label };
+    send("content:status", status);
+  },
 });
 
-ipcRenderer.on("content:command" satisfies ContentChannel, (_event, command: ContentCommand) => toggles[command]?.());
+ipcRenderer.on("content:command" satisfies ContentChannel, (_event, command: ContentCommand) => {
+  if (command.type === "set-status") requestStatus?.(command.status);
+  else toggles[command.type]?.();
+});
 
 // --- Signals and state ------------------------------------------------------------------------------------
 contextBridge.exposeInMainWorld("workadventureDesktop", {

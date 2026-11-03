@@ -1,4 +1,5 @@
 import { app, type MenuItemConstructorOptions, type WebContents } from "electron";
+import type { ContentCommand } from "../shared/content-api.js";
 import { logger } from "./logger.js";
 import { createMenuBarItem } from "./menu-bar.js";
 import { isOpenAtLogin, onStepAway, registerGlobalShortcuts, setOpenAtLogin, setUnreadBadge } from "./system.js";
@@ -28,14 +29,16 @@ export function startDesktopIntegration(options: DesktopIntegrationOptions): Des
   let space: string | undefined;
   let maps: MenuItemConstructorOptions[] = [];
 
-  const toggle = (command: "toggle-microphone" | "toggle-camera") => (): void => {
+  const send = (command: ContentCommand): void => {
     const content = options.currentContent();
     if (content) sendCommand(content, command);
   };
+  const toggle = (type: "toggle-microphone" | "toggle-camera") => (): void => send({ type });
 
   const menuBar = createMenuBarItem({
     toggleMicrophone: toggle("toggle-microphone"),
     toggleCamera: toggle("toggle-camera"),
+    setStatus: (status) => send({ type: "set-status", status }),
     showWindow: options.showWindow,
     openLauncher: options.openLauncher,
     setOpenAtLogin: (openAtLogin) => {

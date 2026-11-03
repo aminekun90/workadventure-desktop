@@ -17,6 +17,8 @@
 - **`window.WAD`** est l'API desktop prévue par WA (`play/src/front/Api/Desktop/index.ts`) : WA y enregistre
   ses bascules micro/caméra au montage. On n'expose que les membres que WA appelle ; ne pas exposer
   `getDesktopCapturerSources` sans implémenter tout le sélecteur (WA basculerait sur son propre picker).
+  Le statut (`onStatusRequest`, `reportStatus`) n'existe que dans le front du fork avec goyan/workadventure#62 :
+  sans lui, l'entrée « Statut » reste grisée.
 - **Fermer la fenêtre quitte l'app** (et donc la salle), même avec l'icône de barre de menu.
 - **Profil dev séparé** (`WorkAdventure-dev`) : depuis les sources, l'app ne touche ni ne verrouille la
   session de l'app installée (verrou d'instance unique par profil).

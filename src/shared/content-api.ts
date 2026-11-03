@@ -14,15 +14,29 @@ export const CONTENT_CHANNELS = {
   media: "content:media",
   /** Unread chat messages, as shown on WorkAdventure's chat button. */
   unread: "content:unread",
+  /** WorkAdventure accepts status requests (window.WAD.onStatusRequest, fork goyan/workadventure#62). */
+  statusReady: "content:status-ready",
+  /** Effective availability status: WorkAdventure enum name and its localized label. */
+  status: "content:status",
   /** Main → page. */
   command: "content:command",
 } as const;
 export type ContentChannel = (typeof CONTENT_CHANNELS)[keyof typeof CONTENT_CHANNELS];
 
-export const CONTENT_COMMANDS = ["toggle-microphone", "toggle-camera"] as const;
-export type ContentCommand = (typeof CONTENT_COMMANDS)[number];
+/** The statuses that can be requested: the same choices as WorkAdventure's status menu. */
+export const STATUS_REQUESTS = ["online", "busy", "do-not-disturb", "back-in-a-moment"] as const;
+export type StatusRequest = (typeof STATUS_REQUESTS)[number];
+
+export type ContentCommand = { type: "toggle-microphone" } | { type: "toggle-camera" } | { type: "set-status"; status: StatusRequest };
 
 export interface MediaState {
   microphone: boolean;
   camera: boolean;
+}
+
+export interface AvailabilityStatus {
+  /** WorkAdventure enum name, e.g. "BUSY" or "JITSI". */
+  name: string;
+  /** Label in the user's language, e.g. "En réunion". */
+  label: string;
 }
