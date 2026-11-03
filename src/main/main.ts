@@ -5,12 +5,14 @@ import { choiceLabel, choiceUrl, INSTANCES, instanceIdSchema, resolveStartup, ty
 import type { LauncherState } from "../shared/launcher-api.js";
 import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { defaultWokaUrl, downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAvatar, type Avatar } from "./avatar.js";
+import { DEEP_LINK_PROTOCOL, deepLinkTarget } from "./deep-links.js";
+import { startDesktopIntegration, type DesktopIntegration } from "./desktop-integration.js";
 import { registerIpc } from "./ipc.js";
 import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
 import { logger, logToFile } from "./logger.js";
 import { showAboutWindow } from "./about-window.js";
 import { buildMenu } from "./menu.js";
-import { createPolicy, isAllowedUrl } from "./navigation.js";
+import { createPolicy, isAllowedUrl, TRUSTED_DOMAINS } from "./navigation.js";
 import { logFilePath } from "./paths.js";
 import { installPermissionHandlers } from "./permissions.js";
 import { persistSessionCookies } from "./session-persistence.js";
@@ -36,6 +38,15 @@ let notice: string | undefined;
 let updateStatus: UpdateStatus = { state: "disabled" };
 /** Set by the menu item: the next settled status is reported in a dialog. */
 let manualCheckPending = false;
+let desktop: DesktopIntegration | undefined;
+/** A workadventure:// link that launched the app, opened once it is ready. */
+let pendingDeepLink: string | undefined;
+
+// Registered before `ready`: macOS delivers the link that launched the app right away.
+app.on("open-url", (event, link) => {
+  event.preventDefault();
+  void openDeepLink(link);
+});
 
 if (app.requestSingleInstanceLock()) {
   app.on("second-instance", focusCurrentWindow);
@@ -65,10 +76,22 @@ async function start(): Promise<void> {
     checkForUpdates,
   });
   startUpdater(announceUpdateStatus);
+  if (app.isPackaged) app.setAsDefaultProtocolClient(DEEP_LINK_PROTOCOL);
+  desktop = startDesktopIntegration({
+    currentContent: () => currentWindow && contentOf(currentWindow),
+    showWindow: focusCurrentWindow,
+    openLauncher: () => void openLauncher(),
+    checkForUpdates: checkForUpdatesFromMenu,
+    showAbout: () => void showAboutWindow(),
+  });
   Menu.setApplicationMenu(
     buildMenu({ onOpenLauncher: () => void openLauncher(), onSignOut: () => void signOut(), onCheckForUpdates: checkForUpdatesFromMenu, onShowAbout: () => void showAboutWindow() }),
   );
 
+  if (pendingDeepLink) {
+    await enter({ kind: "custom", url: pendingDeepLink });
+    return;
+  }
   const startup = resolveStartup(
     {
       url: app.commandLine.getSwitchValue("url") || undefined,
@@ -99,9 +122,38 @@ async function enter(choice: Choice): Promise<void> {
   const url = choiceUrl(choice);
   policy = createPolicy(url);
   logger.info({ url }, "Entering WorkAdventure");
+  const label = choiceLabel(choice);
   replaceCurrentWindow(
-    await createWorkAdventureWindow({ url, label: choiceLabel(choice), policy, onRoomLoaded: (content) => void refreshAvatar(content) }),
+    await createWorkAdventureWindow({
+      url,
+      label,
+      policy,
+      onRoomLoaded: (content) => {
+        void refreshAvatar(content);
+        desktop?.roomLoaded(content);
+      },
+    }),
   );
+  desktop?.enteredSpace(label);
+}
+
+/** Opens the room of a workadventure:// link; links to untrusted sites are ignored. */
+async function openDeepLink(link: string): Promise<void> {
+  const target = deepLinkTarget(link, (url) => isAllowedUrl(url, { domains: TRUSTED_DOMAINS, origins: [] }));
+  if (!target) {
+    logger.warn({ link }, "Ignoring deep link to an untrusted or malformed address");
+    return;
+  }
+  if (!app.isReady()) {
+    pendingDeepLink = target;
+    return;
+  }
+  try {
+    await enter({ kind: "custom", url: target });
+    focusCurrentWindow();
+  } catch (error) {
+    logger.error({ err: error, target }, "Could not open deep link");
+  }
 }
 
 async function openLauncher(): Promise<void> {
@@ -109,6 +161,7 @@ async function openLauncher(): Promise<void> {
   const content = currentWindow && contentOf(currentWindow);
   if (content) await refreshAvatar(content);
   replaceCurrentWindow(await createLauncherWindow());
+  desktop?.leftSpace();
 }
 
 /** Purely cosmetic: on failure the launcher keeps the previous avatar. */
@@ -191,5 +244,7 @@ function replaceCurrentWindow(next: BrowserWindow): void {
 function focusCurrentWindow(): void {
   if (!currentWindow) return;
   if (currentWindow.isMinimized()) currentWindow.restore();
+  currentWindow.show();
   currentWindow.focus();
+  app.focus({ steal: true });
 }
