@@ -1,6 +1,6 @@
-import { shell, type BrowserWindowConstructorOptions, type WebContents } from "electron";
+import { app, shell, type BrowserWindowConstructorOptions, type WebContents } from "electron";
 import { logger } from "./logger.js";
-import { isSafeExternalUrl } from "./navigation.js";
+import { isSafeExternalUrl, nativeMusicAppUrl } from "./navigation.js";
 
 export const BACKGROUND = "#0b0d1a";
 export const IS_MAC = process.platform === "darwin";
@@ -44,5 +44,14 @@ function openExternal(url: string): void {
     logger.warn({ url }, "Blocked navigation to unsafe URL");
     return;
   }
-  shell.openExternal(url).catch((error: unknown) => logger.warn({ err: error, url }, "Could not open external URL"));
+  const target = installedMusicAppUrl(url) ?? url;
+  shell.openExternal(target).catch((error: unknown) => logger.warn({ err: error, url: target }, "Could not open external URL"));
+}
+
+/** A Spotify or Apple Music link opens in the app when it is installed, in the web player otherwise. */
+function installedMusicAppUrl(url: string): string | undefined {
+  const nativeUrl = nativeMusicAppUrl(url);
+  if (!nativeUrl) return undefined;
+  const protocol = `${nativeUrl.slice(0, nativeUrl.indexOf(":"))}://`;
+  return app.getApplicationNameForProtocol(protocol) ? nativeUrl : undefined;
 }

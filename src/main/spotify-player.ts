@@ -21,24 +21,45 @@ export function watchSpotify(content: WebContents, { watching }: { watching: boo
 }
 
 /**
- * `title<TAB>artist<TAB>spotify:track:<id>` from the script. Ads, podcasts and local files are not shared: only
- * tracks of the Spotify catalog have a public page.
+ * `spotify<TAB>title<TAB>artist<TAB>album<TAB>spotify:track:<id><TAB>cover` or `apple-music<TAB>title<TAB>artist<TAB>album`
+ * from the script. Ads, podcasts and local files are not shared: only tracks of a catalog are.
  */
 export function parsePlayerOutput(output: string): SpotifyTrack | null {
-  const [title = "", artist = "", uri = ""] = output.trim().split("\t");
+  const [source, title = "", artist = "", album = "", uri = "", cover = ""] = output.replace(/\r?\n$/, "").split("\t");
+  if (!title) return null;
+  if (source === "apple-music") return { title, artist, url: "", ...(album && { album }), source: "apple-music" };
+  if (source !== "spotify") return null;
   const id = /^spotify:track:([A-Za-z0-9]+)$/.exec(uri)?.[1];
-  if (!title || !id) return null;
-  return { title, artist, url: `https://open.spotify.com/track/${id}` };
+  if (!id) return null;
+  return {
+    title,
+    artist,
+    url: `https://open.spotify.com/track/${id}`,
+    ...(album && { album }),
+    ...(cover.startsWith("https://i.scdn.co/image/") && { artworkUrl: cover }),
+    source: "spotify",
+  };
 }
 
 /** Close enough to the player for a track change to show quickly; one osascript run costs a few milliseconds. */
 const POLL_INTERVAL_MS = 5000;
 const OSASCRIPT_TIMEOUT_MS = 3000;
-/** The Spotify scripting dictionary is only compiled once Spotify is known to run: otherwise macOS would ask where it is. */
+/**
+ * Spotify first, then Apple Music: each scripting dictionary is only compiled once its app is known to run, otherwise
+ * macOS would ask where it is. Fields are separated by tabs; the first one names the player.
+ */
 const READ_PLAYER_SCRIPT = `
 if application id "com.spotify.client" is running then
-  return run script "tell application id \\"com.spotify.client\\"
-    if player state is playing then return (name of current track) & tab & (artist of current track) & tab & (spotify url of current track)
+  set playing to run script "tell application id \\"com.spotify.client\\"
+    if player state is playing then return \\"spotify\\" & tab & (name of current track) & tab & (artist of current track) & tab & (album of current track) & tab & (spotify url of current track) & tab & (artwork url of current track)
+    return \\"\\"
+  end tell"
+  if playing is not "" then return playing
+end if
+if application id "com.apple.Music" is running then
+  return run script "tell application id \\"com.apple.Music\\"
+    if player state is playing then return \\"apple-music\\" & tab & (name of current track) & tab & (artist of current track) & tab & (album of current track)
+    return \\"\\"
   end tell"
 end if
 return ""`;

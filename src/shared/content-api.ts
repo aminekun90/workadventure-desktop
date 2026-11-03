@@ -46,10 +46,14 @@ export interface AvailabilityStatus {
   label: string;
 }
 
-/** What the Spotify app of this Mac plays (see src/main/spotify-player.ts). */
+/** What the Spotify or Music app of this Mac plays (see src/main/spotify-player.ts). */
 export interface SpotifyTrack {
   title: string;
   artist: string;
-  /** https://open.spotify.com/track/… */
+  /** https://open.spotify.com/track/…, empty for Apple Music (no public link from the app). */
   url: string;
+  album?: string;
+  /** https://i.scdn.co/image/… (Spotify only). */
+  artworkUrl?: string;
+  source: "spotify" | "apple-music";
 }

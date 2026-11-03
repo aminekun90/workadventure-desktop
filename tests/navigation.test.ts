@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createPolicy, isAllowedUrl, isSafeExternalUrl } from "../src/main/navigation.js";
+import { createPolicy, isAllowedUrl, isSafeExternalUrl, nativeMusicAppUrl } from "../src/main/navigation.js";
 
 describe("isAllowedUrl", () => {
   const policy = createPolicy("https://wa.goyan.fr/");
@@ -40,3 +40,23 @@ describe("isSafeExternalUrl", () => {
     expect(isSafeExternalUrl(url)).toBe(false),
   );
 });
+
+describe("nativeMusicAppUrl", () => {
+  it("opens Spotify tracks and searches in the Spotify app", () => {
+    expect(nativeMusicAppUrl("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC")).toBe("spotify:track:4uLU6hMCjMI75M1A2tKUQC");
+    expect(nativeMusicAppUrl("https://open.spotify.com/search/Song%20Artist")).toBe("spotify:search:Song%20Artist");
+  });
+
+  it("opens Apple Music pages in the Music app", () => {
+    expect(nativeMusicAppUrl("https://music.apple.com/search?term=Song%20Artist")).toBe(
+      "music://music.apple.com/search?term=Song%20Artist",
+    );
+  });
+
+  it("leaves every other link to the browser", () => {
+    expect(nativeMusicAppUrl("https://open.spotify.com/playlist/abc")).toBeUndefined();
+    expect(nativeMusicAppUrl("http://open.spotify.com/track/abc")).toBeUndefined();
+    expect(nativeMusicAppUrl("https://wa.goyan.fr/")).toBeUndefined();
+  });
+});
+
