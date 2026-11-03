@@ -14,6 +14,7 @@ import { createPolicy, isAllowedUrl } from "./navigation.js";
 import { installPermissionHandlers } from "./permissions.js";
 import { persistSessionCookies } from "./session-persistence.js";
 import { loadSettings, saveSettings } from "./settings.js";
+import { reportManualCheck } from "./update-dialog.js";
 import { applyUpdate, checkForUpdates, startUpdater } from "./updater.js";
 import { contentOf, createWorkAdventureWindow } from "./workadventure-window.js";
 
@@ -31,6 +32,8 @@ let policy = createPolicy(INSTANCES.prod.url);
 let currentWindow: BrowserWindow | undefined;
 let notice: string | undefined;
 let updateStatus: UpdateStatus = { state: "disabled" };
+/** Set by the menu item: the next settled status is reported in a dialog. */
+let manualCheckPending = false;
 
 if (app.requestSingleInstanceLock()) {
   app.on("second-instance", focusCurrentWindow);
@@ -61,7 +64,7 @@ async function start(): Promise<void> {
   });
   startUpdater(announceUpdateStatus);
   Menu.setApplicationMenu(
-    buildMenu({ onOpenLauncher: () => void openLauncher(), onSignOut: () => void signOut(), onCheckForUpdates: checkForUpdates }),
+    buildMenu({ onOpenLauncher: () => void openLauncher(), onSignOut: () => void signOut(), onCheckForUpdates: checkForUpdatesFromMenu }),
   );
 
   const startup = resolveStartup(
@@ -160,6 +163,20 @@ async function launcherState(): Promise<LauncherState> {
 function announceUpdateStatus(status: UpdateStatus): void {
   updateStatus = status;
   for (const window of BrowserWindow.getAllWindows()) window.webContents.send(UPDATE_CHANNELS.changed, status);
+  if (manualCheckPending && status.state !== "checking") {
+    manualCheckPending = false;
+    void reportManualCheck(status, { parent: currentWindow, onApply: () => applyUpdate(status) });
+  }
+}
+
+/** Already downloaded or running from sources: answer right away; otherwise check and answer when settled. */
+function checkForUpdatesFromMenu(): void {
+  if (updateStatus.state === "ready" || updateStatus.state === "disabled") {
+    void reportManualCheck(updateStatus, { parent: currentWindow, onApply: () => applyUpdate(updateStatus) });
+    return;
+  }
+  manualCheckPending = true;
+  checkForUpdates();
 }
 
 /** The new window opens before the old one closes, so `window-all-closed` never fires in between. */

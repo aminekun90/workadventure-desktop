@@ -15,7 +15,8 @@ const RELEASES_URL = "https://github.com/aminekun90/workadventure-desktop/releas
  */
 const IS_MAC = process.platform === "darwin";
 
-let preparedMacUpdate: PreparedUpdate | undefined;
+/** The macOS update being downloaded or ready: a later check finding the same version reuses it. */
+let macUpdate: { version: string; status: UpdateStatus; prepared?: PreparedUpdate } | undefined;
 
 /** Checks GitHub releases at launch, then every few hours; reports each step to `onChange`. */
 export function startUpdater(onChange: (status: UpdateStatus) => void): void {
@@ -36,8 +37,15 @@ export function startUpdater(onChange: (status: UpdateStatus) => void): void {
   autoUpdater.on("error", () => onChange({ state: "failed" }));
   autoUpdater.on("update-available", (info) => {
     incomingVersion = info.version;
-    onChange({ state: "downloading", version: info.version, percent: 0 });
-    if (IS_MAC) void prepareMacUpdate(info, onChange);
+    if (!IS_MAC) {
+      onChange({ state: "downloading", version: info.version, percent: 0 });
+      return;
+    }
+    if (macUpdate?.version === info.version) {
+      onChange(macUpdate.status);
+      return;
+    }
+    void prepareMacUpdate(info, onChange);
   });
   autoUpdater.on("download-progress", ({ percent }) => {
     onChange({ state: "downloading", version: incomingVersion, percent: Math.round(percent) });
@@ -65,31 +73,36 @@ export async function applyUpdate(status: UpdateStatus): Promise<void> {
     autoUpdater.quitAndInstall();
     return;
   }
-  if (!preparedMacUpdate) throw new Error("No prepared macOS update to install");
-  installOnQuit(preparedMacUpdate);
+  if (!macUpdate?.prepared) throw new Error("No prepared macOS update to install");
+  installOnQuit(macUpdate.prepared);
   app.quit();
 }
 
 /** Falls back to the download page when the app cannot replace itself (run from the DMG, no write access). */
 async function prepareMacUpdate({ version, files }: UpdateInfo, onChange: (status: UpdateStatus) => void): Promise<void> {
+  const report = (status: UpdateStatus, prepared?: PreparedUpdate): void => {
+    macUpdate = { version, status, ...(prepared && { prepared }) };
+    onChange(status);
+  };
   const bundle = replaceableBundle(app.getPath("exe"));
   const file = pickZip(files, process.arch);
   if (!bundle || !file) {
     logger.info({ version, bundle, arch: process.arch }, "macOS update cannot be installed in place, offering the download");
-    onChange({ state: "ready", version, action: "download" });
+    report({ state: "ready", version, action: "download" });
     return;
   }
+  report({ state: "downloading", version, percent: 0 });
   try {
-    preparedMacUpdate = await prepareUpdate({
+    const prepared = await prepareUpdate({
       version,
       file,
       bundle,
       fetch: (url) => net.fetch(url),
-      onProgress: (percent) => onChange({ state: "downloading", version, percent }),
+      onProgress: (percent) => report({ state: "downloading", version, percent }),
     });
-    onChange({ state: "ready", version, action: "restart" });
+    report({ state: "ready", version, action: "restart" }, prepared);
   } catch (error) {
     logger.error({ err: error, version }, "macOS update preparation failed, offering the download");
-    onChange({ state: "ready", version, action: "download" });
+    report({ state: "ready", version, action: "download" });
   }
 }
