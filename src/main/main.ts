@@ -1,0 +1,136 @@
+import { app, Menu, net, powerSaveBlocker, session, type BrowserWindow, type WebContents } from "electron";
+import { rmSync } from "node:fs";
+import { join } from "node:path";
+import { choiceLabel, choiceUrl, INSTANCES, instanceIdSchema, resolveStartup, type Choice, type Settings } from "../shared/config.js";
+import type { LauncherState } from "../shared/launcher-api.js";
+import { downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAvatar } from "./avatar.js";
+import { registerIpc } from "./ipc.js";
+import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
+import { logger } from "./logger.js";
+import { buildMenu } from "./menu.js";
+import { createPolicy, isAllowedUrl } from "./navigation.js";
+import { installPermissionHandlers } from "./permissions.js";
+import { persistSessionCookies } from "./session-persistence.js";
+import { loadSettings, saveSettings } from "./settings.js";
+import { contentOf, createWorkAdventureWindow } from "./workadventure-window.js";
+
+// Chromium throttles hidden and occluded windows by default; WorkAdventure must stay live.
+app.commandLine.appendSwitch("disable-background-timer-throttling");
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
+app.setName("WorkAdventure");
+
+const settingsPath = join(app.getPath("userData"), "settings.json");
+const avatarPath = join(app.getPath("userData"), "avatar.json");
+let policy = createPolicy(INSTANCES.prod.url);
+let currentWindow: BrowserWindow | undefined;
+let notice: string | undefined;
+
+if (app.requestSingleInstanceLock()) {
+  app.on("second-instance", focusCurrentWindow);
+  app.on("window-all-closed", () => app.quit());
+  // No top-level await: Electron only emits `ready` once the ESM entry has finished evaluating.
+  app
+    .whenReady()
+    .then(start)
+    .catch((error: unknown) => {
+      logger.fatal({ err: error }, "Startup failed");
+      app.exit(1);
+    });
+} else {
+  app.quit();
+}
+
+async function start(): Promise<void> {
+  powerSaveBlocker.start("prevent-app-suspension");
+  installPermissionHandlers(session.defaultSession, (url) => url.startsWith(LAUNCHER_URL) || isAllowedUrl(url, policy));
+  persistSessionCookies(session.defaultSession, (url) => isAllowedUrl(url, policy));
+  registerIpc({ getLauncherState: launcherState, launch, openLauncher });
+  Menu.setApplicationMenu(buildMenu({ onOpenLauncher: () => void openLauncher(), onSignOut: () => void signOut() }));
+
+  const startup = resolveStartup(
+    {
+      url: app.commandLine.getSwitchValue("url") || undefined,
+      instance: app.commandLine.getSwitchValue("instance") || undefined,
+      launcher: app.commandLine.hasSwitch("launcher"),
+    },
+    loadSettings(settingsPath),
+  );
+  if (startup.mode === "launcher") {
+    await openLauncher();
+    return;
+  }
+  try {
+    await enter(startup.choice);
+  } catch (error) {
+    logger.error({ err: error }, "Direct launch failed, opening launcher");
+    notice = `Impossible de joindre ${new URL(choiceUrl(startup.choice)).host}`;
+    await openLauncher();
+  }
+}
+
+async function launch(request: Settings): Promise<void> {
+  await enter(request.choice);
+  saveSettings(settingsPath, request);
+}
+
+async function enter(choice: Choice): Promise<void> {
+  const url = choiceUrl(choice);
+  policy = createPolicy(url);
+  logger.info({ url }, "Entering WorkAdventure");
+  replaceCurrentWindow(
+    await createWorkAdventureWindow({ url, label: choiceLabel(choice), policy, onRoomLoaded: (content) => void refreshAvatar(content) }),
+  );
+}
+
+async function openLauncher(): Promise<void> {
+  // Leaving a room: catch any woka change made during the session before the page closes.
+  const content = currentWindow && contentOf(currentWindow);
+  if (content) await refreshAvatar(content);
+  replaceCurrentWindow(await createLauncherWindow());
+}
+
+/** Purely cosmetic: on failure the launcher keeps the previous avatar. */
+async function refreshAvatar(content: WebContents): Promise<void> {
+  try {
+    const layerUrls: unknown = await content.executeJavaScript(READ_AVATAR_SCRIPT, true);
+    const avatar = await downloadAvatar({ layerUrls, isTrusted: (url) => isAllowedUrl(url, policy), fetch: net.fetch });
+    if (avatar) saveAvatar(avatarPath, avatar);
+  } catch (error) {
+    logger.warn({ err: error }, "Could not refresh the avatar");
+  }
+}
+
+/** Clears cookies and site storage (Authentik session, WorkAdventure token), then back to the launcher. */
+async function signOut(): Promise<void> {
+  await session.defaultSession.clearStorageData();
+  rmSync(avatarPath, { force: true });
+  logger.info("Signed out");
+  await openLauncher();
+}
+
+function launcherState(): LauncherState {
+  const avatar = loadAvatar(avatarPath);
+  const state: LauncherState = {
+    instances: instanceIdSchema.options.map((id) => ({ id, ...INSTANCES[id], host: new URL(INSTANCES[id].url).host })),
+    settings: loadSettings(settingsPath),
+    version: app.getVersion(),
+    ...(notice && { notice }),
+    ...(avatar && { avatar: avatar.layers }),
+  };
+  notice = undefined;
+  return state;
+}
+
+/** The new window opens before the old one closes, so `window-all-closed` never fires in between. */
+function replaceCurrentWindow(next: BrowserWindow): void {
+  const previous = currentWindow;
+  currentWindow = next;
+  previous?.close();
+}
+
+function focusCurrentWindow(): void {
+  if (!currentWindow) return;
+  if (currentWindow.isMinimized()) currentWindow.restore();
+  currentWindow.focus();
+}

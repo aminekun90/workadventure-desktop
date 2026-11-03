@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' mediastream: blob:"
+    />
+    <title>WorkAdventure</title>
+    <link rel="stylesheet" href="../theme.css" />
+    <link rel="stylesheet" href="launcher.css" />
+    <script type="module" src="main.js"></script>
+  </head>
+  <body>
+    <div class="titlebar" aria-hidden="true"></div>
+    <div class="sky" aria-hidden="true">
+      <span class="glow glow-a"></span>
+      <span class="glow glow-b"></span>
+      <span class="stars"></span>
+    </div>
+
+    <main class="layout">
+      <section class="hero">
+        <div class="stage" aria-hidden="true">
+          <svg class="woka" viewBox="0 0 16 18" shape-rendering="crispEdges">
+            <rect class="hair" x="5" y="1" width="6" height="2" />
+            <rect class="hair" x="4" y="2" width="8" height="2" />
+            <rect class="hair" x="4" y="4" width="1" height="2" />
+            <rect class="hair" x="11" y="4" width="1" height="2" />
+            <rect class="skin" x="5" y="4" width="6" height="4" />
+            <rect class="eye" x="6" y="5" width="1" height="2" />
+            <rect class="eye" x="9" y="5" width="1" height="2" />
+            <rect class="cheek" x="5" y="7" width="1" height="1" />
+            <rect class="cheek" x="10" y="7" width="1" height="1" />
+            <rect class="hoodie" x="4" y="8" width="8" height="5" />
+            <rect class="hoodie-shade" x="7" y="8" width="2" height="2" />
+            <rect class="hoodie" x="3" y="9" width="1" height="3" />
+            <rect class="hoodie" x="12" y="9" width="1" height="3" />
+            <rect class="skin" x="3" y="12" width="1" height="1" />
+            <rect class="skin" x="12" y="12" width="1" height="1" />
+            <rect class="legs" x="5" y="13" width="2" height="2" />
+            <rect class="legs" x="9" y="13" width="2" height="2" />
+            <rect class="shoes" x="4" y="15" width="3" height="1" />
+            <rect class="shoes" x="9" y="15" width="3" height="1" />
+          </svg>
+          <div id="avatar" class="avatar"></div>
+          <span class="shadow"></span>
+          <span class="tiles"></span>
+        </div>
+        <h1>WorkAdventure</h1>
+        <p class="tagline">Ton bureau virtuel, sans décrochage.</p>
+
+        <div class="devices">
+          <div class="preview" data-active="false">
+            <video id="preview" autoplay muted playsinline></video>
+            <span class="preview-placeholder">Caméra coupée</span>
+          </div>
+          <div class="meter" aria-label="Niveau du micro"><span id="meter-level"></span></div>
+          <button id="devices" class="ghost" type="button">Tester caméra et micro</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Choisis ton espace</h2>
+        <div id="instances" class="instances" role="radiogroup" aria-label="Espace WorkAdventure"></div>
+
+        <label class="card custom">
+          <input type="radio" name="instance" value="custom" />
+          <span class="card-body">
+            <span class="card-head">
+              <span class="card-title">URL personnalisée</span>
+              <span class="status" data-state="idle"><span class="dot"></span><span class="status-text">—</span></span>
+            </span>
+            <input id="custom-url" class="url" type="url" placeholder="http://play.workadventure.localhost/" spellcheck="false" />
+          </span>
+        </label>
+
+        <label class="toggle">
+          <input id="skip" type="checkbox" />
+          <span class="switch" aria-hidden="true"></span>
+          Rejoindre directement au prochain lancement
+        </label>
+
+        <button id="enter" class="enter" type="button">
+          <span class="enter-label">Entrer</span>
+          <kbd>↵</kbd>
+        </button>
+        <p id="error" class="error" role="alert" hidden></p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span id="version"></span>
+      <span>Revenir ici à tout moment : <kbd id="shortcut">Ctrl ⇧ L</kbd></span>
+    </footer>
+
+    <template id="instance-template">
+      <label class="card">
+        <input type="radio" name="instance" />
+        <span class="card-body">
+          <span class="card-head">
+            <span class="card-title"></span>
+            <span class="status" data-state="pending"><span class="dot"></span><span class="status-text">…</span></span>
+          </span>
+          <span class="card-host"></span>
+        </span>
+      </label>
+    </template>
+  </body>
+</html>
