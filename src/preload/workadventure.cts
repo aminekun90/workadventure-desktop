@@ -74,6 +74,9 @@ contextBridge.exposeInMainWorld("WAD", {
     };
   },
   dequeueOnSpotify: (track: unknown) => send("content:dequeue", track),
+  moveInSpotifyQueue: (move: unknown) => send("content:move", move),
+  // Heart on a card or a Jukebox track: saved to the Liked Songs of this Spotify.
+  likeOnSpotify: (track: unknown) => send("content:like", track),
   // Spotify sharing without an account: WorkAdventure calls it while sharing is on (fork, LocalSpotifyPlayer.ts).
   watchSpotifyTrack: (callback: (track: SpotifyTrack | null) => void) => {
     onSpotifyTrack = callback;

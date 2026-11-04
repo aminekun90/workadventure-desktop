@@ -1,6 +1,6 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import { z } from "zod";
-import type { EnqueueRequest, FollowTarget, HomeJam, QueuedTrack, SpotifyTrack } from "../shared/content-api.js";
+import type { EnqueueRequest, FollowTarget, HomeJam, QueueMove, QueuedTrack, SpotifyTrack } from "../shared/content-api.js";
 import { logger } from "./logger.js";
 import { queueRequestSchema, queueSchema } from "./workadventure-controls.js";
 
@@ -109,6 +109,16 @@ export function enqueueOnSpicetify(request: EnqueueRequest): void {
 /** As the Jukebox's host: removes a track from the queue of this Spotify. */
 export function dequeueOnSpicetify(track: Pick<QueuedTrack, "uri" | "uid">): void {
   extension?.send(JSON.stringify({ type: "dequeue", uri: track.uri, uid: track.uid }));
+}
+
+/** As the Jukebox's host: moves a track of the queue before or after another one. */
+export function moveInSpicetifyQueue(move: QueueMove): void {
+  extension?.send(JSON.stringify({ type: "move", ...move }));
+}
+
+/** Saves a track to the Liked Songs of this Spotify. */
+export function likeOnSpicetify(uri: string): void {
+  extension?.send(JSON.stringify({ type: "like", uri }));
 }
 
 /** The tracks added to the queue of this Spotify, as last reported by the extension; empty without it. */

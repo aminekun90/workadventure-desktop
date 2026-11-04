@@ -14,6 +14,8 @@ import {
   dequeueOnSpicetify,
   enqueueOnSpicetify,
   followOnSpicetify,
+  likeOnSpicetify,
+  moveInSpicetifyQueue,
   onSpicetifyChange,
   onSpicetifyQueue,
   onSpicetifyQueueRequest,
@@ -24,6 +26,8 @@ import {
 import {
   dequeueSchema,
   enqueueSchema,
+  likeSchema,
+  moveSchema,
   followSchema,
   homeJamSchema,
   listeningSchema,
@@ -235,6 +239,14 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.dequeue, (event, payload: unknown) => {
     const track = dequeueSchema.safeParse(payload);
     if (track.success && isWorkAdventureContent(event.sender)) dequeueOnSpicetify(track.data);
+  });
+  ipcMain.on(CONTENT_CHANNELS.move, (event, payload: unknown) => {
+    const move = moveSchema.safeParse(payload);
+    if (move.success && isWorkAdventureContent(event.sender)) moveInSpicetifyQueue(move.data);
+  });
+  ipcMain.on(CONTENT_CHANNELS.like, (event, payload: unknown) => {
+    const like = likeSchema.safeParse(payload);
+    if (like.success && isWorkAdventureContent(event.sender)) likeOnSpicetify(like.data.uri);
   });
   ipcMain.on(CONTENT_CHANNELS.unread, (event, payload: unknown) => {
     const unread = unreadSchema.safeParse(payload);
