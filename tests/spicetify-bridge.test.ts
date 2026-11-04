@@ -71,6 +71,33 @@ describe("Spicetify bridge", () => {
     });
   });
 
+  it("passes the playlist the track plays from, and drops another kind of context", async () => {
+    const url = await start();
+    client = await connect(url, SPOTIFY_ORIGIN);
+    const state = (context: unknown) =>
+      JSON.stringify({
+        type: "state",
+        track: { uri: "spotify:track:abc", title: "Song", artist: "Artist", album: "", artworkUrl: "" },
+        positionMs: 0,
+        positionAt: 1,
+        context,
+      });
+
+    let changed = nextChange();
+    client.send(state({ uri: "spotify:playlist:37i9dQZF1DX8Uebhn9wzrS", name: "Focus" }));
+    await changed;
+    expect(bridge.spicetifyTrack()).toMatchObject({
+      contextUri: "spotify:playlist:37i9dQZF1DX8Uebhn9wzrS",
+      contextName: "Focus",
+    });
+
+    changed = nextChange();
+    client.send(state({ uri: "spotify:artist:abc", name: "Artist radio" }));
+    await changed;
+    expect(bridge.spicetifyTrack()).toMatchObject({ title: "Song" });
+    expect(bridge.spicetifyTrack()).not.toHaveProperty("contextUri");
+  });
+
   it("ignores a state with an unsafe link", async () => {
     const url = await start();
     client = await connect(url, SPOTIFY_ORIGIN);

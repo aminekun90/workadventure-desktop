@@ -12,6 +12,7 @@ import {
   currentEnvironment,
   installListenAlong,
   readListenAlongAnswer,
+  updateListenAlongExtension,
   saveListenAlongAnswer,
   shouldOfferListenAlong,
 } from "./listen-along-install.js";
@@ -91,6 +92,9 @@ async function start(): Promise<void> {
   });
   startUpdater(announceUpdateStatus);
   startSpicetifyBridge();
+  updateListenAlongExtension(currentEnvironment(), net.fetch).catch((error: unknown) =>
+    logger.warn({ err: error }, "Could not update the listen along extension"),
+  );
   if (app.isPackaged) app.setAsDefaultProtocolClient(DEEP_LINK_PROTOCOL);
   desktop = startDesktopIntegration({
     currentContent: () => currentWindow && contentOf(currentWindow),

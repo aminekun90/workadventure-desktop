@@ -24,6 +24,15 @@ const stateSchema = z.object({
     .nullable(),
   positionMs: z.number().int().nonnegative(),
   positionAt: z.number().positive(),
+  // The playlist or album the track plays from (extension 1.1.0+). Anything else is dropped, not the whole state.
+  context: z
+    .object({
+      uri: z.string().regex(/^spotify:(playlist|album):[A-Za-z0-9]+$/),
+      name: z.string().max(200),
+    })
+    .nullable()
+    .optional()
+    .catch(null),
 });
 
 let extension: WebSocket | undefined;
@@ -88,7 +97,7 @@ function receive(socket: WebSocket, raw: string): void {
   }
   const state = stateSchema.safeParse(json);
   if (!state.success) return;
-  const { track: playing, positionMs, positionAt } = state.data;
+  const { track: playing, positionMs, positionAt, context } = state.data;
   track = playing && {
     title: playing.title,
     artist: playing.artist,
@@ -98,6 +107,7 @@ function receive(socket: WebSocket, raw: string): void {
     source: "spotify",
     positionMs,
     positionAt,
+    ...(context && { contextUri: context.uri, contextName: context.name }),
   };
   notify();
 }

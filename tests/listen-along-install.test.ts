@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +13,7 @@ const {
   spicetifyCandidates,
   spicetifyTarget,
   spotifyLocations,
+  updateListenAlongExtension,
 } = await import("../src/main/listen-along-install.js");
 
 const homes: string[] = [];
@@ -73,5 +74,50 @@ describe("listen along installation", () => {
     writeFileSync(config, "[AdditionalOptions]\nextensions            = adblock.js\n");
     expect(extensionConfigured(windows)).toBe(false);
     expect(shouldOfferListenAlong(windows, undefined)).toBe(true);
+  });
+
+  describe("extension update", () => {
+    /** A Mac with Spicetify set up with the extension; `spicetify` records its arguments. */
+    function setUp(installed: string) {
+      const home = fakeHome();
+      mkdirSync(join(home, ".config", "spicetify", "Extensions"), { recursive: true });
+      writeFileSync(join(home, ".config", "spicetify", "config-xpui.ini"), "extensions = workadventure.js\n");
+      writeFileSync(join(home, ".config", "spicetify", "Extensions", "workadventure.js"), installed);
+      mkdirSync(join(home, ".spicetify"));
+      const calls = join(home, "calls");
+      writeFileSync(join(home, ".spicetify", "spicetify"), `#!/bin/sh\necho "$@" >> "${calls}"\n`);
+      chmodSync(join(home, ".spicetify", "spicetify"), 0o755);
+      return {
+        env: mac(home),
+        extension: () => readFileSync(join(home, ".config", "spicetify", "Extensions", "workadventure.js"), "utf8"),
+        calls: () => (existsSync(calls) ? readFileSync(calls, "utf8").trim().split("\n") : []),
+      };
+    }
+    const fetchPinned = vi.fn(async () => new Response("// v1.1.0"));
+
+    it("replaces an older extension and restarts a running Spotify to load it", async () => {
+      const mac = setUp("// v1.0.0");
+      expect(await updateListenAlongExtension(mac.env, fetchPinned, async () => true)).toBe(true);
+      expect(mac.extension()).toBe("// v1.1.0");
+      expect(mac.calls()).toEqual(["apply"]);
+    });
+
+    it("does not open a closed Spotify: the new version loads when it starts", async () => {
+      const mac = setUp("// v1.0.0");
+      expect(await updateListenAlongExtension(mac.env, fetchPinned, async () => false)).toBe(true);
+      expect(mac.calls()).toEqual(["apply --no-restart"]);
+    });
+
+    it("leaves an up-to-date extension and Spotify alone", async () => {
+      const mac = setUp("// v1.1.0");
+      expect(await updateListenAlongExtension(mac.env, fetchPinned, async () => true)).toBe(false);
+      expect(mac.calls()).toEqual([]);
+    });
+
+    it("installs nothing for someone who did not set up the extension", async () => {
+      const fetchNothing = vi.fn(async () => new Response(""));
+      expect(await updateListenAlongExtension(mac(fakeHome()), fetchNothing)).toBe(false);
+      expect(fetchNothing).not.toHaveBeenCalled();
+    });
   });
 });
