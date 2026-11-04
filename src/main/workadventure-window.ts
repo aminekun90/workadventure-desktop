@@ -6,7 +6,7 @@ import { logger } from "./logger.js";
 import { currentMapPath, fetchMaps, mapUrl } from "./maps.js";
 import { resetControls } from "./workadventure-controls.js";
 import { isAllowedUrl, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
-import { BACKGROUND, framelessChrome, relayConsole, routeNavigation } from "./window-common.js";
+import { BACKGROUND, framelessChrome, relayConsole, routeNavigation, screenWorkArea } from "./window-common.js";
 
 const TOOLBAR_HTML = fileURLToPath(new URL("../renderer/toolbar/index.html", import.meta.url));
 const TOOLBAR_PRELOAD = fileURLToPath(new URL("../preload/toolbar.cjs", import.meta.url));
@@ -42,8 +42,7 @@ export interface WorkAdventureTarget {
  */
 export async function createWorkAdventureWindow({ url, label, policy, onRoomLoaded }: WorkAdventureTarget): Promise<BrowserWindow> {
   const window = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    ...screenWorkArea(),
     minWidth: 960,
     minHeight: 600,
     show: false,

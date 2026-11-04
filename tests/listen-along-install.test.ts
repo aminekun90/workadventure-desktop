@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../src/main/logger.js", () => ({ logger: { info: vi.fn(), warn: vi.fn() } }));
 
 const {
+  extensionConfigured,
   readListenAlongAnswer,
   saveListenAlongAnswer,
   shouldOfferListenAlong,
@@ -55,5 +56,22 @@ describe("listen along installation", () => {
     saveListenAlongAnswer(answerFile, "dismissed");
     expect(readListenAlongAnswer(answerFile)).toBe("dismissed");
     expect(shouldOfferListenAlong(windows, readListenAlongAnswer(answerFile))).toBe(false);
+  });
+
+  it("is not offered when the extension is already set up in Spicetify", () => {
+    const appData = fakeHome();
+    const windows = { platform: "win32" as const, arch: "x64", home: appData, appData, localAppData: appData };
+    mkdirSync(join(appData, "Spotify"));
+    writeFileSync(join(appData, "Spotify", "Spotify.exe"), "");
+    mkdirSync(join(appData, "spicetify"));
+    const config = join(appData, "spicetify", "config-xpui.ini");
+
+    writeFileSync(config, "[AdditionalOptions]\nextensions            = adblock.js|workadventure.js\n");
+    expect(extensionConfigured(windows)).toBe(true);
+    expect(shouldOfferListenAlong(windows, undefined)).toBe(false);
+
+    writeFileSync(config, "[AdditionalOptions]\nextensions            = adblock.js\n");
+    expect(extensionConfigured(windows)).toBe(false);
+    expect(shouldOfferListenAlong(windows, undefined)).toBe(true);
   });
 });

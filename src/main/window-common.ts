@@ -1,4 +1,4 @@
-import { app, shell, type BrowserWindowConstructorOptions, type WebContents } from "electron";
+import { app, screen, shell, type BrowserWindowConstructorOptions, type Rectangle, type WebContents } from "electron";
 import { logger } from "./logger.js";
 import { isSafeExternalUrl, nativeMusicAppUrl } from "./navigation.js";
 
@@ -6,6 +6,11 @@ export const BACKGROUND = "#0b0d1a";
 export const IS_MAC = process.platform === "darwin";
 
 /** Hides the native title bar: our page draws it, and keeps drag + double-click-to-maximize natively. */
+/** The usable area (Dock and menu bar excluded) of the screen the pointer is on: windows open filling it. */
+export function screenWorkArea(): Rectangle {
+  return screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+}
+
 export function framelessChrome({ height, color }: { height: number; color: string }): BrowserWindowConstructorOptions {
   return {
     titleBarStyle: "hidden",
