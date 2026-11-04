@@ -45,6 +45,8 @@ contextBridge.exposeInMainWorld("WAD", {
     const status: AvailabilityStatus = { name, label };
     send("content:status", status);
   },
+  // What the user shares about their listening, whatever its source (fork, Api/Desktop/index.ts). Validated in main.
+  reportListening: (listening: unknown) => send("content:listening", listening),
   // Spotify sharing without an account: WorkAdventure calls it while sharing is on (fork, LocalSpotifyPlayer.ts).
   watchSpotifyTrack: (callback: (track: SpotifyTrack | null) => void) => {
     onSpotifyTrack = callback;

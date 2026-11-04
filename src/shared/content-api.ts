@@ -23,6 +23,8 @@ export const CONTENT_CHANNELS = {
   spotifyWatch: "content:spotify-watch",
   /** Main → page: the track Spotify plays, or null. */
   spotifyTrack: "content:spotify-track",
+  /** What the user shares about their listening, whatever its source (window.WAD.reportListening). */
+  listening: "content:listening",
   /** Main → page. */
   command: "content:command",
 } as const;
@@ -44,6 +46,25 @@ export interface AvailabilityStatus {
   name: string;
   /** Label in the user's language, e.g. "En réunion". */
   label: string;
+}
+
+/**
+ * What the user shares about their listening, as WorkAdventure publishes it: read from the Spotify or Music app of
+ * this Mac, or from the Web API of a linked Spotify account (phone, web player, speaker). Empty strings when nothing
+ * is shared.
+ */
+export interface Listening {
+  title: string;
+  artist: string;
+  album: string;
+  /** https://open.spotify.com/track/…, empty for Apple Music. */
+  url: string;
+  /** https://i.scdn.co/image/… (Spotify only). */
+  artworkUrl: string;
+  /** Empty when nothing plays. */
+  source: "spotify" | "apple-music" | "";
+  /** The listening zone whose Spotify Jam the user joined, empty otherwise. */
+  jamAreaName: string;
 }
 
 /** What the Spotify or Music app of this Mac plays (see src/main/spotify-player.ts). */

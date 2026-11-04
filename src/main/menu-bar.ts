@@ -1,5 +1,5 @@
 import { Menu, nativeImage, Tray, type MenuItemConstructorOptions } from "electron";
-import type { StatusRequest } from "../shared/content-api.js";
+import type { Listening, StatusRequest } from "../shared/content-api.js";
 import { fileURLToPath } from "node:url";
 import { SHORTCUTS } from "./system.js";
 import type { ControlsState } from "./workadventure-controls.js";
@@ -27,6 +27,8 @@ export interface MenuBarActions {
   toggleMicrophone: () => void;
   toggleCamera: () => void;
   setStatus: (status: StatusRequest) => void;
+  /** Opens the shared track, in the Spotify app when it is installed. */
+  openTrack: (url: string) => void;
   showWindow: () => void;
   openLauncher: () => void;
   setOpenAtLogin: (openAtLogin: boolean) => void;
@@ -49,12 +51,34 @@ export function createMenuBarItem(actions: MenuBarActions): { update: (state: Me
   };
 }
 
+/** Long titles would stretch the whole menu. */
+const MAX_LISTENING_LABEL = 60;
+
+/** What the user shares, whatever its source: the track (a click opens it) and the Jam they joined. */
+export function listeningItems(listening: Listening | undefined, actions: Pick<MenuBarActions, "openTrack">): MenuItemConstructorOptions[] {
+  if (!listening) return [];
+  const items: MenuItemConstructorOptions[] = [];
+  if (listening.title) {
+    const track = listening.artist ? `${listening.title} — ${listening.artist}` : listening.title;
+    const label = `En écoute : ${track}`;
+    const { url } = listening;
+    items.push({
+      label: label.length > MAX_LISTENING_LABEL ? `${label.slice(0, MAX_LISTENING_LABEL - 1)}…` : label,
+      enabled: url !== "",
+      click: () => actions.openTrack(url),
+    });
+  }
+  if (listening.jamAreaName) items.push({ label: `Dans la Jam : ${listening.jamAreaName}`, enabled: false });
+  return items;
+}
+
 function menuTemplate({ space, controls, maps, openAtLogin }: MenuBarState, actions: MenuBarActions): MenuItemConstructorOptions[] {
   const ready = controls?.ready ?? false;
   const unread = controls?.unread ?? 0;
   return [
     { label: space ? `Dans l'espace ${space}` : "Pas encore dans un espace", enabled: false },
     { label: `Statut : ${controls?.status?.label ?? ""}`, enabled: false, visible: controls?.status !== undefined },
+    ...listeningItems(controls?.listening, actions),
     { type: "separator" },
     {
       label: controls?.media.microphone ? "Couper le micro" : "Activer le micro",

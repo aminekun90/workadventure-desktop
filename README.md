@@ -32,7 +32,9 @@ Sous Windows, passer par Git Bash.
   « Notifications » de WorkAdventure). L'icône rebondit dans le Dock / la barre des tâches clignote ; un clic sur
   une notification de message ramène la fenêtre et ouvre la conversation.
 - **Barre de menu macOS** (icône tasse) : couper/activer micro et caméra, statut (En ligne, Occupé, Ne pas
-  déranger, De retour bientôt ; nécessite un front WA avec goyan/workadventure#62), messages non lus, changer de map,
+  déranger, De retour bientôt ; nécessite un front WA avec goyan/workadventure#62), ce que tu écoutes (app Spotify ou
+  Musique du Mac, ou compte Spotify lié : téléphone, lecteur web, enceinte ; un clic ouvre le morceau) et la Jam
+  rejointe, messages non lus, changer de map,
   afficher la fenêtre, revenir au launcher, ouvrir à l'ouverture de session, mises à jour, À propos.
 - **Raccourcis globaux**, même quand l'app n'est pas au premier plan : <kbd>⌘</kbd><kbd>⇧</kbd><kbd>M</kbd>
   micro, <kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd> caméra.

@@ -2,6 +2,7 @@ import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 import {
   controlsOf,
+  listeningSchema,
   mediaSchema,
   muteAll,
   onControlsChange,
@@ -67,5 +68,22 @@ describe("workadventure controls", () => {
     expect(unreadSchema.safeParse(-1).success).toBe(false);
     expect(unreadSchema.safeParse(2.5).success).toBe(false);
     expect(unreadSchema.safeParse(12).success).toBe(true);
+  });
+
+  it("accepts a shared listening, and refuses links that are not a Spotify track or cover", () => {
+    const listening = {
+      title: "Song",
+      artist: "Artist",
+      album: "",
+      url: "https://open.spotify.com/track/abc",
+      artworkUrl: "https://i.scdn.co/image/abc",
+      source: "spotify",
+      jamAreaName: "",
+    };
+    expect(listeningSchema.safeParse(listening).success).toBe(true);
+    expect(listeningSchema.safeParse({ ...listening, url: "", source: "" }).success).toBe(true);
+    expect(listeningSchema.safeParse({ ...listening, url: "file:///etc/passwd" }).success).toBe(false);
+    expect(listeningSchema.safeParse({ ...listening, url: "https://open.spotify.com/track/abc?x=1" }).success).toBe(false);
+    expect(listeningSchema.safeParse({ ...listening, artworkUrl: "https://evil.example/a.png" }).success).toBe(false);
   });
 });

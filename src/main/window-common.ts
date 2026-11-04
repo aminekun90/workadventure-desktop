@@ -15,18 +15,26 @@ export function framelessChrome({ height, color }: { height: number; color: stri
   };
 }
 
-/** Keeps in-app URLs in the window and hands every other link to the default browser. */
-export function routeNavigation(contents: WebContents, isInApp: (url: string) => boolean): void {
+/**
+ * Keeps in-app URLs in the window and hands every other link to the default browser. `inAppWindow` names the windows
+ * the page may open in the app (window.open); their own navigation is routed by `routeChild`.
+ */
+export function routeNavigation(
+  contents: WebContents,
+  isInApp: (url: string) => boolean,
+  inAppWindow?: { allows: (details: { url: string; frameName: string }) => boolean; routeChild: (child: WebContents) => void },
+): void {
   contents.on("will-navigate", (event) => {
     if (isInApp(event.url)) return;
     event.preventDefault();
     openExternal(event.url);
   });
-  contents.setWindowOpenHandler(({ url }) => {
-    if (isInApp(url)) return { action: "allow" };
+  contents.setWindowOpenHandler(({ url, frameName }) => {
+    if (isInApp(url) || inAppWindow?.allows({ url, frameName })) return { action: "allow" };
     openExternal(url);
     return { action: "deny" };
   });
+  if (inAppWindow) contents.on("did-create-window", (child) => inAppWindow.routeChild(child.webContents));
 }
 
 /** Surfaces the logs of our own pages (launcher, toolbar) in the main-process logger. */
@@ -39,7 +47,8 @@ export function relayConsole(contents: WebContents): void {
   });
 }
 
-function openExternal(url: string): void {
+/** Opens a link in the default browser, or a Spotify or Apple Music link in its app; an unsafe link is blocked. */
+export function openExternal(url: string): void {
   if (!isSafeExternalUrl(url)) {
     logger.warn({ url }, "Blocked navigation to unsafe URL");
     return;

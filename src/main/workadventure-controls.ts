@@ -1,11 +1,27 @@
 import type { WebContents } from "electron";
 import { z } from "zod";
-import { CONTENT_CHANNELS, type AvailabilityStatus, type ContentCommand, type MediaState } from "../shared/content-api.js";
+import {
+  CONTENT_CHANNELS,
+  type AvailabilityStatus,
+  type ContentCommand,
+  type Listening,
+  type MediaState,
+} from "../shared/content-api.js";
 
 /** Values sent by the remote page: validated before use. */
 export const mediaSchema = z.object({ microphone: z.boolean(), camera: z.boolean() });
 export const unreadSchema = z.number().int().min(0).max(9999);
 export const statusSchema = z.object({ name: z.string().regex(/^[A-Z_]{1,40}$/), label: z.string().min(1).max(60) });
+/** Links are opened from the menu bar: only a Spotify track and a Spotify cover are accepted. */
+export const listeningSchema = z.object({
+  title: z.string().max(200),
+  artist: z.string().max(200),
+  album: z.string().max(200),
+  url: z.union([z.literal(""), z.string().regex(/^https:\/\/open\.spotify\.com\/track\/[A-Za-z0-9]+$/)]),
+  artworkUrl: z.union([z.literal(""), z.string().startsWith("https://i.scdn.co/image/").max(200)]),
+  source: z.enum(["spotify", "apple-music", ""]),
+  jamAreaName: z.string().max(100),
+}) satisfies z.ZodType<Listening>;
 
 export interface ControlsState {
   /** WorkAdventure registered its microphone/camera toggles (window.WAD): toggles can be sent. */
@@ -15,6 +31,8 @@ export interface ControlsState {
   media: MediaState;
   unread: number;
   status: AvailabilityStatus | undefined;
+  /** What the user shares about their listening (WorkAdventure builds carrying window.WAD.reportListening). */
+  listening: Listening | undefined;
 }
 
 const INITIAL_STATE: ControlsState = {
@@ -23,6 +41,7 @@ const INITIAL_STATE: ControlsState = {
   media: { microphone: false, camera: false },
   unread: 0,
   status: undefined,
+  listening: undefined,
 };
 
 const states = new WeakMap<WebContents, ControlsState>();
