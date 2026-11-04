@@ -63,12 +63,15 @@ export function shouldOfferListenAlong(env: ListenAlongEnvironment, answer: List
   );
 }
 
+/** Spicetify's user data (`spicetify path userdata`): its config and the Extensions folder. */
+function spicetifyUserData(env: ListenAlongEnvironment): string | undefined {
+  return env.platform === "win32" ? env.appData && join(env.appData, "spicetify") : join(env.home, ".config", "spicetify");
+}
+
 /** Spicetify lists its extensions in config-xpui.ini: `extensions = a.js|workadventure.js`. */
 export function extensionConfigured(env: ListenAlongEnvironment): boolean {
-  const configPath =
-    env.platform === "win32"
-      ? env.appData && join(env.appData, "spicetify", "config-xpui.ini")
-      : join(env.home, ".config", "spicetify", "config-xpui.ini");
+  const userData = spicetifyUserData(env);
+  const configPath = userData && join(userData, "config-xpui.ini");
   if (!configPath || !existsSync(configPath)) return false;
   const extensions = /^extensions\s*=(.*)$/m.exec(readFileSync(configPath, "utf8"))?.[1] ?? "";
   return extensions.split("|").some((name) => name.trim() === EXTENSION_FILE);
@@ -115,6 +118,42 @@ export async function installListenAlong(env: ListenAlongEnvironment, fetchFn: F
   // A fresh Spicetify first backs up the untouched Spotify; an existing one already has its backup.
   await run(spicetify, existing ? ["apply"] : ["backup", "apply"]);
   logger.info({ spicetify }, "Listen along installed");
+}
+
+/**
+ * Brings an installed extension to the version this desktop app speaks to (EXTENSION_URL): a desktop update that pins
+ * a newer tag updates it too, without asking. A running Spotify is restarted to load it now; a closed one is not
+ * opened, it loads the new version when it starts. Returns whether the extension changed.
+ */
+export async function updateListenAlongExtension(
+  env: ListenAlongEnvironment,
+  fetchFn: Fetch,
+  isSpotifyRunning: () => Promise<boolean> = () => spotifyRunning(env),
+): Promise<boolean> {
+  const userData = spicetifyUserData(env);
+  const spicetify = spicetifyCandidates(env).find((path) => existsSync(path));
+  if (!userData || !spicetify || !extensionConfigured(env)) return false;
+  const installedPath = join(userData, "Extensions", EXTENSION_FILE);
+  const pinned = await download(fetchFn, EXTENSION_URL);
+  if (existsSync(installedPath) && readFileSync(installedPath).equals(pinned)) return false;
+  await mkdir(join(userData, "Extensions"), { recursive: true });
+  await writeFile(installedPath, pinned);
+  await run(spicetify, (await isSpotifyRunning()) ? ["apply"] : ["apply", "--no-restart"]);
+  logger.info({ url: EXTENSION_URL }, "Listen along extension updated");
+  return true;
+}
+
+/** Whether the Spotify app runs; a failed check counts as not running, so that Spotify is never opened by surprise. */
+async function spotifyRunning(env: ListenAlongEnvironment): Promise<boolean> {
+  try {
+    if (env.platform === "win32") {
+      return (await run("tasklist", ["/FI", "IMAGENAME eq Spotify.exe", "/NH"])).includes("Spotify.exe");
+    }
+    await run("pgrep", ["-x", env.platform === "darwin" ? "Spotify" : "spotify"]);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function downloadSpicetify(env: ListenAlongEnvironment, fetchFn: Fetch): Promise<string> {
