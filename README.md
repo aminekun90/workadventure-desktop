@@ -40,6 +40,10 @@ Sous Windows, passer par Git Bash.
   micro, <kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd> caméra.
 - **Écran verrouillé ou Mac en veille** : micro et caméra coupés automatiquement (jamais rallumés seuls).
 - **Messages non lus** affichés sur l'icône du Dock et à côté de l'icône de barre de menu.
+- **Écouter en même temps** qu'un collègue, sur son propre Spotify et **sans Premium**, avec Spicetify et l'extension
+  [workadventure-spicetify](https://github.com/aminekun90/workadventure-spicetify). L'app lui parle en local
+  (`ws://127.0.0.1:47613`, app Spotify seulement) ; elle lit aussi par elle le morceau et sa position, sous Windows et
+  Linux compris.
 - **Liens `workadventure://`** : `workadventure://wa.goyan.fr/~/goyan/office.wam` ouvre cette salle dans l'app.
 - **À propos** : fenêtre dédiée (versions de l'app, d'Electron, de Chromium, de Node et du système, statut et
   recherche de mises à jour, notes de version, « Copier les infos » pour un rapport de bug).

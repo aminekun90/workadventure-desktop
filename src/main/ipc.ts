@@ -1,4 +1,4 @@
-import { ipcMain, net, type IpcMainInvokeEvent } from "electron";
+import { ipcMain, net, type IpcMainInvokeEvent, type WebContents } from "electron";
 import { z } from "zod";
 import { ABOUT_CHANNELS, ABOUT_LINKS } from "../shared/about-api.js";
 import { choiceSchema, choiceUrl, settingsSchema, type Settings } from "../shared/config.js";
@@ -10,10 +10,12 @@ import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-wi
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
 import { watchSpotify } from "./spotify-player.js";
-import { listeningSchema, mediaSchema, statusSchema, unreadSchema, updateControls } from "./workadventure-controls.js";
+import { followOnSpicetify, onSpicetifyChange, spicetifyConnected } from "./spicetify-bridge.js";
+import { followSchema, listeningSchema, mediaSchema, statusSchema, unreadSchema, updateControls } from "./workadventure-controls.js";
 import { focusWindowOf, isWorkAdventureContent, reloadContent, requestAttention, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
 const PROBE_TIMEOUT_MS = 4000;
+const availabilitySubscriptions = new WeakMap<WebContents, () => void>();
 const anchorSchema = z.object({ x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });
 
 export interface IpcHandlers {
@@ -137,6 +139,25 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.listening, (event, payload: unknown) => {
     const listening = listeningSchema.safeParse(payload);
     if (listening.success && isWorkAdventureContent(event.sender)) updateControls(event.sender, { listening: listening.data });
+  });
+  ipcMain.on(CONTENT_CHANNELS.listenAlongReady, (event) => {
+    if (!isWorkAdventureContent(event.sender)) return;
+    const page = event.sender;
+    // A reload asks again: the previous subscription of this page is replaced, not stacked.
+    availabilitySubscriptions.get(page)?.();
+    let available = spicetifyConnected();
+    page.send(CONTENT_CHANNELS.listenAlongAvailable, available);
+    const stop = onSpicetifyChange(() => {
+      if (page.isDestroyed() || spicetifyConnected() === available) return;
+      available = spicetifyConnected();
+      page.send(CONTENT_CHANNELS.listenAlongAvailable, available);
+    });
+    availabilitySubscriptions.set(page, stop);
+    page.once("destroyed", stop);
+  });
+  ipcMain.on(CONTENT_CHANNELS.follow, (event, payload: unknown) => {
+    const target = followSchema.safeParse(payload);
+    if (target.success && isWorkAdventureContent(event.sender)) followOnSpicetify(target.data);
   });
   ipcMain.on(CONTENT_CHANNELS.unread, (event, payload: unknown) => {
     const unread = unreadSchema.safeParse(payload);
