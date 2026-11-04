@@ -5,7 +5,10 @@ export const UPDATE_CHANNELS = {
 } as const;
 export type UpdateChannel = (typeof UPDATE_CHANNELS)[keyof typeof UPDATE_CHANNELS];
 
-/** "restart" installs an update already downloaded; "download" opens the release page (macOS without Developer ID). */
+/**
+ * "restart" installs an update already downloaded; "download" downloads and opens the disk image, for a macOS app run
+ * from its disk image (or translocated) that cannot replace itself.
+ */
 export type UpdateAction = "restart" | "download";
 
 export type UpdateStatus =

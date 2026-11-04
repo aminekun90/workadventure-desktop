@@ -1,9 +1,18 @@
-import { app, net, shell } from "electron";
+import { app, dialog, net, shell } from "electron";
 import updaterPackage, { type UpdateInfo } from "electron-updater";
 import type { UpdateStatus } from "../shared/update-api.js";
 import { logger } from "./logger.js";
 import { describeUpdateError, isReleaseInProgress } from "./update-errors.js";
-import { installOnQuit, pickZip, prepareUpdate, replaceableBundle, type PreparedUpdate } from "./mac-update.js";
+import {
+  downloadDiskImage,
+  installOnQuit,
+  locateBundle,
+  pickDmg,
+  pickZip,
+  prepareUpdate,
+  type PreparedUpdate,
+  type UpdateFile,
+} from "./mac-update.js";
 
 const { autoUpdater } = updaterPackage;
 
@@ -21,7 +30,11 @@ const IS_MAC = process.platform === "darwin";
 /** The macOS update being downloaded or ready: a later check finding the same version reuses it. */
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
-let macUpdate: { version: string; status: UpdateStatus; prepared?: PreparedUpdate } | undefined;
+let macUpdate:
+  | { version: string; status: UpdateStatus; files: readonly UpdateFile[]; prepared?: PreparedUpdate }
+  | undefined;
+/** Where update statuses go, for the disk image downloaded on click. */
+let notify: (status: UpdateStatus) => void = () => undefined;
 
 /** Checks GitHub releases at launch, then every few hours; reports each step to `onChange`. */
 export function startUpdater(onChange: (status: UpdateStatus) => void): void {
@@ -29,6 +42,7 @@ export function startUpdater(onChange: (status: UpdateStatus) => void): void {
     onChange({ state: "disabled" });
     return;
   }
+  notify = onChange;
 
   autoUpdater.logger = logger;
   autoUpdater.autoDownload = !IS_MAC;
@@ -82,7 +96,7 @@ export function checkForUpdates(): void {
 export async function applyUpdate(status: UpdateStatus): Promise<void> {
   if (status.state !== "ready") return;
   if (status.action === "download") {
-    await shell.openExternal(`${RELEASES_URL}/v${status.version}`);
+    await downloadAndOpenDiskImage(status.version);
     return;
   }
   if (!IS_MAC) {
@@ -94,16 +108,19 @@ export async function applyUpdate(status: UpdateStatus): Promise<void> {
   app.quit();
 }
 
-/** Falls back to the download page when the app cannot replace itself (run from the DMG, no write access). */
+/**
+ * Prepares the update in the background. An app run from its disk image (or translocated) cannot be replaced: the new
+ * disk image is offered instead. A failed download is reported and retried, never sent to the browser.
+ */
 async function prepareMacUpdate({ version, files }: UpdateInfo, onChange: (status: UpdateStatus) => void): Promise<void> {
   const report = (status: UpdateStatus, prepared?: PreparedUpdate): void => {
-    macUpdate = { version, status, ...(prepared && { prepared }) };
+    macUpdate = { version, status, files, ...(prepared && { prepared }) };
     onChange(status);
   };
-  const bundle = replaceableBundle(app.getPath("exe"));
+  const location = locateBundle(app.getPath("exe"));
   const file = pickZip(files, process.arch);
-  if (!bundle || !file) {
-    logger.info({ version, bundle, arch: process.arch }, "macOS update cannot be installed in place, offering the download");
+  if (!location || location.kind === "read-only" || !file) {
+    logger.info({ version, location, arch: process.arch }, "macOS update cannot be installed in place, offering the disk image");
     report({ state: "ready", version, action: "download" });
     return;
   }
@@ -112,13 +129,62 @@ async function prepareMacUpdate({ version, files }: UpdateInfo, onChange: (statu
     const prepared = await prepareUpdate({
       version,
       file,
-      bundle,
+      bundle: location.bundle,
+      asAdministrator: location.kind === "admin",
       fetch: (url) => net.fetch(url),
       onProgress: (percent) => report({ state: "downloading", version, percent }),
     });
     report({ state: "ready", version, action: "restart" }, prepared);
   } catch (error) {
-    logger.error({ err: error, version }, "macOS update preparation failed, offering the download");
-    report({ state: "ready", version, action: "download" });
+    logger.error({ err: error, version }, "macOS update preparation failed");
+    reportFailure(error);
   }
+}
+
+/** Downloads the disk image into Downloads and opens it: the user drags the app to Applications. */
+async function downloadAndOpenDiskImage(version: string): Promise<void> {
+  if (!macUpdate || macUpdate.version !== version || macUpdate.status.state === "downloading") return;
+  const { files } = macUpdate;
+  const file = pickDmg(files, process.arch);
+  if (!file) {
+    // No disk image for this CPU in the release: its page is the only way left.
+    await shell.openExternal(`${RELEASES_URL}/v${version}`);
+    return;
+  }
+  const ready: UpdateStatus = { state: "ready", version, action: "download" };
+  const report = (status: UpdateStatus): void => {
+    macUpdate = { version, status, files };
+    notify(status);
+  };
+  report({ state: "downloading", version, percent: 0 });
+  try {
+    const path = await downloadDiskImage({
+      version,
+      file,
+      directory: app.getPath("downloads"),
+      fetch: (url) => net.fetch(url),
+      onProgress: (percent) => report({ state: "downloading", version, percent }),
+    });
+    report(ready);
+    const openError = await shell.openPath(path);
+    if (openError) logger.warn({ path, openError }, "Could not open the update disk image");
+    await dialog.showMessageBox({
+      type: "info",
+      message: `La version ${version} est téléchargée`,
+      detail:
+        "Glisse WorkAdventure dans Applications (en remplaçant l'ancienne), puis ouvre-le depuis Applications : " +
+        `les prochaines mises à jour s'installeront alors toutes seules.\n\nFichier : ${path}`,
+    });
+  } catch (error) {
+    logger.error({ err: error, version }, "Update disk image download failed");
+    reportFailure(error);
+  }
+}
+
+/** Shown to the user and retried shortly, like a failed check; the next check prepares the update again. */
+function reportFailure(error: unknown): void {
+  macUpdate = undefined;
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(checkForUpdates, RETRY_AFTER_FAILURE_MINUTES * 60 * 1000);
+  notify({ state: "failed", reason: describeUpdateError(error), retryInMinutes: RETRY_AFTER_FAILURE_MINUTES });
 }
