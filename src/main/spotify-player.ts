@@ -2,19 +2,25 @@ import { execFile } from "node:child_process";
 import type { WebContents } from "electron";
 import { CONTENT_CHANNELS, type SpotifyTrack } from "../shared/content-api.js";
 import { logger } from "./logger.js";
+import { onSpicetifyChange, spicetifyConnected, spicetifyTrack } from "./spicetify-bridge.js";
 
 /**
- * Tells a WorkAdventure page what the Spotify app of this Mac plays, for WorkAdventure's Spotify sharing: no
+ * Tells a WorkAdventure page what the Spotify app of this computer plays, for WorkAdventure's Spotify sharing: no
  * account to link, no developer app, no Premium. Read only while the page asks (sharing is on), and only from a
- * Spotify app already running: it is never launched.
+ * Spotify app already running: it is never launched. The WorkAdventure Spicetify extension, when connected, gives
+ * the track with its position on any system; otherwise AppleScript reads it, on a Mac only.
  */
 export function watchSpotify(content: WebContents, { watching }: { watching: boolean }): void {
   if (!watching) {
     stopWatching(content);
     return;
   }
-  if (watchers.has(content) || process.platform !== "darwin") return;
-  const watcher: Watcher = { last: undefined, timer: setInterval(() => void read(content, watcher), POLL_INTERVAL_MS) };
+  if (watchers.has(content)) return;
+  const watcher: Watcher = {
+    last: undefined,
+    timer: setInterval(() => void read(content, watcher), POLL_INTERVAL_MS),
+    stopFollowingExtension: onSpicetifyChange(() => void read(content, watcher)),
+  };
   watchers.set(content, watcher);
   content.once("destroyed", () => stopWatching(content));
   void read(content, watcher);
@@ -68,6 +74,7 @@ interface Watcher {
   /** What the page was last told, as JSON: a track is only sent when it changes. */
   last: string | undefined;
   timer: NodeJS.Timeout;
+  stopFollowingExtension: () => void;
 }
 
 const watchers = new Map<WebContents, Watcher>();
@@ -76,15 +83,22 @@ function stopWatching(content: WebContents): void {
   const watcher = watchers.get(content);
   if (!watcher) return;
   clearInterval(watcher.timer);
+  watcher.stopFollowingExtension();
   watchers.delete(content);
 }
 
 async function read(content: WebContents, watcher: Watcher): Promise<void> {
-  const track = parsePlayerOutput(await runPlayerScript());
+  const track = await readTrack();
   const serialized = JSON.stringify(track);
   if (serialized === watcher.last || content.isDestroyed() || watchers.get(content) !== watcher) return;
   watcher.last = serialized;
   content.send(CONTENT_CHANNELS.spotifyTrack, track);
+}
+
+async function readTrack(): Promise<SpotifyTrack | null> {
+  if (spicetifyConnected()) return spicetifyTrack();
+  if (process.platform !== "darwin") return null;
+  return parsePlayerOutput(await runPlayerScript());
 }
 
 /** A failed read (Automation permission refused, Spotify quitting) means nothing to share, not an error to surface. */

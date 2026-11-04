@@ -26,6 +26,7 @@ const UNREAD_CHECK_DELAY_MS = 500;
 const toggles: Partial<Record<"toggle-microphone" | "toggle-camera", () => void>> = {};
 let requestStatus: ((request: StatusRequest) => void) | undefined;
 let onSpotifyTrack: ((track: SpotifyTrack | null) => void) | undefined;
+let onListenAlongAvailable: ((available: boolean) => void) | undefined;
 
 contextBridge.exposeInMainWorld("WAD", {
   desktop: true,
@@ -47,6 +48,12 @@ contextBridge.exposeInMainWorld("WAD", {
   },
   // What the user shares about their listening, whatever its source (fork, Api/Desktop/index.ts). Validated in main.
   reportListening: (listening: unknown) => send("content:listening", listening),
+  // Listening along, through the WorkAdventure Spicetify extension (fork, Spotify/ListeningFollower.ts).
+  followListening: (target: unknown) => send("content:follow", target),
+  onListenAlongAvailable: (callback: (available: boolean) => void) => {
+    onListenAlongAvailable = callback;
+    send("content:listen-along-ready");
+  },
   // Spotify sharing without an account: WorkAdventure calls it while sharing is on (fork, LocalSpotifyPlayer.ts).
   watchSpotifyTrack: (callback: (track: SpotifyTrack | null) => void) => {
     onSpotifyTrack = callback;
@@ -61,6 +68,10 @@ contextBridge.exposeInMainWorld("WAD", {
 
 ipcRenderer.on("content:spotify-track" satisfies ContentChannel, (_event, track: SpotifyTrack | null) => {
   onSpotifyTrack?.(track);
+});
+
+ipcRenderer.on("content:listen-along-available" satisfies ContentChannel, (_event, available: boolean) => {
+  onListenAlongAvailable?.(available);
 });
 
 ipcRenderer.on("content:command" satisfies ContentChannel, (_event, command: ContentCommand) => {

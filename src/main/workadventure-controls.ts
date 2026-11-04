@@ -4,6 +4,7 @@ import {
   CONTENT_CHANNELS,
   type AvailabilityStatus,
   type ContentCommand,
+  type FollowTarget,
   type Listening,
   type MediaState,
 } from "../shared/content-api.js";
@@ -13,6 +14,9 @@ export const mediaSchema = z.object({ microphone: z.boolean(), camera: z.boolean
 export const unreadSchema = z.number().int().min(0).max(9999);
 export const statusSchema = z.object({ name: z.string().regex(/^[A-Z_]{1,40}$/), label: z.string().min(1).max(60) });
 /** Links are opened from the menu bar: only a Spotify track and a Spotify cover are accepted. */
+export const followSchema = z
+  .object({ uri: z.string().regex(/^spotify:track:[A-Za-z0-9]+$/), positionMs: z.number().int().nonnegative() })
+  .nullable() satisfies z.ZodType<FollowTarget | null>;
 export const listeningSchema = z.object({
   title: z.string().max(200),
   artist: z.string().max(200),

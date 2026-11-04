@@ -8,6 +8,7 @@ import { defaultWokaUrl, downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAva
 import { DEEP_LINK_PROTOCOL, deepLinkTarget } from "./deep-links.js";
 import { startDesktopIntegration, type DesktopIntegration } from "./desktop-integration.js";
 import { registerIpc } from "./ipc.js";
+import { startSpicetifyBridge } from "./spicetify-bridge.js";
 import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
 import { logger, logToFile } from "./logger.js";
 import { showAboutWindow } from "./about-window.js";
@@ -76,6 +77,7 @@ async function start(): Promise<void> {
     checkForUpdates,
   });
   startUpdater(announceUpdateStatus);
+  startSpicetifyBridge();
   if (app.isPackaged) app.setAsDefaultProtocolClient(DEEP_LINK_PROTOCOL);
   desktop = startDesktopIntegration({
     currentContent: () => currentWindow && contentOf(currentWindow),

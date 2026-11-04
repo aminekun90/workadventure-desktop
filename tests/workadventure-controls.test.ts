@@ -2,6 +2,7 @@ import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 import {
   controlsOf,
+  followSchema,
   listeningSchema,
   mediaSchema,
   muteAll,
@@ -85,5 +86,12 @@ describe("workadventure controls", () => {
     expect(listeningSchema.safeParse({ ...listening, url: "file:///etc/passwd" }).success).toBe(false);
     expect(listeningSchema.safeParse({ ...listening, url: "https://open.spotify.com/track/abc?x=1" }).success).toBe(false);
     expect(listeningSchema.safeParse({ ...listening, artworkUrl: "https://evil.example/a.png" }).success).toBe(false);
+  });
+
+  it("only plays along a Spotify track at a valid position", () => {
+    expect(followSchema.safeParse({ uri: "spotify:track:abc", positionMs: 5000 }).success).toBe(true);
+    expect(followSchema.safeParse(null).success).toBe(true);
+    expect(followSchema.safeParse({ uri: "spotify:album:abc", positionMs: 0 }).success).toBe(false);
+    expect(followSchema.safeParse({ uri: "spotify:track:abc", positionMs: -1 }).success).toBe(false);
   });
 });

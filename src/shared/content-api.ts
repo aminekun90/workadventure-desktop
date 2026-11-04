@@ -25,6 +25,12 @@ export const CONTENT_CHANNELS = {
   spotifyTrack: "content:spotify-track",
   /** What the user shares about their listening, whatever its source (window.WAD.reportListening). */
   listening: "content:listening",
+  /** Page → main: WorkAdventure wants to know whether listening along is possible (window.WAD.onListenAlongAvailable). */
+  listenAlongReady: "content:listen-along-ready",
+  /** Main → page: whether the WorkAdventure Spicetify extension is connected. */
+  listenAlongAvailable: "content:listen-along-available",
+  /** Page → main: play this track along with another user, or stop (window.WAD.followListening). */
+  follow: "content:follow",
   /** Main → page. */
   command: "content:command",
 } as const;
@@ -77,4 +83,14 @@ export interface SpotifyTrack {
   /** https://i.scdn.co/image/… (Spotify only). */
   artworkUrl?: string;
   source: "spotify" | "apple-music";
+  /** Position in the track (ms) at `positionAt` (ms since the epoch); only from the Spicetify extension. */
+  positionMs?: number;
+  positionAt?: number;
+}
+
+/** A track to play along with another user, at the position they are at. */
+export interface FollowTarget {
+  /** spotify:track:… */
+  uri: string;
+  positionMs: number;
 }
