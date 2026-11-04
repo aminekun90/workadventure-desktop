@@ -136,6 +136,17 @@ export interface QueuedTrack {
   addedByUuid: string;
 }
 
+/** A track still to come from the playing playlist or album (or Spotify's autoplay): shown, never edited. */
+export type UpcomingTrack = Pick<QueuedTrack, "uri" | "title" | "artist" | "artworkUrl">;
+
+/** What the Jukebox's host plays next: the tracks added to the queue, then the rest of the playlist. */
+export interface QueueState {
+  tracks: QueuedTrack[];
+  upcoming: UpcomingTrack[];
+  /** The playing playlist or album, empty when it is neither. */
+  contextName: string;
+}
+
 /** A queued track moved just before or just after another one. */
 export type QueueMove = Pick<QueuedTrack, "uri" | "uid"> &
   ({ before: Pick<QueuedTrack, "uri" | "uid"> } | { after: Pick<QueuedTrack, "uri" | "uid"> });

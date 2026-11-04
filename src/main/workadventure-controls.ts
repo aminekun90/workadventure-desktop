@@ -9,6 +9,7 @@ import {
   type HomeJam,
   type QueueMove,
   type QueuedTrack,
+  type UpcomingTrack,
   type Listening,
   type MediaState,
 } from "../shared/content-api.js";
@@ -53,6 +54,19 @@ export const queueSchema = z.object({
       }) satisfies z.ZodType<QueuedTrack>,
     )
     .max(30),
+  // Extension 1.3.1+: what plays after the queue, and the playlist's name.
+  upcoming: z
+    .array(
+      z.object({
+        uri: trackUri,
+        title: z.string().max(200),
+        artist: z.string().max(200),
+        artworkUrl: z.union([z.literal(""), z.string().startsWith("https://i.scdn.co/image/").max(200)]).catch(""),
+      }) satisfies z.ZodType<UpcomingTrack>,
+    )
+    .max(20)
+    .catch([]),
+  contextName: z.string().max(200).catch(""),
 });
 /** What the extension sends when the user adds tracks to the home Jam from Spotify's context menu. */
 export const queueRequestSchema = z.object({ type: z.literal("queue-request"), uris: trackUris });

@@ -167,7 +167,7 @@ describe("Spicetify bridge", () => {
     await vi.waitFor(() => expect(received).toEqual([{ type: "enqueue", uris: ["spotify:track:abc"], from: "Amine" }]));
   });
 
-  it("keeps the queue the extension reports, without an unsafe cover, and empties it when Spotify goes", async () => {
+  it("keeps the queue and the rest of the playlist the extension reports, and empties them when Spotify goes", async () => {
     const url = await start();
     client = await connect(url, SPOTIFY_ORIGIN);
     const reported: unknown[] = [];
@@ -184,11 +184,19 @@ describe("Spicetify bridge", () => {
     client.send(
       JSON.stringify({ type: "queue", tracks: [{ ...queued, artworkUrl: "https://evil.example/cover.png" }] }),
     );
-    await vi.waitFor(() => expect(bridge.spicetifyQueue()).toEqual([{ ...queued, artworkUrl: "" }]));
+    await vi.waitFor(() =>
+      expect(bridge.spicetifyQueue()).toEqual({ tracks: [{ ...queued, artworkUrl: "" }], upcoming: [], contextName: "" }),
+    );
+
+    const upcoming = { uri: "spotify:track:next", title: "Next", artist: "Artist", artworkUrl: "" };
+    client.send(JSON.stringify({ type: "queue", tracks: [], upcoming: [upcoming], contextName: "Focus" }));
+    await vi.waitFor(() =>
+      expect(bridge.spicetifyQueue()).toEqual({ tracks: [], upcoming: [upcoming], contextName: "Focus" }),
+    );
 
     client.close();
-    await vi.waitFor(() => expect(bridge.spicetifyQueue()).toEqual([]));
-    expect(reported.at(-1)).toEqual([]);
+    await vi.waitFor(() => expect(bridge.spicetifyQueue()).toEqual({ tracks: [], upcoming: [], contextName: "" }));
+    expect(reported.at(-1)).toEqual({ tracks: [], upcoming: [], contextName: "" });
     stop();
   });
 
