@@ -27,6 +27,7 @@ const toggles: Partial<Record<"toggle-microphone" | "toggle-camera", () => void>
 let requestStatus: ((request: StatusRequest) => void) | undefined;
 let onSpotifyTrack: ((track: SpotifyTrack | null) => void) | undefined;
 let onListenAlongAvailable: ((available: boolean) => void) | undefined;
+let onQueueRequest: ((uris: string[]) => void) | undefined;
 
 contextBridge.exposeInMainWorld("WAD", {
   desktop: true,
@@ -54,6 +55,12 @@ contextBridge.exposeInMainWorld("WAD", {
     onListenAlongAvailable = callback;
     send("content:listen-along-ready");
   },
+  // Home Jam (fork, Spotify/HomeJam.ts): guests add tracks from Spotify to the host's queue. Validated in main.
+  setHomeJam: (jam: unknown) => send("content:home-jam", jam),
+  onQueueRequest: (callback: (uris: string[]) => void) => {
+    onQueueRequest = callback;
+  },
+  enqueueOnSpotify: (request: unknown) => send("content:enqueue", request),
   // Spotify sharing without an account: WorkAdventure calls it while sharing is on (fork, LocalSpotifyPlayer.ts).
   watchSpotifyTrack: (callback: (track: SpotifyTrack | null) => void) => {
     onSpotifyTrack = callback;
@@ -68,6 +75,10 @@ contextBridge.exposeInMainWorld("WAD", {
 
 ipcRenderer.on("content:spotify-track" satisfies ContentChannel, (_event, track: SpotifyTrack | null) => {
   onSpotifyTrack?.(track);
+});
+
+ipcRenderer.on("content:queue-request" satisfies ContentChannel, (_event, uris: string[]) => {
+  onQueueRequest?.(uris);
 });
 
 ipcRenderer.on("content:listen-along-available" satisfies ContentChannel, (_event, available: boolean) => {

@@ -31,6 +31,12 @@ export const CONTENT_CHANNELS = {
   listenAlongAvailable: "content:listen-along-available",
   /** Page → main: play this track along with another user, or stop (window.WAD.followListening). */
   follow: "content:follow",
+  /** Page → main: the home Jam the user takes part in, or null (window.WAD.setHomeJam). */
+  homeJam: "content:home-jam",
+  /** Main → page: tracks the user asked, from Spotify, to add to the queue of the home Jam's host. */
+  queueRequest: "content:queue-request",
+  /** Page → main: tracks another participant adds to this user's queue, as host (window.WAD.enqueueOnSpotify). */
+  enqueue: "content:enqueue",
   /** Main → page. */
   command: "content:command",
 } as const;
@@ -89,6 +95,18 @@ export interface SpotifyTrack {
   /** The playlist or album it plays from (spotify:playlist:… or spotify:album:…) and its name; Spicetify only. */
   contextUri?: string;
   contextName?: string;
+}
+
+/** The home Jam the user takes part in as a guest: the extension offers to add tracks to its host's queue. */
+export interface HomeJam {
+  hostName: string;
+}
+
+/** Tracks (spotify:track:…) a home Jam participant adds to the host's queue. */
+export interface EnqueueRequest {
+  uris: string[];
+  /** Who added them, shown in the host's Spotify. */
+  from: string;
 }
 
 /** A track to play along with another user, at the position they are at. */

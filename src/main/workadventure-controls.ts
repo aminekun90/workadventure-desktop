@@ -4,7 +4,9 @@ import {
   CONTENT_CHANNELS,
   type AvailabilityStatus,
   type ContentCommand,
+  type EnqueueRequest,
   type FollowTarget,
+  type HomeJam,
   type Listening,
   type MediaState,
 } from "../shared/content-api.js";
@@ -17,6 +19,11 @@ export const statusSchema = z.object({ name: z.string().regex(/^[A-Z_]{1,40}$/),
 export const followSchema = z
   .object({ uri: z.string().regex(/^spotify:track:[A-Za-z0-9]+$/), positionMs: z.number().int().nonnegative() })
   .nullable() satisfies z.ZodType<FollowTarget | null>;
+const trackUris = z.array(z.string().regex(/^spotify:track:[A-Za-z0-9]+$/)).min(1).max(5);
+export const homeJamSchema = z.object({ hostName: z.string().max(100) }).nullable() satisfies z.ZodType<HomeJam | null>;
+export const enqueueSchema = z.object({ uris: trackUris, from: z.string().max(100) }) satisfies z.ZodType<EnqueueRequest>;
+/** What the extension sends when the user adds tracks to the home Jam from Spotify's context menu. */
+export const queueRequestSchema = z.object({ type: z.literal("queue-request"), uris: trackUris });
 export const listeningSchema = z.object({
   title: z.string().max(200),
   artist: z.string().max(200),
