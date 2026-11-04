@@ -86,6 +86,9 @@ export interface SpotifyTrack {
   /** Position in the track (ms) at `positionAt` (ms since the epoch); only from the Spicetify extension. */
   positionMs?: number;
   positionAt?: number;
+  /** The playlist or album it plays from (spotify:playlist:… or spotify:album:…) and its name; Spicetify only. */
+  contextUri?: string;
+  contextName?: string;
 }
 
 /** A track to play along with another user, at the position they are at. */
