@@ -21,6 +21,8 @@ const anchorSchema = z.object({ x: z.number().int().nonnegative(), y: z.number()
 export interface IpcHandlers {
   getLauncherState(): Promise<LauncherState>;
   launch(request: Settings): Promise<void>;
+  installListenAlong(): Promise<void>;
+  dismissListenAlong(): void;
   openLauncher(): Promise<void>;
   getUpdateStatus(): UpdateStatus;
   applyUpdate(): Promise<void>;
@@ -30,6 +32,7 @@ export interface IpcHandlers {
 /** Payloads come from a renderer: each channel only answers its own bundled page, and validates input. */
 export function registerIpc(handlers: IpcHandlers): void {
   registerLauncherChannels(handlers);
+  registerListenAlongChannels(handlers);
   registerToolbarChannels(handlers);
   registerUpdateChannels(handlers);
   registerContentChannels();
@@ -59,6 +62,23 @@ function registerLauncherChannels(handlers: IpcHandlers): void {
       logger.error({ err: error, host }, "Launch failed");
       return { ok: false, message: `Impossible de joindre ${host}` };
     }
+  });
+}
+
+function registerListenAlongChannels(handlers: IpcHandlers): void {
+  ipcMain.handle(LAUNCHER_CHANNELS.installListenAlong, async (event): Promise<LaunchResult> => {
+    assertSender(event, LAUNCHER_URL);
+    try {
+      await handlers.installListenAlong();
+      return { ok: true };
+    } catch (error) {
+      logger.error({ err: error }, "Listen along installation failed");
+      return { ok: false, message: error instanceof Error ? error.message : "Installation impossible" };
+    }
+  });
+  ipcMain.handle(LAUNCHER_CHANNELS.dismissListenAlong, (event) => {
+    assertSender(event, LAUNCHER_URL);
+    handlers.dismissListenAlong();
   });
 }
 
