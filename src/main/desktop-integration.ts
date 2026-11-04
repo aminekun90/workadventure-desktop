@@ -4,6 +4,7 @@ import { logger } from "./logger.js";
 import { createMenuBarItem } from "./menu-bar.js";
 import { isOpenAtLogin, onStepAway, registerGlobalShortcuts, setOpenAtLogin, setUnreadBadge } from "./system.js";
 import { controlsOf, muteAll, onControlsChange, sendCommand } from "./workadventure-controls.js";
+import { openExternal } from "./window-common.js";
 import { mapMenuFor } from "./workadventure-window.js";
 
 export interface DesktopIntegrationOptions {
@@ -39,6 +40,7 @@ export function startDesktopIntegration(options: DesktopIntegrationOptions): Des
     toggleMicrophone: toggle("toggle-microphone"),
     toggleCamera: toggle("toggle-camera"),
     setStatus: (status) => send({ type: "set-status", status }),
+    openTrack: openExternal,
     showWindow: options.showWindow,
     openLauncher: options.openLauncher,
     setOpenAtLogin: (openAtLogin) => {

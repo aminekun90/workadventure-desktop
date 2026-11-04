@@ -10,7 +10,7 @@ import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-wi
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
 import { watchSpotify } from "./spotify-player.js";
-import { mediaSchema, statusSchema, unreadSchema, updateControls } from "./workadventure-controls.js";
+import { listeningSchema, mediaSchema, statusSchema, unreadSchema, updateControls } from "./workadventure-controls.js";
 import { focusWindowOf, isWorkAdventureContent, reloadContent, requestAttention, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
 const PROBE_TIMEOUT_MS = 4000;
@@ -133,6 +133,10 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.spotifyWatch, (event, payload: unknown) => {
     const watching = z.boolean().safeParse(payload);
     if (watching.success && isWorkAdventureContent(event.sender)) watchSpotify(event.sender, { watching: watching.data });
+  });
+  ipcMain.on(CONTENT_CHANNELS.listening, (event, payload: unknown) => {
+    const listening = listeningSchema.safeParse(payload);
+    if (listening.success && isWorkAdventureContent(event.sender)) updateControls(event.sender, { listening: listening.data });
   });
   ipcMain.on(CONTENT_CHANNELS.unread, (event, payload: unknown) => {
     const unread = unreadSchema.safeParse(payload);
