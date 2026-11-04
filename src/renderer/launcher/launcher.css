@@ -2,6 +2,8 @@
 body {
   display: grid;
   grid-template-rows: 1fr auto;
+  /* A small screen must never hide a button: the page scrolls instead. */
+  overflow-y: auto;
   background: linear-gradient(180deg, var(--night-deep) 0%, var(--night) 70%);
 }
 
@@ -14,6 +16,12 @@ body {
   width: min(100%, 64rem);
   margin-inline: auto;
   padding: 3rem 3.5rem 1.5rem;
+}
+
+/* Right: the space picker, then the one-time offers below it */
+.side {
+  display: grid;
+  gap: 1.25rem;
 }
 
 /* Left: the user's woka and the app name */

@@ -1,6 +1,6 @@
 import { BrowserWindow } from "electron";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { BACKGROUND, framelessChrome, IS_MAC, relayConsole, routeNavigation } from "./window-common.js";
+import { BACKGROUND, framelessChrome, IS_MAC, relayConsole, routeNavigation, screenWorkArea } from "./window-common.js";
 
 const LAUNCHER_HTML = fileURLToPath(new URL("../renderer/launcher/index.html", import.meta.url));
 const LAUNCHER_PRELOAD = fileURLToPath(new URL("../preload/launcher.cjs", import.meta.url));
@@ -8,8 +8,7 @@ export const LAUNCHER_URL = pathToFileURL(LAUNCHER_HTML).href;
 
 export async function createLauncherWindow(): Promise<BrowserWindow> {
   const window = new BrowserWindow({
-    width: 1200,
-    height: 780,
+    ...screenWorkArea(),
     minWidth: 1040,
     minHeight: 680,
     show: false,
