@@ -127,4 +127,43 @@ describe("Spicetify bridge", () => {
       expect(received).toEqual([{ type: "follow", uri: "spotify:track:abc", positionMs: 5_000 }, { type: "unfollow" }]),
     );
   });
+
+  it("tells an extension that connects later about the home Jam, and when it ends", async () => {
+    const url = await start();
+    bridge.setHomeJamOnSpicetify({ hostName: "Nat" });
+    // Listening before the socket opens: the bridge tells the home Jam as soon as the extension connects.
+    const received: unknown[] = [];
+    const socket = new WebSocket(url, { origin: SPOTIFY_ORIGIN });
+    socket.on("message", (data) => received.push(JSON.parse(String(data))));
+    client = socket;
+    await vi.waitFor(() => expect(received).toEqual([{ type: "home-jam", hostName: "Nat" }]));
+
+    bridge.setHomeJamOnSpicetify(null);
+    await vi.waitFor(() => expect(received.at(-1)).toEqual({ type: "home-jam", hostName: null }));
+  });
+
+  it("passes on the tracks added from Spotify, and only Spotify tracks", async () => {
+    const url = await start();
+    client = await connect(url, SPOTIFY_ORIGIN);
+    const requests: string[][] = [];
+    const stop = bridge.onSpicetifyQueueRequest((uris) => requests.push(uris));
+
+    client.send(JSON.stringify({ type: "queue-request", uris: ["spotify:episode:abc"] }));
+    client.send(JSON.stringify({ type: "queue-request", uris: ["spotify:track:abc", "spotify:track:def"] }));
+
+    await vi.waitFor(() => expect(requests).toEqual([["spotify:track:abc", "spotify:track:def"]]));
+    stop();
+  });
+
+  it("adds a participant's tracks to the host's queue", async () => {
+    const url = await start();
+    client = await connect(url, SPOTIFY_ORIGIN);
+    await vi.waitFor(() => expect(bridge.spicetifyConnected()).toBe(true));
+    const received: unknown[] = [];
+    client.on("message", (data) => received.push(JSON.parse(String(data))));
+
+    bridge.enqueueOnSpicetify({ uris: ["spotify:track:abc"], from: "Amine" });
+
+    await vi.waitFor(() => expect(received).toEqual([{ type: "enqueue", uris: ["spotify:track:abc"], from: "Amine" }]));
+  });
 });

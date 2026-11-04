@@ -1,7 +1,8 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import { z } from "zod";
-import type { FollowTarget, SpotifyTrack } from "../shared/content-api.js";
+import type { EnqueueRequest, FollowTarget, HomeJam, SpotifyTrack } from "../shared/content-api.js";
 import { logger } from "./logger.js";
+import { queueRequestSchema } from "./workadventure-controls.js";
 
 /**
  * Talks to the WorkAdventure extension for Spicetify (aminekun90/workadventure-spicetify), inside the Spotify app of
@@ -38,6 +39,9 @@ const stateSchema = z.object({
 let extension: WebSocket | undefined;
 let track: SpotifyTrack | null = null;
 const listeners = new Set<() => void>();
+/** Kept to tell an extension that connects later (Spotify started after joining). */
+let homeJam: HomeJam | null = null;
+const queueRequestListeners = new Set<(uris: string[]) => void>();
 
 export function startSpicetifyBridge(port = SPICETIFY_BRIDGE_PORT): WebSocketServer {
   const server = new WebSocketServer({
@@ -55,6 +59,7 @@ export function startSpicetifyBridge(port = SPICETIFY_BRIDGE_PORT): WebSocketSer
     extension?.close();
     extension = socket;
     logger.info("Spicetify extension connected");
+    if (homeJam) socket.send(JSON.stringify({ type: "home-jam", hostName: homeJam.hostName }));
     notify();
     socket.on("message", (data) => receive(socket, data.toString()));
     socket.on("close", () => {
@@ -87,12 +92,34 @@ export function followOnSpicetify(target: FollowTarget | null): void {
   extension?.send(JSON.stringify(target ? { type: "follow", ...target } : { type: "unfollow" }));
 }
 
+/** The home Jam the user takes part in as a guest (null: none): the extension offers "add to the home Jam". */
+export function setHomeJamOnSpicetify(jam: HomeJam | null): void {
+  homeJam = jam;
+  extension?.send(JSON.stringify({ type: "home-jam", hostName: jam?.hostName ?? null }));
+}
+
+/** As the home Jam's host: adds a participant's tracks to the queue of this Spotify. */
+export function enqueueOnSpicetify(request: EnqueueRequest): void {
+  extension?.send(JSON.stringify({ type: "enqueue", ...request }));
+}
+
+/** Called with the tracks the user asks, from Spotify, to add to the home Jam. */
+export function onSpicetifyQueueRequest(listener: (uris: string[]) => void): () => void {
+  queueRequestListeners.add(listener);
+  return () => queueRequestListeners.delete(listener);
+}
+
 function receive(socket: WebSocket, raw: string): void {
   if (extension !== socket) return;
   let json: unknown;
   try {
     json = JSON.parse(raw);
   } catch {
+    return;
+  }
+  const queueRequest = queueRequestSchema.safeParse(json);
+  if (queueRequest.success) {
+    for (const listener of queueRequestListeners) listener(queueRequest.data.uris);
     return;
   }
   const state = stateSchema.safeParse(json);

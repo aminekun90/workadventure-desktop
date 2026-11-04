@@ -10,8 +10,24 @@ import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-wi
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
 import { watchSpotify } from "./spotify-player.js";
-import { followOnSpicetify, onSpicetifyChange, spicetifyConnected } from "./spicetify-bridge.js";
-import { followSchema, listeningSchema, mediaSchema, statusSchema, unreadSchema, updateControls } from "./workadventure-controls.js";
+import {
+  enqueueOnSpicetify,
+  followOnSpicetify,
+  onSpicetifyChange,
+  onSpicetifyQueueRequest,
+  setHomeJamOnSpicetify,
+  spicetifyConnected,
+} from "./spicetify-bridge.js";
+import {
+  enqueueSchema,
+  followSchema,
+  homeJamSchema,
+  listeningSchema,
+  mediaSchema,
+  statusSchema,
+  unreadSchema,
+  updateControls,
+} from "./workadventure-controls.js";
 import { focusWindowOf, isWorkAdventureContent, reloadContent, requestAttention, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
 const PROBE_TIMEOUT_MS = 4000;
@@ -178,6 +194,23 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.follow, (event, payload: unknown) => {
     const target = followSchema.safeParse(payload);
     if (target.success && isWorkAdventureContent(event.sender)) followOnSpicetify(target.data);
+  });
+  // The page in a home Jam receives the tracks the user adds from Spotify; only one at a time, the latest.
+  let homeJamPage: WebContents | undefined;
+  ipcMain.on(CONTENT_CHANNELS.homeJam, (event, payload: unknown) => {
+    const jam = homeJamSchema.safeParse(payload);
+    if (!jam.success || !isWorkAdventureContent(event.sender)) return;
+    if (jam.data) homeJamPage = event.sender;
+    else if (homeJamPage !== event.sender) return;
+    else homeJamPage = undefined;
+    setHomeJamOnSpicetify(jam.data);
+  });
+  onSpicetifyQueueRequest((uris) => {
+    if (homeJamPage && !homeJamPage.isDestroyed()) homeJamPage.send(CONTENT_CHANNELS.queueRequest, uris);
+  });
+  ipcMain.on(CONTENT_CHANNELS.enqueue, (event, payload: unknown) => {
+    const request = enqueueSchema.safeParse(payload);
+    if (request.success && isWorkAdventureContent(event.sender)) enqueueOnSpicetify(request.data);
   });
   ipcMain.on(CONTENT_CHANNELS.unread, (event, payload: unknown) => {
     const unread = unreadSchema.safeParse(payload);
