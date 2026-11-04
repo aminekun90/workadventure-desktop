@@ -1,8 +1,8 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import { z } from "zod";
-import type { EnqueueRequest, FollowTarget, HomeJam, SpotifyTrack } from "../shared/content-api.js";
+import type { EnqueueRequest, FollowTarget, HomeJam, QueuedTrack, SpotifyTrack } from "../shared/content-api.js";
 import { logger } from "./logger.js";
-import { queueRequestSchema } from "./workadventure-controls.js";
+import { queueRequestSchema, queueSchema } from "./workadventure-controls.js";
 
 /**
  * Talks to the WorkAdventure extension for Spicetify (aminekun90/workadventure-spicetify), inside the Spotify app of
@@ -42,6 +42,8 @@ const listeners = new Set<() => void>();
 /** Kept to tell an extension that connects later (Spotify started after joining). */
 let homeJam: HomeJam | null = null;
 const queueRequestListeners = new Set<(uris: string[]) => void>();
+let queue: QueuedTrack[] = [];
+const queueListeners = new Set<(tracks: QueuedTrack[]) => void>();
 
 export function startSpicetifyBridge(port = SPICETIFY_BRIDGE_PORT): WebSocketServer {
   const server = new WebSocketServer({
@@ -66,6 +68,7 @@ export function startSpicetifyBridge(port = SPICETIFY_BRIDGE_PORT): WebSocketSer
       if (extension !== socket) return;
       extension = undefined;
       track = null;
+      setQueue([]);
       logger.info("Spicetify extension disconnected");
       notify();
     });
@@ -103,6 +106,22 @@ export function enqueueOnSpicetify(request: EnqueueRequest): void {
   extension?.send(JSON.stringify({ type: "enqueue", ...request }));
 }
 
+/** As the Jukebox's host: removes a track from the queue of this Spotify. */
+export function dequeueOnSpicetify(track: Pick<QueuedTrack, "uri" | "uid">): void {
+  extension?.send(JSON.stringify({ type: "dequeue", uri: track.uri, uid: track.uid }));
+}
+
+/** The tracks added to the queue of this Spotify, as last reported by the extension; empty without it. */
+export function spicetifyQueue(): QueuedTrack[] {
+  return queue;
+}
+
+/** Called with the queue on every change, and once it empties when the extension disconnects. */
+export function onSpicetifyQueue(listener: (tracks: QueuedTrack[]) => void): () => void {
+  queueListeners.add(listener);
+  return () => queueListeners.delete(listener);
+}
+
 /** Called with the tracks the user asks, from Spotify, to add to the home Jam. */
 export function onSpicetifyQueueRequest(listener: (uris: string[]) => void): () => void {
   queueRequestListeners.add(listener);
@@ -115,6 +134,11 @@ function receive(socket: WebSocket, raw: string): void {
   try {
     json = JSON.parse(raw);
   } catch {
+    return;
+  }
+  const reportedQueue = queueSchema.safeParse(json);
+  if (reportedQueue.success) {
+    setQueue(reportedQueue.data.tracks);
     return;
   }
   const queueRequest = queueRequestSchema.safeParse(json);
@@ -141,4 +165,9 @@ function receive(socket: WebSocket, raw: string): void {
 
 function notify(): void {
   for (const listener of listeners) listener();
+}
+
+function setQueue(tracks: QueuedTrack[]): void {
+  queue = tracks;
+  for (const listener of queueListeners) listener(tracks);
 }

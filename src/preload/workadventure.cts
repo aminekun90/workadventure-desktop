@@ -6,6 +6,7 @@ import type {
   ContentChannel,
   ContentCommand,
   MediaState,
+  QueuedTrack,
   SpotifyTrack,
   StatusRequest,
 } from "../shared/content-api.js";
@@ -28,6 +29,7 @@ let requestStatus: ((request: StatusRequest) => void) | undefined;
 let onSpotifyTrack: ((track: SpotifyTrack | null) => void) | undefined;
 let onListenAlongAvailable: ((available: boolean) => void) | undefined;
 let onQueueRequest: ((uris: string[]) => void) | undefined;
+let onSpotifyQueue: ((tracks: QueuedTrack[]) => void) | undefined;
 
 contextBridge.exposeInMainWorld("WAD", {
   desktop: true,
@@ -61,6 +63,17 @@ contextBridge.exposeInMainWorld("WAD", {
     onQueueRequest = callback;
   },
   enqueueOnSpotify: (request: unknown) => send("content:enqueue", request),
+  // The Jukebox's queue (fork, Spotify/HomeJam.ts): the host's page shows it and removes tracks from it.
+  watchSpotifyQueue: (callback: (tracks: QueuedTrack[]) => void) => {
+    onSpotifyQueue = callback;
+    send("content:queue-watch", true);
+    return () => {
+      if (onSpotifyQueue !== callback) return;
+      onSpotifyQueue = undefined;
+      send("content:queue-watch", false);
+    };
+  },
+  dequeueOnSpotify: (track: unknown) => send("content:dequeue", track),
   // Spotify sharing without an account: WorkAdventure calls it while sharing is on (fork, LocalSpotifyPlayer.ts).
   watchSpotifyTrack: (callback: (track: SpotifyTrack | null) => void) => {
     onSpotifyTrack = callback;
@@ -75,6 +88,10 @@ contextBridge.exposeInMainWorld("WAD", {
 
 ipcRenderer.on("content:spotify-track" satisfies ContentChannel, (_event, track: SpotifyTrack | null) => {
   onSpotifyTrack?.(track);
+});
+
+ipcRenderer.on("content:spotify-queue" satisfies ContentChannel, (_event, tracks: QueuedTrack[]) => {
+  onSpotifyQueue?.(tracks);
 });
 
 ipcRenderer.on("content:queue-request" satisfies ContentChannel, (_event, uris: string[]) => {

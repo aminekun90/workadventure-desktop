@@ -37,6 +37,12 @@ export const CONTENT_CHANNELS = {
   queueRequest: "content:queue-request",
   /** Page → main: tracks another participant adds to this user's queue, as host (window.WAD.enqueueOnSpotify). */
   enqueue: "content:enqueue",
+  /** Page → main: start (true) or stop (false) receiving the queue of this Spotify (window.WAD.watchSpotifyQueue). */
+  queueWatch: "content:queue-watch",
+  /** Main → page: the tracks added to the queue of this Spotify, as host of a Jukebox. */
+  spotifyQueue: "content:spotify-queue",
+  /** Page → main: a track to remove from the queue of this Spotify (window.WAD.dequeueOnSpotify). */
+  dequeue: "content:dequeue",
   /** Main → page. */
   command: "content:command",
 } as const;
@@ -107,6 +113,20 @@ export interface EnqueueRequest {
   uris: string[];
   /** Who added them, shown in the host's Spotify. */
   from: string;
+}
+
+/** A track added to the queue of this Spotify, as the Jukebox shows it. */
+export interface QueuedTrack {
+  /** spotify:track:… */
+  uri: string;
+  /** Identifies this entry of the queue (the same track can be queued twice). */
+  uid: string;
+  title: string;
+  artist: string;
+  /** https://i.scdn.co/image/…, or empty. */
+  artworkUrl: string;
+  /** Who added it from WorkAdventure; empty for the host. */
+  addedBy: string;
 }
 
 /** A track to play along with another user, at the position they are at. */

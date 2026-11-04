@@ -7,6 +7,7 @@ import {
   type EnqueueRequest,
   type FollowTarget,
   type HomeJam,
+  type QueuedTrack,
   type Listening,
   type MediaState,
 } from "../shared/content-api.js";
@@ -22,6 +23,25 @@ export const followSchema = z
 const trackUris = z.array(z.string().regex(/^spotify:track:[A-Za-z0-9]+$/)).min(1).max(5);
 export const homeJamSchema = z.object({ hostName: z.string().max(100) }).nullable() satisfies z.ZodType<HomeJam | null>;
 export const enqueueSchema = z.object({ uris: trackUris, from: z.string().max(100) }) satisfies z.ZodType<EnqueueRequest>;
+const trackUri = z.string().regex(/^spotify:track:[A-Za-z0-9]+$/);
+const queueUid = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
+export const dequeueSchema = z.object({ uri: trackUri, uid: queueUid });
+/** The queue the extension reports; a track it cannot describe safely is dropped, not the whole queue. */
+export const queueSchema = z.object({
+  type: z.literal("queue"),
+  tracks: z
+    .array(
+      z.object({
+        uri: trackUri,
+        uid: queueUid,
+        title: z.string().max(200),
+        artist: z.string().max(200),
+        artworkUrl: z.union([z.literal(""), z.string().startsWith("https://i.scdn.co/image/").max(200)]).catch(""),
+        addedBy: z.string().max(100),
+      }) satisfies z.ZodType<QueuedTrack>,
+    )
+    .max(30),
+});
 /** What the extension sends when the user adds tracks to the home Jam from Spotify's context menu. */
 export const queueRequestSchema = z.object({ type: z.literal("queue-request"), uris: trackUris });
 export const listeningSchema = z.object({
