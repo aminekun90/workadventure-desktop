@@ -166,4 +166,59 @@ describe("Spicetify bridge", () => {
 
     await vi.waitFor(() => expect(received).toEqual([{ type: "enqueue", uris: ["spotify:track:abc"], from: "Amine" }]));
   });
+
+  it("keeps the queue the extension reports, without an unsafe cover, and empties it when Spotify goes", async () => {
+    const url = await start();
+    client = await connect(url, SPOTIFY_ORIGIN);
+    const reported: unknown[] = [];
+    const stop = bridge.onSpicetifyQueue((tracks) => reported.push(tracks));
+    const queued = {
+      uri: "spotify:track:abc",
+      uid: "q1",
+      title: "Song",
+      artist: "Artist",
+      addedBy: "Amine",
+      addedByUuid: "amine-uuid",
+    };
+
+    client.send(
+      JSON.stringify({ type: "queue", tracks: [{ ...queued, artworkUrl: "https://evil.example/cover.png" }] }),
+    );
+    await vi.waitFor(() => expect(bridge.spicetifyQueue()).toEqual([{ ...queued, artworkUrl: "" }]));
+
+    client.close();
+    await vi.waitFor(() => expect(bridge.spicetifyQueue()).toEqual([]));
+    expect(reported.at(-1)).toEqual([]);
+    stop();
+  });
+
+  it("asks the host's extension to remove a track from the queue", async () => {
+    const url = await start();
+    client = await connect(url, SPOTIFY_ORIGIN);
+    await vi.waitFor(() => expect(bridge.spicetifyConnected()).toBe(true));
+    const received: unknown[] = [];
+    client.on("message", (data) => received.push(JSON.parse(String(data))));
+
+    bridge.dequeueOnSpicetify({ uri: "spotify:track:abc", uid: "q1" });
+
+    await vi.waitFor(() => expect(received).toEqual([{ type: "dequeue", uri: "spotify:track:abc", uid: "q1" }]));
+  });
+
+  it("asks the host's extension to move a track, and the local one to like a track", async () => {
+    const url = await start();
+    client = await connect(url, SPOTIFY_ORIGIN);
+    await vi.waitFor(() => expect(bridge.spicetifyConnected()).toBe(true));
+    const received: unknown[] = [];
+    client.on("message", (data) => received.push(JSON.parse(String(data))));
+
+    bridge.moveInSpicetifyQueue({ uri: "spotify:track:b", uid: "q2", before: { uri: "spotify:track:a", uid: "q1" } });
+    bridge.likeOnSpicetify("spotify:track:b");
+
+    await vi.waitFor(() =>
+      expect(received).toEqual([
+        { type: "move", uri: "spotify:track:b", uid: "q2", before: { uri: "spotify:track:a", uid: "q1" } },
+        { type: "like", uri: "spotify:track:b" },
+      ]),
+    );
+  });
 });

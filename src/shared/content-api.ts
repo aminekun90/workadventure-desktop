@@ -37,6 +37,16 @@ export const CONTENT_CHANNELS = {
   queueRequest: "content:queue-request",
   /** Page → main: tracks another participant adds to this user's queue, as host (window.WAD.enqueueOnSpotify). */
   enqueue: "content:enqueue",
+  /** Page → main: start (true) or stop (false) receiving the queue of this Spotify (window.WAD.watchSpotifyQueue). */
+  queueWatch: "content:queue-watch",
+  /** Main → page: the tracks added to the queue of this Spotify, as host of a Jukebox. */
+  spotifyQueue: "content:spotify-queue",
+  /** Page → main: a track to remove from the queue of this Spotify (window.WAD.dequeueOnSpotify). */
+  dequeue: "content:dequeue",
+  /** Page → main: a track to move before or after another in the queue of this Spotify (window.WAD.moveInSpotifyQueue). */
+  move: "content:move",
+  /** Page → main: a track to save to the Liked Songs of this Spotify (window.WAD.likeOnSpotify). */
+  like: "content:like",
   /** Main → page. */
   command: "content:command",
 } as const;
@@ -105,9 +115,30 @@ export interface HomeJam {
 /** Tracks (spotify:track:…) a home Jam participant adds to the host's queue. */
 export interface EnqueueRequest {
   uris: string[];
-  /** Who added them, shown in the host's Spotify. */
+  /** Who added them, shown in the host's Spotify and in WorkAdventure. */
   from: string;
+  /** Their WorkAdventure uuid: they may remove and move their own tracks. Absent for the host. */
+  fromUuid?: string | undefined;
 }
+
+/** A track added to the queue of this Spotify, as the Jukebox shows it. */
+export interface QueuedTrack {
+  /** spotify:track:… */
+  uri: string;
+  /** Identifies this entry of the queue (the same track can be queued twice). */
+  uid: string;
+  title: string;
+  artist: string;
+  /** https://i.scdn.co/image/…, or empty. */
+  artworkUrl: string;
+  /** Who added it from WorkAdventure, name and uuid; empty for the host. */
+  addedBy: string;
+  addedByUuid: string;
+}
+
+/** A queued track moved just before or just after another one. */
+export type QueueMove = Pick<QueuedTrack, "uri" | "uid"> &
+  ({ before: Pick<QueuedTrack, "uri" | "uid"> } | { after: Pick<QueuedTrack, "uri" | "uid"> });
 
 /** A track to play along with another user, at the position they are at. */
 export interface FollowTarget {

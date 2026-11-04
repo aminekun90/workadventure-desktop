@@ -11,15 +11,23 @@ import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
 import { watchSpotify } from "./spotify-player.js";
 import {
+  dequeueOnSpicetify,
   enqueueOnSpicetify,
   followOnSpicetify,
+  likeOnSpicetify,
+  moveInSpicetifyQueue,
   onSpicetifyChange,
+  onSpicetifyQueue,
   onSpicetifyQueueRequest,
   setHomeJamOnSpicetify,
+  spicetifyQueue,
   spicetifyConnected,
 } from "./spicetify-bridge.js";
 import {
+  dequeueSchema,
   enqueueSchema,
+  likeSchema,
+  moveSchema,
   followSchema,
   homeJamSchema,
   listeningSchema,
@@ -211,6 +219,34 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.enqueue, (event, payload: unknown) => {
     const request = enqueueSchema.safeParse(payload);
     if (request.success && isWorkAdventureContent(event.sender)) enqueueOnSpicetify(request.data);
+  });
+  // The Jukebox's host page shows its Spotify queue: it receives it while it asks, a reload asking again.
+  const queueSubscriptions = new WeakMap<WebContents, () => void>();
+  ipcMain.on(CONTENT_CHANNELS.queueWatch, (event, payload: unknown) => {
+    const watching = z.boolean().safeParse(payload);
+    if (!watching.success || !isWorkAdventureContent(event.sender)) return;
+    const page = event.sender;
+    queueSubscriptions.get(page)?.();
+    queueSubscriptions.delete(page);
+    if (!watching.data) return;
+    page.send(CONTENT_CHANNELS.spotifyQueue, spicetifyQueue());
+    const stop = onSpicetifyQueue((tracks) => {
+      if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyQueue, tracks);
+    });
+    queueSubscriptions.set(page, stop);
+    page.once("destroyed", stop);
+  });
+  ipcMain.on(CONTENT_CHANNELS.dequeue, (event, payload: unknown) => {
+    const track = dequeueSchema.safeParse(payload);
+    if (track.success && isWorkAdventureContent(event.sender)) dequeueOnSpicetify(track.data);
+  });
+  ipcMain.on(CONTENT_CHANNELS.move, (event, payload: unknown) => {
+    const move = moveSchema.safeParse(payload);
+    if (move.success && isWorkAdventureContent(event.sender)) moveInSpicetifyQueue(move.data);
+  });
+  ipcMain.on(CONTENT_CHANNELS.like, (event, payload: unknown) => {
+    const like = likeSchema.safeParse(payload);
+    if (like.success && isWorkAdventureContent(event.sender)) likeOnSpicetify(like.data.uri);
   });
   ipcMain.on(CONTENT_CHANNELS.unread, (event, payload: unknown) => {
     const unread = unreadSchema.safeParse(payload);
