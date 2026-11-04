@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -50,9 +50,28 @@ export function saveListenAlongAnswer(filePath: string, answer: ListenAlongAnswe
   writeJsonFile(filePath, { answer });
 }
 
-/** Offered once, to a computer with a Spotify app Spicetify can patch, and a Spicetify build for it. */
+/**
+ * Offered once, to a computer with a Spotify app Spicetify can patch and a Spicetify build for it, unless the
+ * extension is already set up (installed by hand, or on another WorkAdventure profile).
+ */
 export function shouldOfferListenAlong(env: ListenAlongEnvironment, answer: ListenAlongAnswer | undefined): boolean {
-  return answer === undefined && spotifyInstalled(env) && spicetifyTarget(env) !== undefined;
+  return (
+    answer === undefined &&
+    spotifyInstalled(env) &&
+    spicetifyTarget(env) !== undefined &&
+    !extensionConfigured(env)
+  );
+}
+
+/** Spicetify lists its extensions in config-xpui.ini: `extensions = a.js|workadventure.js`. */
+export function extensionConfigured(env: ListenAlongEnvironment): boolean {
+  const configPath =
+    env.platform === "win32"
+      ? env.appData && join(env.appData, "spicetify", "config-xpui.ini")
+      : join(env.home, ".config", "spicetify", "config-xpui.ini");
+  if (!configPath || !existsSync(configPath)) return false;
+  const extensions = /^extensions\s*=(.*)$/m.exec(readFileSync(configPath, "utf8"))?.[1] ?? "";
+  return extensions.split("|").some((name) => name.trim() === EXTENSION_FILE);
 }
 
 export function spotifyInstalled(env: ListenAlongEnvironment): boolean {
