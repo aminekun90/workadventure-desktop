@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createPolicy, isAllowedUrl, isSafeExternalUrl, nativeMusicAppUrl } from "../src/main/navigation.js";
+import {
+  createPolicy,
+  isAllowedUrl,
+  isSafeExternalUrl,
+  isSpotifyAuthorizationWindow,
+  isSpotifyLoginUrl,
+  nativeMusicAppUrl,
+} from "../src/main/navigation.js";
 
 describe("isAllowedUrl", () => {
   const policy = createPolicy("https://wa.goyan.fr/");
@@ -60,3 +67,19 @@ describe("nativeMusicAppUrl", () => {
   });
 });
 
+
+describe("Spotify account linking window", () => {
+  it("only lets the empty Spotify linking window open in the app", () => {
+    expect(isSpotifyAuthorizationWindow({ url: "about:blank", frameName: "spotify-authorization" })).toBe(true);
+    expect(isSpotifyAuthorizationWindow({ url: "", frameName: "spotify-authorization" })).toBe(true);
+    expect(isSpotifyAuthorizationWindow({ url: "https://evil.example/", frameName: "spotify-authorization" })).toBe(false);
+    expect(isSpotifyAuthorizationWindow({ url: "about:blank", frameName: "other" })).toBe(false);
+  });
+
+  it("keeps Spotify's sign-in pages in that window, over https only", () => {
+    expect(isSpotifyLoginUrl("https://accounts.spotify.com/authorize?client_id=x")).toBe(true);
+    expect(isSpotifyLoginUrl("https://challenge.spotify.com/c/abc")).toBe(true);
+    expect(isSpotifyLoginUrl("http://accounts.spotify.com/authorize")).toBe(false);
+    expect(isSpotifyLoginUrl("https://open.spotify.com/track/abc")).toBe(false);
+  });
+});

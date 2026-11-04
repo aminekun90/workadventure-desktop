@@ -22,6 +22,22 @@ export function isAllowedUrl(url: string, policy: NavigationPolicy): boolean {
   return policy.domains.some((domain) => parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`));
 }
 
+/** The window WorkAdventure opens, empty, to link a Spotify account (SpotifyAccount.ts in the fork). */
+export const SPOTIFY_AUTHORIZATION_WINDOW = "spotify-authorization";
+
+/** Spotify's sign-in and consent pages, the only ones that may load in that window besides WorkAdventure. */
+const SPOTIFY_LOGIN_HOSTS = new Set(["accounts.spotify.com", "challenge.spotify.com"]);
+
+export function isSpotifyLoginUrl(url: string): boolean {
+  const parsed = URL.parse(url);
+  return parsed?.protocol === "https:" && SPOTIFY_LOGIN_HOSTS.has(parsed.hostname);
+}
+
+/** The Spotify linking window opens empty, then goes to Spotify: nothing else may open a window in the app. */
+export function isSpotifyAuthorizationWindow({ url, frameName }: { url: string; frameName: string }): boolean {
+  return frameName === SPOTIFY_AUTHORIZATION_WINDOW && (url === "" || url === "about:blank");
+}
+
 export function isSafeExternalUrl(url: string): boolean {
   const parsed = URL.parse(url);
   return parsed !== null && EXTERNAL_PROTOCOLS.has(parsed.protocol);

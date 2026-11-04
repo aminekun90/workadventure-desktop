@@ -5,7 +5,7 @@ import { TOOLBAR_CHANNELS, type ToolbarState } from "../shared/toolbar-api.js";
 import { logger } from "./logger.js";
 import { currentMapPath, fetchMaps, mapUrl } from "./maps.js";
 import { resetControls } from "./workadventure-controls.js";
-import { isAllowedUrl, type NavigationPolicy } from "./navigation.js";
+import { isAllowedUrl, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
 import { BACKGROUND, framelessChrome, relayConsole, routeNavigation } from "./window-common.js";
 
 const TOOLBAR_HTML = fileURLToPath(new URL("../renderer/toolbar/index.html", import.meta.url));
@@ -67,7 +67,11 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
 
   routeNavigation(window.webContents, (target) => target === TOOLBAR_URL);
   relayConsole(window.webContents);
-  routeNavigation(content.webContents, (target) => isAllowedUrl(target, policy));
+  routeNavigation(content.webContents, (target) => isAllowedUrl(target, policy), {
+    // Linking a Spotify account: Spotify's pages, then WorkAdventure's callback, which hands the code to the page.
+    allows: isSpotifyAuthorizationWindow,
+    routeChild: (child) => routeNavigation(child, (target) => isSpotifyLoginUrl(target) || isAllowedUrl(target, policy)),
+  });
   keepContentBelowToolbar(window, content);
   reloadOnCrash(content.webContents);
   syncToolbar(window.webContents, content.webContents, label);
