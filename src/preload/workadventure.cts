@@ -6,7 +6,7 @@ import type {
   ContentChannel,
   ContentCommand,
   MediaState,
-  QueuedTrack,
+  QueueState,
   SpotifyTrack,
   StatusRequest,
 } from "../shared/content-api.js";
@@ -29,7 +29,7 @@ let requestStatus: ((request: StatusRequest) => void) | undefined;
 let onSpotifyTrack: ((track: SpotifyTrack | null) => void) | undefined;
 let onListenAlongAvailable: ((available: boolean) => void) | undefined;
 let onQueueRequest: ((uris: string[]) => void) | undefined;
-let onSpotifyQueue: ((tracks: QueuedTrack[]) => void) | undefined;
+let onSpotifyQueue: ((state: QueueState) => void) | undefined;
 
 contextBridge.exposeInMainWorld("WAD", {
   desktop: true,
@@ -64,7 +64,7 @@ contextBridge.exposeInMainWorld("WAD", {
   },
   enqueueOnSpotify: (request: unknown) => send("content:enqueue", request),
   // The Jukebox's queue (fork, Spotify/HomeJam.ts): the host's page shows it and removes tracks from it.
-  watchSpotifyQueue: (callback: (tracks: QueuedTrack[]) => void) => {
+  watchSpotifyQueue: (callback: (state: QueueState) => void) => {
     onSpotifyQueue = callback;
     send("content:queue-watch", true);
     return () => {
@@ -93,8 +93,8 @@ ipcRenderer.on("content:spotify-track" satisfies ContentChannel, (_event, track:
   onSpotifyTrack?.(track);
 });
 
-ipcRenderer.on("content:spotify-queue" satisfies ContentChannel, (_event, tracks: QueuedTrack[]) => {
-  onSpotifyQueue?.(tracks);
+ipcRenderer.on("content:spotify-queue" satisfies ContentChannel, (_event, state: QueueState) => {
+  onSpotifyQueue?.(state);
 });
 
 ipcRenderer.on("content:queue-request" satisfies ContentChannel, (_event, uris: string[]) => {

@@ -230,8 +230,8 @@ function registerContentChannels(): void {
     queueSubscriptions.delete(page);
     if (!watching.data) return;
     page.send(CONTENT_CHANNELS.spotifyQueue, spicetifyQueue());
-    const stop = onSpicetifyQueue((tracks) => {
-      if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyQueue, tracks);
+    const stop = onSpicetifyQueue((state) => {
+      if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyQueue, state);
     });
     queueSubscriptions.set(page, stop);
     page.once("destroyed", stop);
