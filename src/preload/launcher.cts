@@ -19,6 +19,8 @@ const api: LauncherApi = {
   getState: () => invoke("launcher:get-state"),
   probe: (choice) => invoke("launcher:probe", choice),
   launch: (request) => invoke("launcher:launch", request),
+  installListenAlong: () => invoke("launcher:install-listen-along"),
+  dismissListenAlong: () => invoke("launcher:dismiss-listen-along"),
   update,
 };
 

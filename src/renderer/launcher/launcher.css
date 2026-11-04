@@ -345,6 +345,21 @@ h2 {
   background: rgb(236 124 98 / 10%);
 }
 
+.listen-along p {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+}
+
+.listen-along .hint {
+  color: var(--muted);
+}
+
+.listen-along .actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
 /* Bottom: the lit office skyline, with version and shortcut on the street */
 .city .skyline {
   height: 9rem;

@@ -8,6 +8,13 @@ import { defaultWokaUrl, downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAva
 import { DEEP_LINK_PROTOCOL, deepLinkTarget } from "./deep-links.js";
 import { startDesktopIntegration, type DesktopIntegration } from "./desktop-integration.js";
 import { registerIpc } from "./ipc.js";
+import {
+  currentEnvironment,
+  installListenAlong,
+  readListenAlongAnswer,
+  saveListenAlongAnswer,
+  shouldOfferListenAlong,
+} from "./listen-along-install.js";
 import { startSpicetifyBridge } from "./spicetify-bridge.js";
 import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
 import { logger, logToFile } from "./logger.js";
@@ -34,6 +41,7 @@ if (!app.isPackaged) app.setPath("userData", join(app.getPath("appData"), "WorkA
 
 const settingsPath = join(app.getPath("userData"), "settings.json");
 const avatarPath = join(app.getPath("userData"), "avatar.json");
+const listenAlongPath = join(app.getPath("userData"), "listen-along.json");
 let policy = createPolicy(INSTANCES.prod.url);
 let currentWindow: BrowserWindow | undefined;
 let notice: string | undefined;
@@ -75,6 +83,11 @@ async function start(): Promise<void> {
     getUpdateStatus: () => updateStatus,
     applyUpdate: () => applyUpdate(updateStatus),
     checkForUpdates,
+    installListenAlong: async () => {
+      await installListenAlong(currentEnvironment(), net.fetch);
+      saveListenAlongAnswer(listenAlongPath, "installed");
+    },
+    dismissListenAlong: () => saveListenAlongAnswer(listenAlongPath, "dismissed"),
   });
   startUpdater(announceUpdateStatus);
   startSpicetifyBridge();
@@ -209,6 +222,7 @@ async function launcherState(): Promise<LauncherState> {
     instances: instanceIdSchema.options.map((id) => ({ id, ...INSTANCES[id], host: new URL(INSTANCES[id].url).host })),
     settings,
     version: app.getVersion(),
+    offerListenAlong: shouldOfferListenAlong(currentEnvironment(), readListenAlongAnswer(listenAlongPath)),
     ...(notice && { notice }),
     ...(avatar && { avatar: avatar.layers }),
   };

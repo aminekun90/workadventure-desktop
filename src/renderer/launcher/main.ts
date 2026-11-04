@@ -22,6 +22,7 @@ drawSkyline(byId("skyline", SVGSVGElement));
 mountUpdateStatus(api.update);
 if (state.avatar) showAvatar(state.avatar);
 if (state.notice) showError(state.notice);
+if (state.offerListenAlong) setupListenAlongOffer();
 
 enterButton.addEventListener("click", () => void enter());
 document.addEventListener("keydown", (event) => {
@@ -37,6 +38,36 @@ async function enter(): Promise<void> {
   if (!result.ok) {
     showError(result.message);
     setBusy(false);
+  }
+}
+
+function setupListenAlongOffer(): void {
+  const section = byId("listen-along", HTMLElement);
+  const install = byId("listen-along-install", HTMLButtonElement);
+  const dismiss = byId("listen-along-dismiss", HTMLButtonElement);
+  const status = byId("listen-along-status", HTMLParagraphElement);
+  section.hidden = false;
+  dismiss.addEventListener("click", () => {
+    section.hidden = true;
+    void api.dismissListenAlong();
+  });
+  install.addEventListener("click", () => void installListenAlong());
+
+  async function installListenAlong(): Promise<void> {
+    install.disabled = true;
+    dismiss.disabled = true;
+    status.hidden = false;
+    status.textContent = "Installation en cours… Spotify va redémarrer.";
+    const result = await api.installListenAlong();
+    if (result.ok) {
+      status.textContent = "C'est prêt : « Écouter en même temps » apparaît sur la carte d'un collègue qui écoute Spotify.";
+      dismiss.hidden = true;
+      install.hidden = true;
+      return;
+    }
+    status.textContent = `${result.message}. Réessaie, ou installe Spicetify à la main (spicetify.app).`;
+    install.disabled = false;
+    dismiss.disabled = false;
   }
 }
 
