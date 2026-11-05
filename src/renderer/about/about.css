@@ -2,7 +2,7 @@
 body {
   display: grid;
   grid-template-rows: 1fr auto;
-  background: linear-gradient(180deg, var(--night-deep) 0%, var(--night) 75%);
+  background: linear-gradient(180deg, var(--backdrop-top) 0%, var(--backdrop-bottom) 75%);
 }
 
 .about {
