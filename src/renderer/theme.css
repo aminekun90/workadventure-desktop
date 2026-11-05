@@ -31,6 +31,92 @@
   --font-pixel: "Pixelify Sans", var(--font-ui);
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* The skyline (skyline.ts) and the sky behind it: the office at night, its windows lit. */
+  --backdrop-top: var(--night-deep);
+  --backdrop-bottom: var(--night);
+  --city-far: #19213a;
+  --city-near: #212a45;
+  --city-window: #2a3455;
+  --city-window-lit: var(--window-light);
+  --city-ground: var(--night-deep);
+  --sun: #ffd36b;
+  --cloud: #fff;
+  --moon: #f3f0dc;
+  --moon-crater: #d6d1b4;
+  --moon-glow: rgb(243 240 220 / 55%);
+  --sun-glow: rgb(255 196 64 / 75%);
+}
+
+/*
+ * The look chosen in WorkAdventure's settings (src/renderer/appearance.ts): the same palettes, in the same hues, and
+ * the titles in the chosen font. Pixel and arcade keep the pixel titles (arcade's font is not bundled here); the
+ * readable fonts make titles readable too.
+ */
+:root[data-palette="forest"] {
+  --night: hsl(140 26% 10%);
+  --night-deep: hsl(140 28% 7%);
+  --slate: hsl(140 24% 14%);
+  --slate-raised: hsl(140 22% 18%);
+  --line: hsl(140 22% 22%);
+  --text: hsl(140 22% 90%);
+  --muted: hsl(140 16% 62%);
+  --accent: hsl(145 45% 45%);
+  --accent-hover: hsl(145 48% 52%);
+}
+
+:root[data-palette="ember"] {
+  --night: hsl(12 24% 11%);
+  --night-deep: hsl(12 26% 8%);
+  --slate: hsl(12 22% 16%);
+  --slate-raised: hsl(13 22% 20%);
+  --line: hsl(14 22% 24%);
+  --text: hsl(18 30% 90%);
+  --muted: hsl(18 22% 62%);
+  --accent: hsl(24 74% 55%);
+  --accent-hover: hsl(24 82% 60%);
+}
+
+:root[data-palette="gameboy"] {
+  --night: hsl(112 28% 10%);
+  --night-deep: hsl(114 30% 7%);
+  --slate: hsl(110 26% 14%);
+  --slate-raised: hsl(109 25% 18%);
+  --line: hsl(108 24% 22%);
+  --text: hsl(90 40% 88%);
+  --muted: hsl(86 28% 60%);
+  --accent: hsl(74 83% 37%);
+  --accent-hover: hsl(75 75% 46%);
+}
+
+:root[data-palette="light"] {
+  color-scheme: light;
+  /* By day: a morning sky, pale facades whose glass reflects it, the sun catching a few panes. */
+  --backdrop-top: hsl(220 45% 99%);
+  --backdrop-bottom: hsl(203 82% 86%);
+  --city-far: hsl(212 32% 80%);
+  --city-near: hsl(216 26% 66%);
+  --city-window: hsl(199 64% 88%);
+  --city-window-lit: hsl(195 100% 97%);
+  --city-ground: hsl(216 22% 58%);
+  --sun: hsl(42 100% 64%);
+  --cloud: hsl(0 0% 100%);
+  --night: hsl(220 45% 98%);
+  --night-deep: hsl(220 35% 94%);
+  --slate: hsl(220 45% 100%);
+  --slate-raised: hsl(220 35% 94%);
+  --line: hsl(220 28% 85%);
+  --text: #263044;
+  --muted: hsl(220 18% 38%);
+  --accent: hsl(233 76% 48%);
+  --accent-hover: hsl(233 76% 55%);
+}
+
+:root[data-font="system"] {
+  --font-pixel: var(--font-ui);
+}
+
+:root[data-font="classic"] {
+  --font-pixel: Roboto, var(--font-ui);
 }
 
 * {
@@ -161,29 +247,90 @@ kbd {
 }
 
 .skyline .far {
-  fill: #19213a;
+  fill: var(--city-far);
 }
 
 .skyline .near {
-  fill: #212a45;
+  fill: var(--city-near);
 }
 
 .skyline .window {
-  fill: #2a3455;
+  fill: var(--city-window);
 }
 
 .skyline .window.lit {
-  fill: var(--window-light);
+  fill: var(--city-window-lit);
   animation: light-on 0.5s steps(2) both;
   animation-delay: var(--delay, 0s);
 }
 
 .skyline .ground {
-  fill: var(--night-deep);
+  fill: var(--city-ground);
+}
+
+/* Two skies: the moon and the stars by night, the sun and the clouds by day (light palette). */
+.skyline .sun,
+.skyline .cloud-drift {
+  display: none;
+}
+
+:root[data-palette="light"] .skyline .sun,
+:root[data-palette="light"] .skyline .cloud-drift {
+  display: inline;
+}
+
+:root[data-palette="light"] .skyline .moon,
+:root[data-palette="light"] .skyline .star {
+  display: none;
+}
+
+/* Round glows: the filter follows the pixel disc, not its bounding box. */
+.skyline .moon {
+  fill: var(--moon);
+  filter: drop-shadow(0 0 1.5px var(--moon-glow));
+}
+
+.skyline .moon .crater {
+  fill: var(--moon-crater);
+}
+
+.skyline .star {
+  fill: var(--moon);
+  opacity: 0.55;
+}
+
+/* A third of the stars twinkle, each on its own beat (skyline.ts sets --delay). */
+.skyline .star.twinkle {
+  animation: twinkle 3.2s steps(2) infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes twinkle {
+  50% { opacity: 0.15; }
+}
+
+.skyline .sun {
+  fill: var(--sun);
+  filter: drop-shadow(0 0 2.5px var(--sun-glow));
+}
+
+.skyline .cloud {
+  fill: var(--cloud);
+}
+
+/* Clouds drift east across the whole sky, each at its own pace (skyline.ts sets the variables). */
+.skyline .cloud-drift {
+  animation: drift var(--duration, 300s) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--travel, 0)); }
 }
 
 @keyframes light-on {
-  from { fill: #2a3455; }
+  from { fill: var(--city-window); }
 }
 
 @media (prefers-reduced-motion: reduce) {

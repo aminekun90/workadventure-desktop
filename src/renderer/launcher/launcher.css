@@ -4,7 +4,7 @@ body {
   grid-template-rows: 1fr auto;
   /* A small screen must never hide a button: the page scrolls instead. */
   overflow-y: auto;
-  background: linear-gradient(180deg, var(--night-deep) 0%, var(--night) 70%);
+  background: linear-gradient(180deg, var(--backdrop-top) 0%, var(--backdrop-bottom) 70%);
 }
 
 /* Content stays centered and proportioned when the window is maximized. */

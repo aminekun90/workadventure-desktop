@@ -1,6 +1,8 @@
 /**
  * Draws the pixel office skyline into an empty `<svg class="skyline">`. The layout is fixed (same city
  * at every launch); lit windows switch on one after another, timed by the `--delay` custom property.
+ * Both skies are drawn: theme.css shows the sun and the drifting clouds by day (light palette), the moon and the
+ * twinkling stars by night (every other palette).
  */
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -20,6 +22,23 @@ const NEAR_ROW: readonly [number, number, number][] = [
   [134, 26, 17], [164, 14, 25], [182, 22, 19], [206, 16, 26], [224, 16, 15],
 ];
 
+/** The pixel sun and moon, row by row: [offset from its left side, width]. A disc 10 pixels wide. */
+const SUN_ROWS: readonly [number, number][] = [
+  [3, 4], [1, 8], [1, 8], [0, 10], [0, 10], [0, 10], [0, 10], [1, 8], [1, 8], [3, 4],
+];
+/** Stars per city, placed by the seeded generator in the sky above the roofs; one in TWINKLE_EVERY twinkles. */
+const STARS = 16;
+const STAR_SKY_HEIGHT = 16;
+const TWINKLE_EVERY = 3;
+/** Craters of the full moon: [x, y, width] from its top-left corner, inside the disc of SUN_ROWS. */
+const MOON_CRATERS: readonly [number, number, number][] = [[2, 2, 2], [6, 4, 1], [3, 6, 2], [6, 7, 1]];
+
+/** Where the sun (or the moon) rises in a city: above its lowest roofs (x 26 to 44). */
+const SUN_X = 30;
+/** Clouds of one city: [x, y, speed in pixels per second]; each is three overlapping blocks, drifting east. */
+const CLOUDS: readonly [number, number, number][] = [[62, 7, 1.6], [104, 3, 1.1], [196, 9, 1.35]];
+const CLOUD_WIDTH = 16;
+
 /**
  * The city is repeated side by side as many times as the shape of the element needs, so that its buildings keep
  * their size and stay whole: a very wide window (full screen) used to enlarge a single city until their tops were
@@ -35,6 +54,13 @@ export function drawSkyline(svg: SVGSVGElement): void {
     copies = needed;
     svg.replaceChildren();
     svg.setAttribute("viewBox", `0 0 ${WIDTH * copies} ${HEIGHT}`);
+    // Over the gap between the low buildings of the last city, so they rise clear of the roofs.
+    drawSun(svg, (copies - 1) * WIDTH + SUN_X, 5);
+    drawMoon(svg, (copies - 1) * WIDTH + SUN_X, 5);
+    for (let copy = 0; copy < copies; copy++) drawStars(svg, copy * WIDTH, seededRandom(31 + copy));
+    for (let copy = 0; copy < copies; copy++) {
+      for (const [x, y, speed] of CLOUDS) drawCloud(svg, { x: copy * WIDTH + x, y, speed, skyWidth: WIDTH * copies });
+    }
     let litCount = 0;
     for (let copy = 0; copy < copies; copy++) {
       // Each copy lights other windows, so the repetition does not show.
@@ -44,6 +70,64 @@ export function drawSkyline(svg: SVGSVGElement): void {
   };
   render();
   new ResizeObserver(render).observe(svg);
+}
+
+/** A pixel sun rising behind the buildings; its glow comes from theme.css. */
+function drawSun(svg: SVGSVGElement, x: number, y: number): void {
+  svg.append(disc({ x, y, className: "sun" }));
+}
+
+/** A pixel full moon with a few craters; its glow comes from theme.css. */
+function drawMoon(svg: SVGSVGElement, x: number, y: number): void {
+  const moon = disc({ x, y, className: "moon" });
+  for (const [cx, cy, width] of MOON_CRATERS) {
+    moon.append(rect({ x: x + cx, y: y + cy, width, height: 1, className: "crater" }));
+  }
+  svg.append(moon);
+}
+
+/** The round pixel disc of SUN_ROWS, as a group so that a glow (CSS filter) follows its round shape. */
+function disc({ x, y, className }: { x: number; y: number; className: string }): SVGGElement {
+  const group = document.createElementNS(SVG, "g");
+  group.setAttribute("class", className);
+  SUN_ROWS.forEach(([offset, width], row) => {
+    group.append(rect({ x: x + offset, y: y + row, width, height: 1, className: "disc" }));
+  });
+  return group;
+}
+
+function drawStars(svg: SVGSVGElement, offsetX: number, random: () => number): void {
+  for (let index = 0; index < STARS; index++) {
+    const star = rect({
+      x: offsetX + Math.floor(random() * WIDTH),
+      y: 1 + Math.floor(random() * STAR_SKY_HEIGHT),
+      width: 1,
+      height: 1,
+      className: index % TWINKLE_EVERY === 0 ? "star twinkle" : "star",
+    });
+    if (index % TWINKLE_EVERY === 0) star.style.setProperty("--delay", `${(random() * 4).toFixed(2)}s`);
+    svg.append(star);
+  }
+}
+
+/**
+ * A cloud crossing the whole sky from west to east, then coming back from the west. It starts where it is placed: its
+ * animation is shifted (negative delay) by the time it would have taken to get there.
+ */
+function drawCloud(svg: SVGSVGElement, cloud: { x: number; y: number; speed: number; skyWidth: number }): void {
+  const group = document.createElementNS(SVG, "g");
+  group.setAttribute("class", "cloud-drift");
+  const travel = cloud.skyWidth + CLOUD_WIDTH;
+  const duration = travel / cloud.speed;
+  group.style.setProperty("--travel", `${travel}px`);
+  group.style.setProperty("--duration", `${duration.toFixed(1)}s`);
+  group.style.setProperty("--delay", `${(-((cloud.x + CLOUD_WIDTH) / travel) * duration).toFixed(1)}s`);
+  group.append(
+    rect({ x: -CLOUD_WIDTH, y: cloud.y + 2, width: CLOUD_WIDTH, height: 3, className: "cloud" }),
+    rect({ x: -CLOUD_WIDTH + 3, y: cloud.y, width: 7, height: 3, className: "cloud" }),
+    rect({ x: -CLOUD_WIDTH + 9, y: cloud.y + 1, width: 5, height: 2, className: "cloud" }),
+  );
+  svg.append(group);
 }
 
 /** One city, shifted by `offsetX`. Returns the number of lit windows so far, which staggers their lighting. */

@@ -12,14 +12,20 @@ ailleurs.
 | `--accent` | #4f5ff0 | action principale (bleu des boutons WA) |
 | `--window-light` | #ffd36b | fenêtres allumées, attente, canal beta |
 | `--online` / `--alert` | #47d18c / #ec7c62 | en ligne, erreur / hors ligne |
+| `--backdrop-*`, `--city-*`, `--sun`, `--cloud`, `--moon` | selon la palette | fond, ligne d'immeubles, ciels |
+
+Palettes et police des titres suivent le choix fait dans WorkAdventure (`appearance.ts`, `data-palette`,
+`data-font`) : nuit, forêt, braise, Game Boy, clair (le jour).
 
 ## Règles
 - **Police pixel** (Pixelify Sans, OFL, `src/renderer/fonts/`) pour les **titres seulement** ; tout le reste
   en police système.
 - Pas de libellés en MAJUSCULES espacées, pas de texte en dégradé, pas de méta-chaînes « A · B · C »,
   pas de monospace pour de petits libellés (réservé à la saisie d'URL).
-- **Une seule animation décorative** : la ligne d'immeubles (`skyline.ts`) dont les fenêtres s'allument au
-  chargement. Le woka marche sur place. Le reste ne bouge qu'en réponse à une action.
+- **Animations décoratives limitées à la ligne d'immeubles** (`skyline.ts`) : ses fenêtres s'allument au
+  chargement ; de nuit, quelques étoiles scintillent sous la lune ; de jour (palette claire reprise de WA), le
+  soleil se lève et les nuages dérivent lentement. Le woka marche sur place.
+  Le reste ne bouge qu'en réponse à une action.
   `prefers-reduced-motion` coupe tout (règle globale dans `theme.css`).
 - Boutons : `.button` (secondaire), `.button.primary` (une seule action principale par écran),
   `.button.quiet` (barre, liens). Pas d'autre variante.
