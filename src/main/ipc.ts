@@ -1,12 +1,14 @@
 import { ipcMain, net, type IpcMainInvokeEvent, type WebContents } from "electron";
 import { z } from "zod";
 import { ABOUT_CHANNELS, ABOUT_LINKS } from "../shared/about-api.js";
+import { APPEARANCE_CHANNELS, appearanceSchema } from "../shared/appearance-api.js";
 import { choiceSchema, choiceUrl, settingsSchema, type Settings } from "../shared/config.js";
 import { LAUNCHER_CHANNELS, type LaunchResult, type LauncherState, type ProbeResult } from "../shared/launcher-api.js";
 import { CONTENT_CHANNELS } from "../shared/content-api.js";
 import { TOOLBAR_CHANNELS } from "../shared/toolbar-api.js";
 import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-window.js";
+import { getAppearance, setAppearance } from "./appearance.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
 import { watchSpotify } from "./spotify-player.js";
@@ -59,6 +61,7 @@ export function registerIpc(handlers: IpcHandlers): void {
   registerListenAlongChannels(handlers);
   registerToolbarChannels(handlers);
   registerUpdateChannels(handlers);
+  registerAppearanceChannels();
   registerContentChannels();
   registerAboutChannels(handlers);
 }
@@ -145,6 +148,14 @@ function registerAboutChannels(handlers: IpcHandlers): void {
   });
 }
 
+/** Every local page follows the look chosen in WorkAdventure. */
+function registerAppearanceChannels(): void {
+  ipcMain.handle(APPEARANCE_CHANNELS.get, (event) => {
+    assertSender(event, LAUNCHER_URL, TOOLBAR_URL, ABOUT_URL);
+    return getAppearance();
+  });
+}
+
 /** Update status is shown by every local page. */
 function registerUpdateChannels(handlers: IpcHandlers): void {
   ipcMain.handle(UPDATE_CHANNELS.get, (event) => {
@@ -175,6 +186,10 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.status, (event, payload: unknown) => {
     const status = statusSchema.safeParse(payload);
     if (status.success && isWorkAdventureContent(event.sender)) updateControls(event.sender, { status: status.data });
+  });
+  ipcMain.on(CONTENT_CHANNELS.appearance, (event, payload: unknown) => {
+    const appearance = appearanceSchema.safeParse(payload);
+    if (appearance.success && isWorkAdventureContent(event.sender)) setAppearance(appearance.data);
   });
   ipcMain.on(CONTENT_CHANNELS.spotifyWatch, (event, payload: unknown) => {
     const watching = z.boolean().safeParse(payload);

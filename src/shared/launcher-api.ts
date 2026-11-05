@@ -1,4 +1,5 @@
 import type { Choice, InstanceId, Settings } from "./config.js";
+import type { AppearanceApi } from "./appearance-api.js";
 import type { UpdateApi } from "./update-api.js";
 
 export const LAUNCHER_CHANNELS = {
@@ -45,4 +46,5 @@ export interface LauncherApi {
   /** "Non merci": the offer is not shown again. */
   dismissListenAlong(): Promise<void>;
   update: UpdateApi;
+  appearance: AppearanceApi;
 }

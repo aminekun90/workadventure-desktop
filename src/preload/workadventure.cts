@@ -45,6 +45,8 @@ contextBridge.exposeInMainWorld("WAD", {
     requestStatus = callback;
     send("content:status-ready");
   },
+  // The look chosen in WorkAdventure's settings: the local pages follow it (fork, Api/Desktop/index.ts).
+  reportAppearance: (appearance: unknown) => send("content:appearance", appearance),
   reportStatus: (name: string, label: string) => {
     const status: AvailabilityStatus = { name, label };
     send("content:status", status);

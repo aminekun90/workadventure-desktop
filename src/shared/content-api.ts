@@ -47,6 +47,8 @@ export const CONTENT_CHANNELS = {
   move: "content:move",
   /** Page → main: a track to save to the Liked Songs of this Spotify (window.WAD.likeOnSpotify). */
   like: "content:like",
+  /** Page → main: the palette and font chosen in WorkAdventure's settings (window.WAD.reportAppearance). */
+  appearance: "content:appearance",
   /** Main → page. */
   command: "content:command",
 } as const;

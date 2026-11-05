@@ -1,5 +1,6 @@
 import type { ToolbarApi } from "../../shared/toolbar-api.js";
 import { byId } from "../dom.js";
+import { mountAppearance } from "../appearance.js";
 import { mountUpdateStatus } from "../update-status.js";
 
 declare global {
@@ -15,6 +16,7 @@ const mapsButton = byId("maps", HTMLButtonElement);
 
 document.body.dataset["platform"] = api.platform;
 mountUpdateStatus(api.update);
+mountAppearance(api.appearance);
 homeButton.title = `Revenir au launcher (${api.platform === "darwin" ? "⌘⇧L" : "Ctrl+Shift+L"})`;
 
 homeButton.addEventListener("click", () => void api.openLauncher());

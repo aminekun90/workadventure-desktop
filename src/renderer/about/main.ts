@@ -1,6 +1,7 @@
 import type { AboutApi } from "../../shared/about-api.js";
 import { byId } from "../dom.js";
 import { drawSkyline } from "../skyline.js";
+import { mountAppearance } from "../appearance.js";
 import { mountUpdateStatus } from "../update-status.js";
 
 declare global {
@@ -27,6 +28,7 @@ byId("copyright", HTMLElement).textContent = info.copyright;
 
 drawSkyline(byId("skyline", SVGSVGElement));
 mountUpdateStatus(api.update);
+mountAppearance(api.appearance);
 byId("check", HTMLButtonElement).addEventListener("click", () => void api.checkForUpdates());
 byId("release-notes", HTMLButtonElement).addEventListener("click", () => void api.open("release-notes"));
 byId("repository", HTMLButtonElement).addEventListener("click", () => void api.open("repository"));

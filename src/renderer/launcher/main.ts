@@ -4,6 +4,7 @@ import { setupDeviceCheck } from "./devices.js";
 import { byId } from "../dom.js";
 import { drawSkyline } from "../skyline.js";
 import { createInstancePicker } from "./instances.js";
+import { mountAppearance } from "../appearance.js";
 import { mountUpdateStatus } from "../update-status.js";
 
 const enterButton = byId("enter", HTMLButtonElement);
@@ -20,6 +21,7 @@ byId("version", HTMLSpanElement).textContent = `v${state.version}`;
 byId("shortcut", HTMLElement).textContent = api.platform === "darwin" ? "⌘ ⇧ L" : "Ctrl ⇧ L";
 drawSkyline(byId("skyline", SVGSVGElement));
 mountUpdateStatus(api.update);
+mountAppearance(api.appearance);
 if (state.avatar) showAvatar(state.avatar);
 if (state.notice) showError(state.notice);
 if (state.offerListenAlong) setupListenAlongOffer();

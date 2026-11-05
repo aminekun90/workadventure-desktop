@@ -1,3 +1,4 @@
+import type { AppearanceApi } from "./appearance-api.js";
 import type { UpdateApi } from "./update-api.js";
 
 export const TOOLBAR_CHANNELS = {
@@ -24,4 +25,5 @@ export interface ToolbarApi {
   showMaps(anchor: { x: number; y: number }): Promise<void>;
   onState(listener: (state: ToolbarState) => void): void;
   update: UpdateApi;
+  appearance: AppearanceApi;
 }

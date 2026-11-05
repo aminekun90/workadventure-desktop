@@ -26,6 +26,7 @@ import { logFilePath } from "./paths.js";
 import { installPermissionHandlers } from "./permissions.js";
 import { persistSessionCookies } from "./session-persistence.js";
 import { loadSettings, saveSettings } from "./settings.js";
+import { loadAppearance } from "./appearance.js";
 import { reportManualCheck } from "./update-dialog.js";
 import { applyUpdate, checkForUpdates, startUpdater } from "./updater.js";
 import { contentOf, createWorkAdventureWindow } from "./workadventure-window.js";
@@ -43,6 +44,7 @@ if (!app.isPackaged) app.setPath("userData", join(app.getPath("appData"), "WorkA
 const settingsPath = join(app.getPath("userData"), "settings.json");
 const avatarPath = join(app.getPath("userData"), "avatar.json");
 const listenAlongPath = join(app.getPath("userData"), "listen-along.json");
+loadAppearance(join(app.getPath("userData"), "appearance.json"));
 let policy = createPolicy(INSTANCES.prod.url);
 let currentWindow: BrowserWindow | undefined;
 let notice: string | undefined;

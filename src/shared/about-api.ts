@@ -1,3 +1,4 @@
+import type { AppearanceApi } from "./appearance-api.js";
 import type { UpdateApi } from "./update-api.js";
 
 export const ABOUT_CHANNELS = {
@@ -32,4 +33,5 @@ export interface AboutApi {
   /** Copies app, engine and OS versions, ready to paste in a bug report. */
   copyDiagnostics(): Promise<void>;
   update: UpdateApi;
+  appearance: AppearanceApi;
 }
