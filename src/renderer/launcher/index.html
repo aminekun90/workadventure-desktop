@@ -36,6 +36,7 @@
       <section class="panel" aria-labelledby="panel-title">
         <h2 id="panel-title">Choisis ton espace</h2>
         <div id="instances" class="instances" role="radiogroup" aria-labelledby="panel-title"></div>
+        <button id="restore-spaces" class="button quiet restore" type="button" hidden>Restaurer les espaces goyan</button>
 
         <label class="card custom">
           <input type="radio" name="instance" value="custom" />
@@ -46,6 +47,10 @@
               <span class="status" data-state="idle"><span class="dot"></span><span class="status-text"></span></span>
             </span>
             <input id="custom-url" class="url" type="url" placeholder="http://play.workadventure.localhost/" spellcheck="false" />
+            <span class="add-space">
+              <input id="custom-label" class="url name" type="text" maxlength="40" placeholder="Nom (facultatif)" spellcheck="false" />
+              <button id="add-space" class="button quiet" type="button">Ajouter à mes espaces</button>
+            </span>
           </span>
         </label>
 
@@ -99,6 +104,7 @@
             <span class="radio" aria-hidden="true"></span>
             <span class="card-title"></span>
             <span class="status" data-state="pending"><span class="dot"></span><span class="status-text"></span></span>
+            <button class="remove" type="button" aria-label="Supprimer cet espace" title="Supprimer cet espace">×</button>
           </span>
           <span class="card-host"></span>
         </span>

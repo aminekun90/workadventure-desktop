@@ -30,6 +30,9 @@ const api: LauncherApi = {
   launch: (request) => invoke("launcher:launch", request),
   installListenAlong: () => invoke("launcher:install-listen-along"),
   dismissListenAlong: () => invoke("launcher:dismiss-listen-along"),
+  addSpace: (request) => invoke("launcher:add-space", request),
+  removeSpace: (ref) => invoke("launcher:remove-space", ref),
+  restoreSpaces: () => invoke("launcher:restore-spaces"),
   update,
   appearance,
 };
