@@ -188,7 +188,7 @@ describe("Spicetify bridge", () => {
       expect(bridge.spicetifyQueue()).toEqual({ tracks: [{ ...queued, artworkUrl: "" }], upcoming: [], contextName: "" }),
     );
 
-    const upcoming = { uri: "spotify:track:next", title: "Next", artist: "Artist", artworkUrl: "" };
+    const upcoming = { uri: "spotify:track:next", uid: "6b7541", title: "Next", artist: "Artist", artworkUrl: "" };
     client.send(JSON.stringify({ type: "queue", tracks: [], upcoming: [upcoming], contextName: "Focus" }));
     await vi.waitFor(() =>
       expect(bridge.spicetifyQueue()).toEqual({ tracks: [], upcoming: [upcoming], contextName: "Focus" }),
