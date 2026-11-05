@@ -124,6 +124,11 @@
   margin: 0;
 }
 
+/* `hidden` must win over the display of a component (.panel is a grid): the offers and pills rely on it. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   height: 100%;
@@ -225,10 +230,6 @@ kbd {
   background: var(--online);
   cursor: pointer;
   -webkit-app-region: no-drag;
-}
-
-.update-pill[hidden] {
-  display: none;
 }
 
 .update-pill:hover {
