@@ -39,7 +39,8 @@ Fenêtres :
   liens `workadventure://` (`deep-links.ts`). L'état vient de la page WA via `workadventure-controls.ts`.
 
 Points d'entrée pour modifier :
-- espaces : `INSTANCES` + `instanceIdSchema` dans `src/shared/config.ts`
+- espaces de goyan : `INSTANCES` + `instanceIdSchema` dans `src/shared/config.ts` ; espaces ajoutés ou masqués
+  par l'utilisateur : `src/shared/spaces.ts` (fichier `spaces.json` du profil)
 - domaines de confiance : `TRUSTED_DOMAINS` dans `src/main/navigation.ts`
 - permissions : `GRANTED_PERMISSIONS` dans `src/main/permissions.ts`
 - maps masquées : `HIDDEN_MAP_PATTERNS` dans `src/main/maps.ts`

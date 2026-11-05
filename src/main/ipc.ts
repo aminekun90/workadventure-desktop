@@ -3,7 +3,15 @@ import { z } from "zod";
 import { ABOUT_CHANNELS, ABOUT_LINKS } from "../shared/about-api.js";
 import { APPEARANCE_CHANNELS, appearanceSchema } from "../shared/appearance-api.js";
 import { choiceSchema, choiceUrl, settingsSchema, type Settings } from "../shared/config.js";
-import { LAUNCHER_CHANNELS, type LaunchResult, type LauncherState, type ProbeResult } from "../shared/launcher-api.js";
+import {
+  LAUNCHER_CHANNELS,
+  type AddSpaceResponse,
+  type LaunchResult,
+  type LauncherSpaces,
+  type LauncherState,
+  type ProbeResult,
+} from "../shared/launcher-api.js";
+import { newSpaceSchema, spaceRefSchema, type NewSpace, type SpaceRef } from "../shared/spaces.js";
 import { CONTENT_CHANNELS } from "../shared/content-api.js";
 import { TOOLBAR_CHANNELS } from "../shared/toolbar-api.js";
 import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
@@ -49,6 +57,9 @@ export interface IpcHandlers {
   launch(request: Settings): Promise<void>;
   installListenAlong(): Promise<void>;
   dismissListenAlong(): void;
+  addSpace(request: NewSpace): AddSpaceResponse;
+  removeSpace(ref: SpaceRef): LauncherSpaces;
+  restoreSpaces(): LauncherSpaces;
   openLauncher(): Promise<void>;
   getUpdateStatus(): UpdateStatus;
   applyUpdate(): Promise<void>;
@@ -106,6 +117,20 @@ function registerListenAlongChannels(handlers: IpcHandlers): void {
   ipcMain.handle(LAUNCHER_CHANNELS.dismissListenAlong, (event) => {
     assertSender(event, LAUNCHER_URL);
     handlers.dismissListenAlong();
+  });
+  ipcMain.handle(LAUNCHER_CHANNELS.addSpace, (event, payload: unknown): AddSpaceResponse => {
+    assertSender(event, LAUNCHER_URL);
+    const request = newSpaceSchema.safeParse(payload);
+    if (!request.success) return { ok: false, message: request.error.issues[0]?.message ?? "Espace invalide" };
+    return handlers.addSpace(request.data);
+  });
+  ipcMain.handle(LAUNCHER_CHANNELS.removeSpace, (event, payload: unknown) => {
+    assertSender(event, LAUNCHER_URL);
+    return handlers.removeSpace(spaceRefSchema.parse(payload));
+  });
+  ipcMain.handle(LAUNCHER_CHANNELS.restoreSpaces, (event) => {
+    assertSender(event, LAUNCHER_URL);
+    return handlers.restoreSpaces();
   });
 }
 

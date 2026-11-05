@@ -1,8 +1,9 @@
 import { app, BrowserWindow, Menu, net, session, type WebContents } from "electron";
 import { rmSync } from "node:fs";
 import { join } from "node:path";
-import { choiceLabel, choiceUrl, INSTANCES, instanceIdSchema, resolveStartup, type Choice, type Settings } from "../shared/config.js";
-import type { LauncherState } from "../shared/launcher-api.js";
+import { choiceLabel, choiceUrl, INSTANCES, resolveStartup, type Choice, type Settings } from "../shared/config.js";
+import type { LauncherSpaces, LauncherState } from "../shared/launcher-api.js";
+import { visibleInstances, type Spaces } from "../shared/spaces.js";
 import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { defaultWokaUrl, downloadAvatar, loadAvatar, READ_AVATAR_SCRIPT, saveAvatar, type Avatar } from "./avatar.js";
 import { DEEP_LINK_PROTOCOL, deepLinkTarget } from "./deep-links.js";
@@ -27,6 +28,7 @@ import { installPermissionHandlers } from "./permissions.js";
 import { persistSessionCookies } from "./session-persistence.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { loadAppearance } from "./appearance.js";
+import { deleteSpace, loadSpaces, restoreGoyanSpaces, saveNewSpace } from "./spaces.js";
 import { reportManualCheck } from "./update-dialog.js";
 import { applyUpdate, checkForUpdates, startUpdater } from "./updater.js";
 import { contentOf, createWorkAdventureWindow } from "./workadventure-window.js";
@@ -44,6 +46,7 @@ if (!app.isPackaged) app.setPath("userData", join(app.getPath("appData"), "WorkA
 const settingsPath = join(app.getPath("userData"), "settings.json");
 const avatarPath = join(app.getPath("userData"), "avatar.json");
 const listenAlongPath = join(app.getPath("userData"), "listen-along.json");
+const spacesPath = join(app.getPath("userData"), "spaces.json");
 loadAppearance(join(app.getPath("userData"), "appearance.json"));
 let policy = createPolicy(INSTANCES.prod.url);
 let currentWindow: BrowserWindow | undefined;
@@ -91,6 +94,12 @@ async function start(): Promise<void> {
       saveListenAlongAnswer(listenAlongPath, "installed");
     },
     dismissListenAlong: () => saveListenAlongAnswer(listenAlongPath, "dismissed"),
+    addSpace: (request) => {
+      const result = saveNewSpace(spacesPath, request);
+      return result.ok ? { ok: true, spaces: launcherSpaces(result.spaces) } : result;
+    },
+    removeSpace: (ref) => launcherSpaces(deleteSpace(spacesPath, ref)),
+    restoreSpaces: () => launcherSpaces(restoreGoyanSpaces(spacesPath)),
   });
   startUpdater(announceUpdateStatus);
   startSpicetifyBridge();
@@ -225,7 +234,7 @@ async function launcherState(): Promise<LauncherState> {
   const settings = loadSettings(settingsPath);
   const avatar = loadAvatar(avatarPath) ?? (await fetchDefaultAvatar(choiceUrl(settings.choice)));
   const state: LauncherState = {
-    instances: instanceIdSchema.options.map((id) => ({ id, ...INSTANCES[id], host: new URL(INSTANCES[id].url).host })),
+    ...launcherSpaces(loadSpaces(spacesPath)),
     settings,
     version: app.getVersion(),
     offerListenAlong: shouldOfferListenAlong(currentEnvironment(), readListenAlongAnswer(listenAlongPath)),
@@ -234,6 +243,14 @@ async function launcherState(): Promise<LauncherState> {
   };
   notice = undefined;
   return state;
+}
+
+function launcherSpaces(spaces: Spaces): LauncherSpaces {
+  return {
+    instances: visibleInstances(spaces).map((id) => ({ id, ...INSTANCES[id], host: new URL(INSTANCES[id].url).host })),
+    saved: spaces.saved,
+    canRestore: spaces.hiddenInstances.length > 0,
+  };
 }
 
 /** Local pages only: a window's own page is the launcher or the toolbar, never the remote WorkAdventure view. */

@@ -1,5 +1,6 @@
 import type { Choice, InstanceId, Settings } from "./config.js";
 import type { AppearanceApi } from "./appearance-api.js";
+import type { NewSpace, SavedSpace, SpaceRef } from "./spaces.js";
 import type { UpdateApi } from "./update-api.js";
 
 export const LAUNCHER_CHANNELS = {
@@ -8,6 +9,9 @@ export const LAUNCHER_CHANNELS = {
   launch: "launcher:launch",
   installListenAlong: "launcher:install-listen-along",
   dismissListenAlong: "launcher:dismiss-listen-along",
+  addSpace: "launcher:add-space",
+  removeSpace: "launcher:remove-space",
+  restoreSpaces: "launcher:restore-spaces",
 } as const;
 export type LauncherChannel = (typeof LAUNCHER_CHANNELS)[keyof typeof LAUNCHER_CHANNELS];
 
@@ -18,8 +22,17 @@ export interface LauncherInstance {
   host: string;
 }
 
-export interface LauncherState {
+/** The spaces the launcher lists: goyan's still shown, then the user's own. */
+export interface LauncherSpaces {
   instances: LauncherInstance[];
+  saved: SavedSpace[];
+  /** Some of goyan's spaces were removed: offer to bring them back. */
+  canRestore: boolean;
+}
+
+export type AddSpaceResponse = { ok: true; spaces: LauncherSpaces } | { ok: false; message: string };
+
+export interface LauncherState extends LauncherSpaces {
   settings: Settings;
   version: string;
   notice?: string;
@@ -45,6 +58,11 @@ export interface LauncherApi {
   installListenAlong(): Promise<LaunchResult>;
   /** "Non merci": the offer is not shown again. */
   dismissListenAlong(): Promise<void>;
+  addSpace(request: NewSpace): Promise<AddSpaceResponse>;
+  /** Removes a space of the user, or hides one of goyan's. */
+  removeSpace(ref: SpaceRef): Promise<LauncherSpaces>;
+  /** Shows goyan's removed spaces again. */
+  restoreSpaces(): Promise<LauncherSpaces>;
   update: UpdateApi;
   appearance: AppearanceApi;
 }

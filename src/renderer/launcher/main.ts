@@ -12,7 +12,7 @@ const skipToggle = byId("skip", HTMLInputElement);
 const errorBox = byId("error", HTMLParagraphElement);
 
 const state = await api.getState();
-const picker = createInstancePicker(state.instances);
+const picker = createInstancePicker(state, showError);
 const devices = setupDeviceCheck({ onError: showError });
 
 picker.select(state.settings.choice);
