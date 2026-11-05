@@ -20,27 +20,56 @@ const NEAR_ROW: readonly [number, number, number][] = [
   [134, 26, 17], [164, 14, 25], [182, 22, 19], [206, 16, 26], [224, 16, 15],
 ];
 
+/**
+ * The city is repeated side by side as many times as the shape of the element needs, so that its buildings keep
+ * their size and stay whole: a very wide window (full screen) used to enlarge a single city until their tops were
+ * cut off. Redrawn when the element changes shape enough to need another number of copies.
+ */
 export function drawSkyline(svg: SVGSVGElement): void {
-  svg.setAttribute("viewBox", `0 0 ${WIDTH} ${HEIGHT}`);
   svg.setAttribute("preserveAspectRatio", "xMidYMax slice");
-  const random = seededRandom(7);
-  let litCount = 0;
+  let copies = 0;
+  const render = (): void => {
+    const { width, height } = svg.getBoundingClientRect();
+    const needed = width > 0 && height > 0 ? Math.max(1, Math.ceil(width / height / (WIDTH / HEIGHT))) : 1;
+    if (needed === copies) return;
+    copies = needed;
+    svg.replaceChildren();
+    svg.setAttribute("viewBox", `0 0 ${WIDTH * copies} ${HEIGHT}`);
+    let litCount = 0;
+    for (let copy = 0; copy < copies; copy++) {
+      // Each copy lights other windows, so the repetition does not show.
+      litCount = drawCity(svg, copy * WIDTH, seededRandom(7 + copy), litCount);
+    }
+    svg.append(rect({ x: 0, y: HEIGHT - GROUND, width: WIDTH * copies, height: GROUND, className: "ground" }));
+  };
+  render();
+  new ResizeObserver(render).observe(svg);
+}
 
+/** One city, shifted by `offsetX`. Returns the number of lit windows so far, which staggers their lighting. */
+function drawCity(svg: SVGSVGElement, offsetX: number, random: () => number, litSoFar: number): number {
+  let litCount = litSoFar;
   for (const [row, buildings] of [["far", FAR_ROW], ["near", NEAR_ROW]] as const) {
     for (const [x, width, height] of buildings) {
       const top = HEIGHT - GROUND - height;
-      svg.append(rect({ x, y: top, width, height, className: row }));
+      svg.append(rect({ x: offsetX + x, y: top, width, height, className: row }));
       for (let wy = top + 3; wy < HEIGHT - GROUND - 3; wy += WINDOW_STEP) {
         for (let wx = x + 2; wx < x + width - 2; wx += WINDOW_STEP) {
           const lit = random() < (row === "near" ? 0.32 : 0.18);
-          const window = rect({ x: wx, y: wy, width: 1, height: 1, className: lit ? "window lit" : "window" });
+          const window = rect({
+            x: offsetX + wx,
+            y: wy,
+            width: 1,
+            height: 1,
+            className: lit ? "window lit" : "window",
+          });
           if (lit) window.style.setProperty("--delay", `${(litCount++ * LIGHT_STAGGER_S).toFixed(3)}s`);
           svg.append(window);
         }
       }
     }
   }
-  svg.append(rect({ x: 0, y: HEIGHT - GROUND, width: WIDTH, height: GROUND, className: "ground" }));
+  return litCount;
 }
 
 function rect({ x, y, width, height, className }: { x: number; y: number; width: number; height: number; className: string }): SVGRectElement {
