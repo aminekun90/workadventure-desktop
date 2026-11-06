@@ -59,7 +59,7 @@ export const queueSchema = z.object({
     .array(
       z.object({
         uri: trackUri,
-        uid: queueUid.optional(),
+        uid: queueUid.optional().catch(undefined),
         title: z.string().max(200),
         artist: z.string().max(200),
         artworkUrl: z.union([z.literal(""), z.string().startsWith("https://i.scdn.co/image/").max(200)]).catch(""),

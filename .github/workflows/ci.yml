@@ -16,7 +16,7 @@ jobs:
           node-version-file: .nvmrc
           cache: yarn
       - run: yarn install --frozen-lockfile
-      - run: yarn check
+      - run: yarn run check
 
   # Each OS uploads its installers and update manifests to the same draft release of the tag.
   package:

@@ -155,6 +155,16 @@ describe("Spicetify bridge", () => {
     stop();
   });
 
+  it("asks the connected extension to refresh its context and queue", async () => {
+    const url = await start();
+    client = await connect(url, SPOTIFY_ORIGIN);
+    await vi.waitFor(() => expect(bridge.spicetifyConnected()).toBe(true));
+    const received: unknown[] = [];
+    client.on("message", (data) => { received[received.length] = JSON.parse(String(data)); });
+    bridge.refreshSpicetifyQueue();
+    await vi.waitFor(() => expect(received).toEqual([{ type: "refresh-queue" }]));
+  });
+
   it("adds a participant's tracks to the host's queue", async () => {
     const url = await start();
     client = await connect(url, SPOTIFY_ORIGIN);
