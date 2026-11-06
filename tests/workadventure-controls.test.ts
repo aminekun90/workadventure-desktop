@@ -5,6 +5,7 @@ import {
   followSchema,
   listeningSchema,
   mediaSchema,
+  queueSchema,
   muteAll,
   onControlsChange,
   resetControls,
@@ -93,5 +94,22 @@ describe("workadventure controls", () => {
     expect(followSchema.safeParse(null).success).toBe(true);
     expect(followSchema.safeParse({ uri: "spotify:album:abc", positionMs: 0 }).success).toBe(false);
     expect(followSchema.safeParse({ uri: "spotify:track:abc", positionMs: -1 }).success).toBe(false);
+  });
+});
+
+
+describe("Spotify playlist queue", () => {
+  it("keeps upcoming tracks without ids, even when Spotify reports an unusable id", () => {
+    const track = { uri: "spotify:track:abc", title: "Fresh playlist", artist: "Artist", artworkUrl: "" };
+    const result = queueSchema.parse({
+      type: "queue",
+      tracks: [],
+      upcoming: [track, { ...track, uri: "spotify:track:def", uid: "spotify:context:temporary" }, { ...track, uid: "valid_1" }],
+      contextName: "Mix Work",
+    });
+    expect(result.upcoming).toHaveLength(3);
+    expect(result.upcoming[0]?.uid).toBeUndefined();
+    expect(result.upcoming[1]?.uid).toBeUndefined();
+    expect(result.upcoming[2]?.uid).toBe("valid_1");
   });
 });

@@ -32,6 +32,7 @@ import {
   setHomeJamOnSpicetify,
   spicetifyQueue,
   spicetifyConnected,
+  refreshSpicetifyQueue,
 } from "./spicetify-bridge.js";
 import {
   dequeueSchema,
@@ -239,6 +240,9 @@ function registerContentChannels(): void {
     availabilitySubscriptions.set(page, stop);
     page.once("destroyed", stop);
   });
+  ipcMain.on(CONTENT_CHANNELS.queueRefresh, (event) => {
+    if (isWorkAdventureContent(event.sender)) refreshSpicetifyQueue();
+  });
   ipcMain.on(CONTENT_CHANNELS.follow, (event, payload: unknown) => {
     const target = followSchema.safeParse(payload);
     if (target.success && isWorkAdventureContent(event.sender)) followOnSpicetify(target.data);
@@ -275,6 +279,7 @@ function registerContentChannels(): void {
     });
     queueSubscriptions.set(page, stop);
     page.once("destroyed", stop);
+    refreshSpicetifyQueue();
   });
   ipcMain.on(CONTENT_CHANNELS.dequeue, (event, payload: unknown) => {
     const track = dequeueSchema.safeParse(payload);

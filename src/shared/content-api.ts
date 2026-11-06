@@ -39,6 +39,8 @@ export const CONTENT_CHANNELS = {
   enqueue: "content:enqueue",
   /** Page → main: start (true) or stop (false) receiving the queue of this Spotify (window.WAD.watchSpotifyQueue). */
   queueWatch: "content:queue-watch",
+  /** Page → main: request a fresh Spotify context and queue snapshot. */
+  queueRefresh: "content:queue-refresh",
   /** Main → page: the tracks added to the queue of this Spotify, as host of a Jukebox. */
   spotifyQueue: "content:spotify-queue",
   /** Page → main: a track to remove from the queue of this Spotify (window.WAD.dequeueOnSpotify). */

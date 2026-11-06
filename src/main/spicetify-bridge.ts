@@ -127,6 +127,11 @@ export function spicetifyQueue(): QueueState {
   return queue;
 }
 
+/** Re-read Spotify's live context instead of relying only on the last reported queue. */
+export function refreshSpicetifyQueue(): void {
+  extension?.send(JSON.stringify({ type: "refresh-queue" }));
+}
+
 /** Called with the queue on every change, and once it empties when the extension disconnects. */
 export function onSpicetifyQueue(listener: (state: QueueState) => void): () => void {
   queueListeners.add(listener);

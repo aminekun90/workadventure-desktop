@@ -75,6 +75,7 @@ contextBridge.exposeInMainWorld("WAD", {
       send("content:queue-watch", false);
     };
   },
+  refreshSpotifyQueue: () => send("content:queue-refresh"),
   dequeueOnSpotify: (track: unknown) => send("content:dequeue", track),
   moveInSpotifyQueue: (move: unknown) => send("content:move", move),
   // Heart on a card or a Jukebox track: saved to the Liked Songs of this Spotify.
