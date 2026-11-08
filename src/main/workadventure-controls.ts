@@ -1,5 +1,6 @@
 import type { WebContents } from "electron";
 import { z } from "zod";
+import { EnvironmentSetting, type EnvironmentState } from "../shared/environment-api.js";
 import {
   CONTENT_CHANNELS,
   type AvailabilityStatus,
@@ -91,6 +92,7 @@ export interface ControlsState {
   status: AvailabilityStatus | undefined;
   /** What the user shares about their listening (WorkAdventure builds carrying window.WAD.reportListening). */
   listening: Listening | undefined;
+  environment: EnvironmentState | null;
 }
 
 const INITIAL_STATE: ControlsState = {
@@ -100,6 +102,7 @@ const INITIAL_STATE: ControlsState = {
   unread: 0,
   status: undefined,
   listening: undefined,
+  environment: null,
 };
 
 const states = new WeakMap<WebContents, ControlsState>();
@@ -128,6 +131,12 @@ export function resetControls(content: WebContents): void {
 /** Dropped when WorkAdventure has not registered the matching callback yet. */
 export function sendCommand(content: WebContents, command: ContentCommand): void {
   const state = controlsOf(content);
+  if (command.type === "set-environment") {
+    if (!state.environment || state.environment.busy) return;
+    if (command.request.setting === EnvironmentSetting.Weather && !state.environment.canEditWeather) return;
+    content.send(CONTENT_CHANNELS.command, command);
+    return;
+  }
   const available = command.type === "set-status" ? state.statusReady : state.ready;
   if (available) content.send(CONTENT_CHANNELS.command, command);
 }

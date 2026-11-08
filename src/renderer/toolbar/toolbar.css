@@ -69,16 +69,23 @@ body[data-loading="true"] #reload svg {
 
 /* Current space and host, centered on the window whatever the width of the side controls. */
 .place {
-  position: absolute;
-  left: 50%;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  max-width: 40%;
+  min-width: 0;
+  margin: 0 1rem;
   font-size: 0.8125rem;
   white-space: nowrap;
-  transform: translateX(-50%);
   pointer-events: none;
+}
+
+.environment { gap: 0.125rem; }
+.environment .button { gap: 0.25rem; padding: 0 0.4rem; }
+.environment .button[aria-pressed="true"] { color: var(--online); background: var(--slate-raised); }
+.environment .button:disabled { opacity: 0.4; cursor: default; }
+.environment-error { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--alert); font-size: 0.75rem; }
+@media (max-width: 75rem) {
+  .place .host { display: none; }
 }
 
 .dot {

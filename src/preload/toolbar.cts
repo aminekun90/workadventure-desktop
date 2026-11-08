@@ -2,6 +2,7 @@
 import electron = require("electron");
 import type { Appearance, AppearanceApi, AppearanceChannel } from "../shared/appearance-api.js";
 import type { ToolbarApi, ToolbarChannel, ToolbarState } from "../shared/toolbar-api.js";
+import type { EnvironmentState } from "../shared/environment-api.js";
 import type { UpdateApi, UpdateChannel, UpdateStatus } from "../shared/update-api.js";
 
 const invoke = (channel: ToolbarChannel, ...args: unknown[]): Promise<void> => electron.ipcRenderer.invoke(channel, ...args);
@@ -28,6 +29,10 @@ const api: ToolbarApi = {
   openLauncher: () => invoke("toolbar:open-launcher"),
   reload: () => invoke("toolbar:reload"),
   showMaps: (anchor) => invoke("toolbar:show-maps", anchor),
+  showEnvironment: (setting, anchor) => invoke("toolbar:show-environment", { setting, anchor }),
+  onEnvironment: (listener) => {
+    electron.ipcRenderer.on("toolbar:environment" satisfies ToolbarChannel, (_event, state: EnvironmentState | null) => listener(state));
+  },
   onState: (listener) => {
     electron.ipcRenderer.on("toolbar:state" satisfies ToolbarChannel, (_event, state: ToolbarState) => listener(state));
   },

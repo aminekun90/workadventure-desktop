@@ -1,6 +1,7 @@
 // Preload of the remote WorkAdventure page (see src/shared/content-api.ts for what may cross).
 // Sandboxed preloads can only require "electron": channel and command names are inlined, checked by type.
 import electron = require("electron");
+import type { EnvironmentRequest } from "../shared/environment-api.js";
 import type {
   AvailabilityStatus,
   ContentChannel,
@@ -26,6 +27,7 @@ const UNREAD_CHECK_DELAY_MS = 500;
 // Only the members WorkAdventure actually calls are provided.
 const toggles: Partial<Record<"toggle-microphone" | "toggle-camera", () => void>> = {};
 let requestStatus: ((request: StatusRequest) => void) | undefined;
+let requestEnvironment: ((request: EnvironmentRequest) => void) | undefined;
 let onSpotifyTrack: ((track: SpotifyTrack | null) => void) | undefined;
 let onListenAlongAvailable: ((available: boolean) => void) | undefined;
 let onQueueRequest: ((uris: string[]) => void) | undefined;
@@ -33,6 +35,10 @@ let onSpotifyQueue: ((state: QueueState) => void) | undefined;
 
 contextBridge.exposeInMainWorld("WAD", {
   desktop: true,
+  onEnvironmentRequest: (callback: (request: EnvironmentRequest) => void) => {
+    requestEnvironment = callback;
+  },
+  reportEnvironment: (state: unknown) => send("content:environment", state),
   onMuteToggle: (callback: () => void) => {
     toggles["toggle-microphone"] = callback;
     send("content:controls-ready");
@@ -109,7 +115,8 @@ ipcRenderer.on("content:listen-along-available" satisfies ContentChannel, (_even
 });
 
 ipcRenderer.on("content:command" satisfies ContentChannel, (_event, command: ContentCommand) => {
-  if (command.type === "set-status") requestStatus?.(command.status);
+  if (command.type === "set-environment") requestEnvironment?.(command.request);
+  else if (command.type === "set-status") requestStatus?.(command.status);
   else toggles[command.type]?.();
 });
 

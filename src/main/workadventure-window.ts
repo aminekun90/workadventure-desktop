@@ -4,7 +4,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { TOOLBAR_CHANNELS, type ToolbarState } from "../shared/toolbar-api.js";
 import { logger } from "./logger.js";
 import { currentMapPath, fetchMaps, mapUrl } from "./maps.js";
-import { resetControls } from "./workadventure-controls.js";
+import { controlsOf, resetControls } from "./workadventure-controls.js";
+import { showEnvironmentMenu } from "./environment.js";
+import type { EnvironmentSetting, EnvironmentState } from "../shared/environment-api.js";
 import { isAllowedUrl, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
 import { BACKGROUND, framelessChrome, relayConsole, routeNavigation, screenWorkArea } from "./window-common.js";
 
@@ -133,6 +135,15 @@ export function reloadContent(toolbar: WebContents): void {
   partsByToolbar.get(toolbar)?.content.reload();
 }
 
+export function reportEnvironment(content: WebContents, state: EnvironmentState | null): void {
+  liveWindowOf(content)?.webContents.send(TOOLBAR_CHANNELS.environment, state);
+}
+
+export function showEnvironment(toolbar: WebContents, setting: EnvironmentSetting, anchor: { x: number; y: number }): void {
+  const parts = partsByToolbar.get(toolbar);
+  if (parts) showEnvironmentMenu(parts.window, parts.content, setting, anchor);
+}
+
 /** Native menu (the page view would cover an HTML dropdown), listing the space's maps live. */
 export async function showMapMenu(toolbar: WebContents, anchor: { x: number; y: number }): Promise<void> {
   const parts = partsByToolbar.get(toolbar);
@@ -197,6 +208,7 @@ function syncToolbar(toolbar: WebContents, content: WebContents, label: string):
     if (toolbar.isDestroyed() || content.isDestroyed()) return;
     const state: ToolbarState = { label, host: URL.parse(content.getURL())?.host ?? "", loading: content.isLoading() };
     toolbar.send(TOOLBAR_CHANNELS.state, state);
+    toolbar.send(TOOLBAR_CHANNELS.environment, controlsOf(content).environment);
   };
   toolbar.on("did-finish-load", push);
   content.on("did-navigate", push);
