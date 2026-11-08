@@ -14,6 +14,8 @@ import {
 import { newSpaceSchema, spaceRefSchema, type NewSpace, type SpaceRef } from "../shared/spaces.js";
 import { CONTENT_CHANNELS } from "../shared/content-api.js";
 import { TOOLBAR_CHANNELS } from "../shared/toolbar-api.js";
+import { EnvironmentSetting } from "../shared/environment-api.js";
+import { environmentSchema } from "./environment.js";
 import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-window.js";
 import { getAppearance, setAppearance } from "./appearance.js";
@@ -47,7 +49,7 @@ import {
   unreadSchema,
   updateControls,
 } from "./workadventure-controls.js";
-import { focusWindowOf, isWorkAdventureContent, reloadContent, requestAttention, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
+import { focusWindowOf, isWorkAdventureContent, reloadContent, reportEnvironment, requestAttention, showEnvironment, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
 const PROBE_TIMEOUT_MS = 4000;
 const availabilitySubscriptions = new WeakMap<WebContents, () => void>();
@@ -150,6 +152,11 @@ function registerToolbarChannels(handlers: IpcHandlers): void {
     assertSender(event, TOOLBAR_URL);
     return showMapMenu(event.sender, anchorSchema.parse(payload));
   });
+  ipcMain.handle(TOOLBAR_CHANNELS.showEnvironment, (event, payload: unknown) => {
+    assertSender(event, TOOLBAR_URL);
+    const request = z.object({ setting: z.enum(EnvironmentSetting), anchor: anchorSchema }).parse(payload);
+    showEnvironment(event.sender, request.setting, request.anchor);
+  });
 }
 
 function registerAboutChannels(handlers: IpcHandlers): void {
@@ -197,6 +204,13 @@ function registerUpdateChannels(handlers: IpcHandlers): void {
 
 /** From the remote WorkAdventure page: ignored unless the sender is a WorkAdventure view; values validated. */
 function registerContentChannels(): void {
+  ipcMain.on(CONTENT_CHANNELS.environment, (event, payload: unknown) => {
+    if (!isWorkAdventureContent(event.sender)) return;
+    const state = environmentSchema.safeParse(payload);
+    if (!state.success) return;
+    updateControls(event.sender, { environment: state.data });
+    reportEnvironment(event.sender, state.data);
+  });
   ipcMain.on(CONTENT_CHANNELS.attention, (event) => requestAttention(event.sender));
   ipcMain.on(CONTENT_CHANNELS.focus, (event) => focusWindowOf(event.sender));
   ipcMain.on(CONTENT_CHANNELS.controlsReady, (event) => {

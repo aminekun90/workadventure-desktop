@@ -49,7 +49,7 @@ describe("workadventure controls", () => {
     expect(listener).toHaveBeenLastCalledWith(content, expect.objectContaining({ ready: true, unread: 3 }));
 
     resetControls(content);
-    expect(controlsOf(content)).toEqual({ ready: false, statusReady: false, media: { microphone: false, camera: false }, unread: 0, status: undefined });
+    expect(controlsOf(content)).toEqual({ ready: false, statusReady: false, media: { microphone: false, camera: false }, unread: 0, status: undefined, environment: null });
   });
 
   it("sends a status request only once WorkAdventure accepts them", () => {

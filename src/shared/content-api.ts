@@ -1,3 +1,5 @@
+import type { EnvironmentRequest } from "./environment-api.js";
+
 /**
  * What the WorkAdventure page and the main process exchange, through src/preload/workadventure.cts.
  * Page → main: payload-free signals, plus small state values read by the preload (validated in main).
@@ -51,6 +53,7 @@ export const CONTENT_CHANNELS = {
   like: "content:like",
   /** Page → main: the palette and font chosen in WorkAdventure's settings (window.WAD.reportAppearance). */
   appearance: "content:appearance",
+  environment: "content:environment",
   /** Main → page. */
   command: "content:command",
 } as const;
@@ -60,7 +63,8 @@ export type ContentChannel = (typeof CONTENT_CHANNELS)[keyof typeof CONTENT_CHAN
 export const STATUS_REQUESTS = ["online", "busy", "do-not-disturb", "back-in-a-moment"] as const;
 export type StatusRequest = (typeof STATUS_REQUESTS)[number];
 
-export type ContentCommand = { type: "toggle-microphone" } | { type: "toggle-camera" } | { type: "set-status"; status: StatusRequest };
+export type ContentCommand = { type: "toggle-microphone" } | { type: "toggle-camera" } | { type: "set-status"; status: StatusRequest }
+  | { type: "set-environment"; request: EnvironmentRequest };
 
 export interface MediaState {
   microphone: boolean;
