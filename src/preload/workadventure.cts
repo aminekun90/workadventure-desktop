@@ -9,6 +9,9 @@ import type {
   MediaState,
   QueueState,
   SpotifyTrack,
+  SpotifyMusicFrame,
+  SpotifyPlaybackRequest,
+  SpotifyPlaybackState,
   StatusRequest,
 } from "../shared/content-api.js";
 
@@ -28,13 +31,24 @@ const UNREAD_CHECK_DELAY_MS = 500;
 const toggles: Partial<Record<"toggle-microphone" | "toggle-camera", () => void>> = {};
 let requestStatus: ((request: StatusRequest) => void) | undefined;
 let requestEnvironment: ((request: EnvironmentRequest) => void) | undefined;
+let onSpotifyMusic: ((frame: SpotifyMusicFrame | null) => void) | undefined;
 let onSpotifyTrack: ((track: SpotifyTrack | null) => void) | undefined;
 let onListenAlongAvailable: ((available: boolean) => void) | undefined;
 let onQueueRequest: ((uris: string[]) => void) | undefined;
 let onSpotifyQueue: ((state: QueueState) => void) | undefined;
+let onSpotifyPlayback: ((state: SpotifyPlaybackState | null) => void) | undefined;
 
 contextBridge.exposeInMainWorld("WAD", {
   desktop: true,
+  watchSpotifyMusic: (callback: (frame: SpotifyMusicFrame | null) => void): (() => void) => {
+    onSpotifyMusic = callback;
+    send("content:spotify-music-watch", true);
+    return () => {
+      if (onSpotifyMusic !== callback) return;
+      onSpotifyMusic = undefined;
+      send("content:spotify-music-watch", false);
+    };
+  },
   onEnvironmentRequest: (callback: (request: EnvironmentRequest) => void) => {
     requestEnvironment = callback;
   },
@@ -81,6 +95,16 @@ contextBridge.exposeInMainWorld("WAD", {
       send("content:queue-watch", false);
     };
   },
+  controlSpotifyPlayback: (request: SpotifyPlaybackRequest): void => send("content:spotify-playback", request),
+  watchSpotifyPlayback: (callback: (state: SpotifyPlaybackState | null) => void): (() => void) => {
+    onSpotifyPlayback = callback;
+    send("content:spotify-playback-watch", true);
+    return () => {
+      if (onSpotifyPlayback !== callback) return;
+      onSpotifyPlayback = undefined;
+      send("content:spotify-playback-watch", false);
+    };
+  },
   refreshSpotifyQueue: () => send("content:queue-refresh"),
   dequeueOnSpotify: (track: unknown) => send("content:dequeue", track),
   moveInSpotifyQueue: (move: unknown) => send("content:move", move),
@@ -96,6 +120,13 @@ contextBridge.exposeInMainWorld("WAD", {
       send("content:spotify-watch", false);
     };
   },
+});
+
+ipcRenderer.on("content:spotify-music" satisfies ContentChannel, (_event, frame: SpotifyMusicFrame | null) => {
+  onSpotifyMusic?.(frame);
+});
+ipcRenderer.on("content:spotify-playback-state" satisfies ContentChannel, (_event, state: SpotifyPlaybackState | null) => {
+  onSpotifyPlayback?.(state);
 });
 
 ipcRenderer.on("content:spotify-track" satisfies ContentChannel, (_event, track: SpotifyTrack | null) => {

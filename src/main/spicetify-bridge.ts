@@ -1,6 +1,8 @@
+import { createServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import { z } from "zod";
-import type { EnqueueRequest, FollowTarget, HomeJam, QueueMove, QueueState, SpotifyTrack } from "../shared/content-api.js";
+import type { EnqueueRequest, FollowTarget, HomeJam, QueueMove, QueueState, SpotifyTrack, SpotifyMusicFrame } from "../shared/content-api.js";
+import type { SpotifyPlaybackRequest, SpotifyPlaybackState } from "../shared/content-api.js";
 import { logger } from "./logger.js";
 import { queueRequestSchema, queueSchema } from "./workadventure-controls.js";
 
@@ -12,14 +14,17 @@ import { queueRequestSchema, queueSchema } from "./workadventure-controls.js";
 export const SPICETIFY_BRIDGE_PORT = 47613;
 const SPOTIFY_APP_ORIGINS = new Set(["https://xpui.app.spotify.com"]);
 
+/** A text Spotify gives: cut to the length WorkAdventure shows, never a reason to drop the whole state. */
+const spotifyText = z.string().transform((value) => value.slice(0, 200));
+
 const stateSchema = z.object({
   type: z.literal("state"),
   track: z
     .object({
       uri: z.string().regex(/^spotify:track:[A-Za-z0-9]+$/),
-      title: z.string().min(1).max(200),
-      artist: z.string().max(200),
-      album: z.string().max(200),
+      title: spotifyText.pipe(z.string().min(1)),
+      artist: spotifyText,
+      album: spotifyText,
       artworkUrl: z.union([z.literal(""), z.string().startsWith("https://i.scdn.co/image/").max(200)]),
     })
     .nullable(),
@@ -36,6 +41,78 @@ const stateSchema = z.object({
     .catch(null),
 });
 
+const musicSchema = z.object({
+  type: z.literal("music"),
+  frame: z.object({
+    uri: z.string().regex(/^spotify:track:[A-Za-z0-9]+$/),
+    beatStartMs: z.number().int().nonnegative(),
+    intensity: z.number().min(0).max(1),
+    // Extension 1.4.3+: what the lights hit on (bass attacks, brightness, bars). Optional for older extensions.
+    attack: z.number().min(0).max(1).optional(),
+    brightness: z.number().min(0).max(1).optional(),
+    barStartMs: z.number().int().nonnegative().optional(),
+  }).nullable(),
+});
+const playbackSchema = z.object({
+  type: z.literal("playback-state"),
+  // Field by field: one odd value (a track still loading) must not disable every control of the player.
+  state: z.object({
+    track: stateSchema.shape.track.catch(null),
+    playing: z.boolean(),
+    positionMs: z.number().int().nonnegative().catch(0),
+    durationMs: z.number().int().nonnegative().max(86_400_000).catch(0),
+    volume: z.number().min(0).max(1).catch(1),
+    shuffle: z.boolean().catch(false),
+    repeat: z.union([z.literal(0), z.literal(1), z.literal(2)]).catch(0),
+  }),
+});
+let playback: SpotifyPlaybackState | null = null;
+const playbackListeners = new Set<(state: SpotifyPlaybackState | null) => void>();
+
+export function spicetifyPlayback(): SpotifyPlaybackState | null {
+  return playback;
+}
+
+export function onSpicetifyPlayback(listener: (state: SpotifyPlaybackState | null) => void): () => void {
+  playbackListeners.add(listener);
+  if (playbackListeners.size === 1) extension?.send(JSON.stringify({ type: "playback-watch", watching: true }));
+  return () => {
+    playbackListeners.delete(listener);
+    if (playbackListeners.size === 0) {
+      playback = null;
+      extension?.send(JSON.stringify({ type: "playback-watch", watching: false }));
+    }
+  };
+}
+
+function setPlayback(state: SpotifyPlaybackState | null): void {
+  playback = state;
+  for (const listener of playbackListeners) listener(state);
+}
+let music: SpotifyMusicFrame | null = null;
+const musicListeners = new Set<(frame: SpotifyMusicFrame | null) => void>();
+
+export function spicetifyMusic(): SpotifyMusicFrame | null {
+  return music;
+}
+
+export function onSpicetifyMusic(listener: (frame: SpotifyMusicFrame | null) => void): () => void {
+  musicListeners.add(listener);
+  if (musicListeners.size === 1) extension?.send(JSON.stringify({ type: "music-watch", watching: true }));
+  return () => {
+    musicListeners.delete(listener);
+    if (musicListeners.size === 0) {
+      music = null;
+      extension?.send(JSON.stringify({ type: "music-watch", watching: false }));
+    }
+  };
+}
+
+function setMusic(frame: SpotifyMusicFrame | null): void {
+  music = frame;
+  for (const listener of musicListeners) listener(frame);
+}
+
 let extension: WebSocket | undefined;
 let track: SpotifyTrack | null = null;
 const listeners = new Set<() => void>();
@@ -47,20 +124,52 @@ let queue: QueueState = EMPTY_QUEUE;
 const queueListeners = new Set<(state: QueueState) => void>();
 
 export function startSpicetifyBridge(port = SPICETIFY_BRIDGE_PORT): WebSocketServer {
+  const transport = createServer((_request, response) => {
+    response.writeHead(426);
+    response.end();
+  });
   const server = new WebSocketServer({
-    host: "127.0.0.1",
-    port,
+    server: transport,
     verifyClient: ({ origin }: { origin: string }) => {
       const allowed = SPOTIFY_APP_ORIGINS.has(origin);
       if (!allowed) logger.warn({ origin }, "Refused a Spicetify bridge connection");
       return allowed;
     },
   });
-  server.on("error", (error) => logger.warn({ err: error }, "Spicetify bridge unavailable"));
+  server.on("error", () => undefined); // The HTTP transport below handles listen failures.
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false;
+  transport.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code === "EADDRINUSE" && !stopped) {
+      // Another desktop client can release the port later: keep detection alive.
+      retry = setTimeout(() => transport.listen(port, "127.0.0.1"), 1000);
+      retry.unref();
+    } else logger.warn({ err: error }, "Spicetify bridge unavailable");
+  });
+  const alive = new WeakSet<WebSocket>();
+  const heartbeat = setInterval(() => {
+    for (const socket of server.clients) {
+      if (!alive.delete(socket)) socket.terminate();
+      else socket.ping();
+    }
+  }, 15_000);
+  heartbeat.unref();
+  server.on("close", () => {
+    stopped = true;
+    clearTimeout(retry);
+    clearInterval(heartbeat);
+    transport.close();
+  });
+  transport.listen(port, "127.0.0.1");
   server.on("connection", (socket) => {
     // One Spotify app per computer: a new connection (Spotify restarted) replaces the previous one.
     extension?.close();
     extension = socket;
+    alive.add(socket);
+    socket.on("pong", () => alive.add(socket));
+    socket.on("error", (error) => logger.warn({ err: error }, "Spicetify connection failed"));
+    if (musicListeners.size > 0) socket.send(JSON.stringify({ type: "music-watch", watching: true }));
+    if (playbackListeners.size > 0) socket.send(JSON.stringify({ type: "playback-watch", watching: true }));
     logger.info("Spicetify extension connected");
     if (homeJam) socket.send(JSON.stringify({ type: "home-jam", hostName: homeJam.hostName }));
     notify();
@@ -69,6 +178,8 @@ export function startSpicetifyBridge(port = SPICETIFY_BRIDGE_PORT): WebSocketSer
       if (extension !== socket) return;
       extension = undefined;
       track = null;
+      setMusic(null);
+      setPlayback(null);
       setQueue(EMPTY_QUEUE);
       logger.info("Spicetify extension disconnected");
       notify();
@@ -100,6 +211,15 @@ export function followOnSpicetify(target: FollowTarget | null): void {
 export function setHomeJamOnSpicetify(jam: HomeJam | null): void {
   homeJam = jam;
   extension?.send(JSON.stringify({ type: "home-jam", hostName: jam?.hostName ?? null }));
+}
+
+/** Controls this computer's Spotify, without sending commands to other users. */
+export function controlSpicetifyPlayback(request: SpotifyPlaybackRequest): void {
+  if (!extension || extension.readyState !== extension.OPEN) {
+    logger.warn({ command: request.command }, "Spotify command dropped: the Spicetify extension is not connected");
+    return;
+  }
+  extension.send(JSON.stringify({ type: "playback", ...request }));
 }
 
 /** As the home Jam's host: adds a participant's tracks to the queue of this Spotify. */
@@ -150,6 +270,16 @@ function receive(socket: WebSocket, raw: string): void {
   try {
     json = JSON.parse(raw);
   } catch {
+    return;
+  }
+  const reportedMusic = musicSchema.safeParse(json);
+  if (reportedMusic.success) {
+    if (musicListeners.size > 0) setMusic(reportedMusic.data.frame);
+    return;
+  }
+  const reportedPlayback = playbackSchema.safeParse(json);
+  if (reportedPlayback.success) {
+    if (playbackListeners.size > 0) setPlayback(reportedPlayback.data.state);
     return;
   }
   const reportedQueue = queueSchema.safeParse(json);
