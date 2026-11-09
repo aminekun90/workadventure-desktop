@@ -133,6 +133,8 @@ export function sendCommand(content: WebContents, command: ContentCommand): void
   const state = controlsOf(content);
   if (command.type === "set-environment") {
     if (!state.environment || state.environment.busy) return;
+    if (state.environment[command.request.setting] === undefined) return;
+    if (state.environment.seasonal !== undefined && (command.request.setting === EnvironmentSetting.Ground || command.request.setting === EnvironmentSetting.Christmas)) return;
     if (command.request.setting === EnvironmentSetting.Weather && !state.environment.canEditWeather) return;
     content.send(CONTENT_CHANNELS.command, command);
     return;

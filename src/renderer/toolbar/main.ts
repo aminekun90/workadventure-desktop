@@ -46,12 +46,27 @@ const weatherIcons: Record<EnvironmentState["weather"], string> = {
   snow: "M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3M4 10l4-1-1-4M17 19l-1-4 4-1M4 14l4 1-1 4M17 5l-1 4 4 1",
   storm: "M7 15a4 4 0 0 1-.3-8 5.5 5.5 0 0 1 10.6-1A4.5 4.5 0 0 1 18 15h-3M12 13l-4 6h4l-2 4 7-7h-5l2-3",
 };
+const seasonalLabels: Record<NonNullable<EnvironmentState["seasonal"]>, string> = {
+  auto: "Auto", autumn: "Automne", christmas: "Noël", none: "Aucun",
+};
 function renderEnvironment(state: EnvironmentState | null): void {
   for (const button of environmentButtons) {
     const setting = button.id as EnvironmentSetting;
-    button.disabled = !state || state.busy || (setting === "weather" && !state.canEditWeather);
+    const hasSeasonal = state?.seasonal !== undefined;
+    button.hidden = setting === "seasonal" ? !hasSeasonal : hasSeasonal && (setting === "ground" || setting === "christmas");
+    button.disabled = !state || state.busy || state[setting] === undefined || (setting === "weather" && !state.canEditWeather);
     const label = button.querySelector("span");
     if (state && label) label.textContent = labels[String(state[setting])] ?? String(state[setting]);
+    if (setting === "seasonal" && state?.seasonal) {
+      if (label) label.textContent = seasonalLabels[state.seasonal];
+      button.querySelector("svg path")?.setAttribute("d", state.seasonal === "christmas"
+        ? "m12 3 4 5h-2l4 5h-3l5 6H4l5-6H6l4-5H8l4-5Zm0 16v3"
+        : state.seasonal === "none"
+          ? "M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM6.3 6.3l11.4 11.4"
+          : "M19 4c-8 0-14 3-14 9a6 6 0 0 0 6 6c6 0 8-7 8-15ZM4 21l11-11m-6 6v-5m0 5h5");
+      button.title = `Thème saisonnier : ${seasonalLabels[state.seasonal]} — choisir Auto, Automne, Noël ou Aucun. Pour moi uniquement.`;
+      button.setAttribute("aria-label", button.title);
+    }
     if (setting === "weather") {
       button.querySelector("svg path")?.setAttribute("d", weatherIcons[state?.displayWeather ?? "automatic"]);
       button.title = `Météo : ${labels[state?.displayWeather ?? "automatic"]} (réglage : ${labels[state?.weather ?? "automatic"]}) — changer la météo pour tout le salon`;

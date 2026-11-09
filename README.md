@@ -25,7 +25,7 @@ Sous Windows, passer par Git Bash.
 - **Barre du haut** : **Accueil** (retour au launcher, <kbd>⌘/Ctrl</kbd> <kbd>⇧</kbd> <kbd>L</kbd>), **Maps** (liste
   live de map-storage, sans les sauvegardes `-before-` ni les conversions `tmj-`), espace et hôte courants, recharger.
 - **Session conservée** entre deux lancements ; menu **Se déconnecter** pour tout effacer.
-- **Ambiance dans la barre du haut** : régler directement météo, cycle jour/nuit, sol et Noël ; la goutte active ou masque les effets météo. Les icônes météo et jour/nuit suivent l'état affiché, avec des infobulles. La météo est commune au salon et demande les droits d'édition ; les autres choix restent personnels. Nécessite le pont d'ambiance du front WA ; les réglages sont désactivés sur un front plus ancien.
+- **Ambiance dans la barre du haut** : régler directement météo, cycle jour/nuit et thème saisonnier (Auto, Automne, Noël, Aucun) ; la goutte active ou masque les effets météo. Les anciennes instances WA gardent leurs choix séparés Sol et Noël. Les icônes météo et jour/nuit suivent l'état affiché, avec des infobulles. La météo est commune au salon et demande les droits d'édition ; les autres choix restent personnels. Nécessite le pont d'ambiance du front WA ; les réglages sont désactivés si ce pont est absent.
 - **Ton woka** s'affiche dans le launcher, capturé à chaque entrée en salle et au retour à l'accueil (woka par
   défaut de WorkAdventure tant qu'aucun n'est capturé, récupéré sur l'instance : les sprites Pipoya ne peuvent pas
   être redistribués dans ce dépôt).
