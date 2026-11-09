@@ -281,12 +281,18 @@ function registerContentChannels(): void {
     const watching = z.boolean().safeParse(payload);
     if (!watching.success || !isWorkAdventureContent(event.sender)) return;
     const page = event.sender;
-    playbackSubscriptions.get(page)?.();
+    // Subscribe again before letting go of the previous subscription: dropping to no listener in between resets the
+    // last state to null, which disabled the player until Spotify reported again.
+    const previous = playbackSubscriptions.get(page);
     playbackSubscriptions.delete(page);
-    if (!watching.data) return;
+    if (!watching.data) {
+      previous?.();
+      return;
+    }
     const stop = onSpicetifyPlayback((state) => {
       if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyPlaybackState, state);
     });
+    previous?.();
     page.send(CONTENT_CHANNELS.spotifyPlaybackState, spicetifyPlayback());
     playbackSubscriptions.set(page, stop);
     page.once("destroyed", stop);
@@ -321,13 +327,17 @@ function registerContentChannels(): void {
     const watching = z.boolean().safeParse(payload);
     if (!watching.success || !isWorkAdventureContent(event.sender)) return;
     const page = event.sender;
-    musicSubscriptions.get(page)?.();
+    const previous = musicSubscriptions.get(page);
     musicSubscriptions.delete(page);
-    if (!watching.data) return;
-    page.send(CONTENT_CHANNELS.spotifyMusic, spicetifyMusic());
+    if (!watching.data) {
+      previous?.();
+      return;
+    }
     const stop = onSpicetifyMusic((frame) => {
       if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyMusic, frame);
     });
+    previous?.();
+    page.send(CONTENT_CHANNELS.spotifyMusic, spicetifyMusic());
     musicSubscriptions.set(page, stop);
     page.once("destroyed", stop);
   });

@@ -14,14 +14,17 @@ import { queueRequestSchema, queueSchema } from "./workadventure-controls.js";
 export const SPICETIFY_BRIDGE_PORT = 47613;
 const SPOTIFY_APP_ORIGINS = new Set(["https://xpui.app.spotify.com"]);
 
+/** A text Spotify gives: cut to the length WorkAdventure shows, never a reason to drop the whole state. */
+const spotifyText = z.string().transform((value) => value.slice(0, 200));
+
 const stateSchema = z.object({
   type: z.literal("state"),
   track: z
     .object({
       uri: z.string().regex(/^spotify:track:[A-Za-z0-9]+$/),
-      title: z.string().min(1).max(200),
-      artist: z.string().max(200),
-      album: z.string().max(200),
+      title: spotifyText.pipe(z.string().min(1)),
+      artist: spotifyText,
+      album: spotifyText,
       artworkUrl: z.union([z.literal(""), z.string().startsWith("https://i.scdn.co/image/").max(200)]),
     })
     .nullable(),
@@ -44,18 +47,23 @@ const musicSchema = z.object({
     uri: z.string().regex(/^spotify:track:[A-Za-z0-9]+$/),
     beatStartMs: z.number().int().nonnegative(),
     intensity: z.number().min(0).max(1),
+    // Extension 1.4.3+: what the lights hit on (bass attacks, brightness, bars). Optional for older extensions.
+    attack: z.number().min(0).max(1).optional(),
+    brightness: z.number().min(0).max(1).optional(),
+    barStartMs: z.number().int().nonnegative().optional(),
   }).nullable(),
 });
 const playbackSchema = z.object({
   type: z.literal("playback-state"),
+  // Field by field: one odd value (a track still loading) must not disable every control of the player.
   state: z.object({
-    track: stateSchema.shape.track,
+    track: stateSchema.shape.track.catch(null),
     playing: z.boolean(),
-    positionMs: z.number().int().nonnegative(),
-    durationMs: z.number().int().nonnegative().max(86_400_000),
-    volume: z.number().min(0).max(1),
-    shuffle: z.boolean(),
-    repeat: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+    positionMs: z.number().int().nonnegative().catch(0),
+    durationMs: z.number().int().nonnegative().max(86_400_000).catch(0),
+    volume: z.number().min(0).max(1).catch(1),
+    shuffle: z.boolean().catch(false),
+    repeat: z.union([z.literal(0), z.literal(1), z.literal(2)]).catch(0),
   }),
 });
 let playback: SpotifyPlaybackState | null = null;
@@ -207,7 +215,11 @@ export function setHomeJamOnSpicetify(jam: HomeJam | null): void {
 
 /** Controls this computer's Spotify, without sending commands to other users. */
 export function controlSpicetifyPlayback(request: SpotifyPlaybackRequest): void {
-  extension?.send(JSON.stringify({ type: "playback", ...request }));
+  if (!extension || extension.readyState !== extension.OPEN) {
+    logger.warn({ command: request.command }, "Spotify command dropped: the Spicetify extension is not connected");
+    return;
+  }
+  extension.send(JSON.stringify({ type: "playback", ...request }));
 }
 
 /** As the home Jam's host: adds a participant's tracks to the queue of this Spotify. */

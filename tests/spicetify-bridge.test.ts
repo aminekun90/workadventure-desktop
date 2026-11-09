@@ -50,7 +50,8 @@ describe("Spicetify bridge", () => {
     const stop = bridge.onSpicetifyPlayback((state) => { states[states.length] = state; });
     const state = { track: { uri: "spotify:track:abc", title: "Song", artist: "Artist", album: "", artworkUrl: "" },
       playing: false, positionMs: 5000, durationMs: 120000, volume: 0.5, shuffle: true, repeat: 2 };
-    client.send(JSON.stringify({ type: "playback-state", state: { ...state, volume: 5 } }));
+    // Without a play state there is nothing to show: the whole report is ignored.
+    client.send(JSON.stringify({ type: "playback-state", state: { ...state, playing: "yes" } }));
     client.send(JSON.stringify({ type: "playback-state", state }));
     await vi.waitFor(() => expect(states).toEqual([state]));
     expect(bridge.spicetifyPlayback()).toEqual(state);
@@ -71,6 +72,21 @@ describe("Spicetify bridge", () => {
     await listening;
     client = await connect(`ws://127.0.0.1:${address.port}`, SPOTIFY_ORIGIN);
     await vi.waitFor(() => expect(bridge.spicetifyConnected()).toBe(true));
+  });
+
+  it("keeps the player usable when one value is odd: a long album is cut, a NaN duration becomes 0", async () => {
+    client = await connect(await start(), SPOTIFY_ORIGIN);
+    const states: unknown[] = [];
+    const stop = bridge.onSpicetifyPlayback((state) => { states[states.length] = state; });
+    const track = { uri: "spotify:track:abc", title: "Song", artist: "A".repeat(250), album: "B".repeat(250), artworkUrl: "" };
+    client.send(JSON.stringify({ type: "playback-state", state: {
+      track, playing: true, positionMs: 1000, durationMs: null, volume: 5, shuffle: false, repeat: 0,
+    } }));
+    await vi.waitFor(() => expect(states).toEqual([{
+      track: { ...track, artist: "A".repeat(200), album: "B".repeat(200) },
+      playing: true, positionMs: 1000, durationMs: 0, volume: 1, shuffle: false, repeat: 0,
+    }]));
+    stop();
   });
 
   it("sends play, pause and next to the local Spotify extension", async () => {

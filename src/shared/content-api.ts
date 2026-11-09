@@ -179,6 +179,9 @@ export interface SpotifyMusicFrame {
   uri: string;
   beatStartMs: number;
   intensity: number;
+  attack?: number | undefined;
+  brightness?: number | undefined;
+  barStartMs?: number | undefined;
 }
 
 export enum SpotifyPlaybackCommand {
