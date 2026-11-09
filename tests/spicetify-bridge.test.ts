@@ -1,4 +1,6 @@
 import type { AddressInfo } from "node:net";
+import { createServer } from "node:http";
+import { SpotifyPlaybackCommand } from "../src/shared/content-api.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, type WebSocketServer } from "ws";
 
@@ -35,12 +37,82 @@ function nextChange(): Promise<void> {
 }
 
 afterEach(async () => {
+  vi.useRealTimers();
   client?.close();
   await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
   await vi.waitFor(() => expect(bridge.spicetifyConnected()).toBe(false));
 });
 
 describe("Spicetify bridge", () => {
+  it("reports real player state while watched, ignores invalid values and clears it on disconnect", async () => {
+    client = await connect(await start(), SPOTIFY_ORIGIN);
+    const states: unknown[] = [];
+    const stop = bridge.onSpicetifyPlayback((state) => { states[states.length] = state; });
+    const state = { track: { uri: "spotify:track:abc", title: "Song", artist: "Artist", album: "", artworkUrl: "" },
+      playing: false, positionMs: 5000, durationMs: 120000, volume: 0.5, shuffle: true, repeat: 2 };
+    client.send(JSON.stringify({ type: "playback-state", state: { ...state, volume: 5 } }));
+    client.send(JSON.stringify({ type: "playback-state", state }));
+    await vi.waitFor(() => expect(states).toEqual([state]));
+    expect(bridge.spicetifyPlayback()).toEqual(state);
+    client.close();
+    await vi.waitFor(() => expect(states).toEqual([state, null]));
+    stop();
+    expect(bridge.spicetifyPlayback()).toBeNull();
+  });
+  it("retries an occupied port after the other desktop client releases it", async () => {
+    const occupied = createServer();
+    await new Promise<void>((resolve) => occupied.listen(0, "127.0.0.1", resolve));
+    const address = occupied.address();
+    if (!address || typeof address === "string") throw new Error("Missing port");
+    server = bridge.startSpicetifyBridge(address.port);
+    const listening = new Promise<void>((resolve) => server?.once("listening", resolve));
+    await new Promise<void>((resolve) => server?.once("error", () => resolve()));
+    await new Promise<void>((resolve) => occupied.close(() => resolve()));
+    await listening;
+    client = await connect(`ws://127.0.0.1:${address.port}`, SPOTIFY_ORIGIN);
+    await vi.waitFor(() => expect(bridge.spicetifyConnected()).toBe(true));
+  });
+
+  it("sends play, pause and next to the local Spotify extension", async () => {
+    client = await connect(await start(), SPOTIFY_ORIGIN);
+    const received: unknown[] = [];
+    client.on("message", (raw) => { received[received.length] = JSON.parse(raw.toString()); });
+    for (const command of [SpotifyPlaybackCommand.Play, SpotifyPlaybackCommand.Pause, SpotifyPlaybackCommand.Next]) {
+      bridge.controlSpicetifyPlayback({ command });
+    }
+    await vi.waitFor(() => expect(received).toEqual([
+      { type: "playback", command: SpotifyPlaybackCommand.Play },
+      { type: "playback", command: SpotifyPlaybackCommand.Pause },
+      { type: "playback", command: SpotifyPlaybackCommand.Next },
+    ]));
+  });
+
+  it("clears availability when Spotify stops answering heartbeats", async () => {
+    vi.useFakeTimers();
+    const url = await start();
+    client = new WebSocket(url, { origin: SPOTIFY_ORIGIN, autoPong: false });
+    await new Promise<void>((resolve) => client?.once("open", resolve));
+    const closed = new Promise<void>((resolve) => client?.once("close", () => resolve()));
+    await vi.advanceTimersByTimeAsync(30_000);
+    await closed;
+    vi.useRealTimers();
+    expect(bridge.spicetifyConnected()).toBe(false);
+  });
+  it("validates musical frames, stops on disconnect and unsubscribes", async () => {
+    const url = await start();
+    client = await connect(url, SPOTIFY_ORIGIN);
+    const frames: unknown[] = [];
+    const stop = bridge.onSpicetifyMusic((frame) => { frames[frames.length] = frame; });
+    const frame = { uri: "spotify:track:abc", beatStartMs: 500, intensity: 0.7 };
+    client.send(JSON.stringify({ type: "music", frame: { ...frame, intensity: 2 } }));
+    client.send(JSON.stringify({ type: "music", frame }));
+    await vi.waitFor(() => expect(frames).toEqual([frame]));
+    expect(bridge.spicetifyMusic()).toEqual(frame);
+    client.close();
+    await vi.waitFor(() => expect(frames).toEqual([frame, null]));
+    stop();
+    expect(bridge.spicetifyMusic()).toBeNull();
+  });
   it("only accepts the Spotify app", async () => {
     const url = await start();
     await expect(connect(url, "https://evil.example")).rejects.toThrow();

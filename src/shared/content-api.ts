@@ -25,6 +25,8 @@ export const CONTENT_CHANNELS = {
   spotifyWatch: "content:spotify-watch",
   /** Main → page: the track Spotify plays, or null. */
   spotifyTrack: "content:spotify-track",
+  spotifyMusicWatch: "content:spotify-music-watch",
+  spotifyMusic: "content:spotify-music",
   /** What the user shares about their listening, whatever its source (window.WAD.reportListening). */
   listening: "content:listening",
   /** Page → main: WorkAdventure wants to know whether listening along is possible (window.WAD.onListenAlongAvailable). */
@@ -43,6 +45,9 @@ export const CONTENT_CHANNELS = {
   queueWatch: "content:queue-watch",
   /** Page → main: request a fresh Spotify context and queue snapshot. */
   queueRefresh: "content:queue-refresh",
+  spotifyPlayback: "content:spotify-playback",
+  spotifyPlaybackWatch: "content:spotify-playback-watch",
+  spotifyPlaybackState: "content:spotify-playback-state",
   /** Main → page: the tracks added to the queue of this Spotify, as host of a Jukebox. */
   spotifyQueue: "content:spotify-queue",
   /** Page → main: a track to remove from the queue of this Spotify (window.WAD.dequeueOnSpotify). */
@@ -167,4 +172,38 @@ export interface FollowTarget {
   /** spotify:track:… */
   uri: string;
   positionMs: number;
+}
+
+/** Spotify analysis at the local playback position; null when paused or unavailable. */
+export interface SpotifyMusicFrame {
+  uri: string;
+  beatStartMs: number;
+  intensity: number;
+}
+
+export enum SpotifyPlaybackCommand {
+  Play = "play",
+  Pause = "pause",
+  Next = "next",
+  Previous = "previous",
+  Seek = "seek",
+  Volume = "volume",
+  Mute = "mute",
+  Shuffle = "shuffle",
+  Repeat = "repeat",
+}
+
+export interface SpotifyPlaybackRequest {
+  command: SpotifyPlaybackCommand;
+  value?: number;
+}
+
+export interface SpotifyPlaybackState {
+  track: { uri: string; title: string; artist: string; artworkUrl: string } | null;
+  playing: boolean;
+  positionMs: number;
+  durationMs: number;
+  volume: number;
+  shuffle: boolean;
+  repeat: 0 | 1 | 2;
 }

@@ -21,8 +21,12 @@ import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-wi
 import { getAppearance, setAppearance } from "./appearance.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
+import { SpotifyPlaybackCommand } from "../shared/content-api.js";
 import { watchSpotify } from "./spotify-player.js";
 import {
+  controlSpicetifyPlayback,
+  onSpicetifyPlayback,
+  spicetifyPlayback,
   dequeueOnSpicetify,
   enqueueOnSpicetify,
   followOnSpicetify,
@@ -30,6 +34,8 @@ import {
   moveInSpicetifyQueue,
   onSpicetifyChange,
   onSpicetifyQueue,
+  onSpicetifyMusic,
+  spicetifyMusic,
   onSpicetifyQueueRequest,
   setHomeJamOnSpicetify,
   spicetifyQueue,
@@ -254,6 +260,37 @@ function registerContentChannels(): void {
     availabilitySubscriptions.set(page, stop);
     page.once("destroyed", stop);
   });
+  ipcMain.on(CONTENT_CHANNELS.spotifyPlayback, (event, payload: unknown) => {
+    const command = z.discriminatedUnion("command", [
+      z.object({ command: z.enum([
+        SpotifyPlaybackCommand.Play,
+        SpotifyPlaybackCommand.Pause,
+        SpotifyPlaybackCommand.Next,
+        SpotifyPlaybackCommand.Previous,
+        SpotifyPlaybackCommand.Mute,
+        SpotifyPlaybackCommand.Shuffle,
+        SpotifyPlaybackCommand.Repeat,
+      ]) }),
+      z.object({ command: z.literal(SpotifyPlaybackCommand.Seek), value: z.number().int().nonnegative().max(86_400_000) }),
+      z.object({ command: z.literal(SpotifyPlaybackCommand.Volume), value: z.number().min(0).max(1) }),
+    ]).safeParse(payload);
+    if (command.success && isWorkAdventureContent(event.sender)) controlSpicetifyPlayback(command.data);
+  });
+  const playbackSubscriptions = new WeakMap<WebContents, () => void>();
+  ipcMain.on(CONTENT_CHANNELS.spotifyPlaybackWatch, (event, payload: unknown) => {
+    const watching = z.boolean().safeParse(payload);
+    if (!watching.success || !isWorkAdventureContent(event.sender)) return;
+    const page = event.sender;
+    playbackSubscriptions.get(page)?.();
+    playbackSubscriptions.delete(page);
+    if (!watching.data) return;
+    const stop = onSpicetifyPlayback((state) => {
+      if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyPlaybackState, state);
+    });
+    page.send(CONTENT_CHANNELS.spotifyPlaybackState, spicetifyPlayback());
+    playbackSubscriptions.set(page, stop);
+    page.once("destroyed", stop);
+  });
   ipcMain.on(CONTENT_CHANNELS.queueRefresh, (event) => {
     if (isWorkAdventureContent(event.sender)) refreshSpicetifyQueue();
   });
@@ -279,6 +316,21 @@ function registerContentChannels(): void {
     if (request.success && isWorkAdventureContent(event.sender)) enqueueOnSpicetify(request.data);
   });
   // The Jukebox's host page shows its Spotify queue: it receives it while it asks, a reload asking again.
+  const musicSubscriptions = new WeakMap<WebContents, () => void>();
+  ipcMain.on(CONTENT_CHANNELS.spotifyMusicWatch, (event, payload: unknown) => {
+    const watching = z.boolean().safeParse(payload);
+    if (!watching.success || !isWorkAdventureContent(event.sender)) return;
+    const page = event.sender;
+    musicSubscriptions.get(page)?.();
+    musicSubscriptions.delete(page);
+    if (!watching.data) return;
+    page.send(CONTENT_CHANNELS.spotifyMusic, spicetifyMusic());
+    const stop = onSpicetifyMusic((frame) => {
+      if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyMusic, frame);
+    });
+    musicSubscriptions.set(page, stop);
+    page.once("destroyed", stop);
+  });
   const queueSubscriptions = new WeakMap<WebContents, () => void>();
   ipcMain.on(CONTENT_CHANNELS.queueWatch, (event, payload: unknown) => {
     const watching = z.boolean().safeParse(payload);
