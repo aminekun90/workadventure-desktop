@@ -1,6 +1,6 @@
 {
   "name": "workadventure-desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Client desktop WorkAdventure (goyan.fr) — Chromium embarqué, jamais mis en veille en arrière-plan",
   "private": true,
   "type": "module",
