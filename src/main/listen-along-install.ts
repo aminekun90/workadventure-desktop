@@ -16,7 +16,7 @@ export type ListenAlongAnswer = "installed" | "dismissed";
 type Fetch = (url: string) => Promise<Response>;
 
 /** The extension at a fixed version, so that it always speaks the protocol of this desktop app. */
-const EXTENSION_URL = "https://raw.githubusercontent.com/aminekun90/workadventure-spicetify/v1.4.2/workadventure.js";
+const EXTENSION_URL = "https://raw.githubusercontent.com/aminekun90/workadventure-spicetify/v1.4.3/workadventure.js";
 const EXTENSION_FILE = "workadventure.js";
 const SPICETIFY_LATEST_URL = "https://api.github.com/repos/spicetify/cli/releases/latest";
 const COMMAND_TIMEOUT_MS = 120_000;
