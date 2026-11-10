@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(yarn check)",
+      "Bash(yarn run check)",
       "Bash(yarn lint)",
       "Bash(yarn typecheck)",
       "Bash(yarn test)",
