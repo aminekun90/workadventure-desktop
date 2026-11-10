@@ -35,3 +35,6 @@
 - Jamais de secret en dur ni committé (dépôt public). `.env*` ignorés.
 - Ne jamais laisser l'app installée tourner avec `--remote-debugging-port` / `--inspect` : n'importe
   quel processus local pourrait piloter la session.
+- Fuses (`electronFuses`, `electron-builder.yml`) : ne jamais réactiver `runAsNode`,
+  `enableNodeOptionsEnvironmentVariable` ni `enableNodeCliInspectArguments`. Un besoin de processus Node
+  passe par `utilityProcess`, pas par `ELECTRON_RUN_AS_NODE`.

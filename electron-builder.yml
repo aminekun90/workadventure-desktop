@@ -18,6 +18,15 @@ files:
 protocols:
   - name: WorkAdventure
     schemes: [workadventure]
+# Written into the packaged Electron binary: no environment variable or flag can turn them back on.
+# The app never runs itself as Node, uses NODE_OPTIONS, nor is debugged once packaged (source runs are not fused).
+# Left at their default: cookie encryption (Keychain prompt after each update, the ad hoc signature changes),
+# asar integrity (to revisit with a Developer ID), file:// privileges (the local pages are loaded from files).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
 
 mac:
   category: public.app-category.business
