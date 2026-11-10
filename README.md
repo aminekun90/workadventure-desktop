@@ -101,6 +101,9 @@ Points d'entrée pour modifier :
 - Chaque canal IPC n'accepte que sa page locale (launcher ou barre) et valide chaque payload (zod).
 - Seuls les cookies de session de `*.goyan.fr` sont rendus persistants (30 jours), en gardant leur portée d'origine.
 - Avatar : URLs lues dans la page puis validées (https, `*.goyan.fr`, PNG, ≤ 256 Ko) ; le jeton WA ne quitte pas la page.
+- Fuses Electron (`electronFuses` dans `electron-builder.yml`) : l'app packagée refuse `ELECTRON_RUN_AS_NODE`,
+  `NODE_OPTIONS` et `--inspect`, et ne charge son code que depuis `app.asar`. Personne ne peut donc lui faire
+  exécuter un autre code avec ses autorisations micro et caméra.
 
 ## Plateformes
 
