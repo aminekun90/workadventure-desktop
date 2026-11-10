@@ -71,7 +71,7 @@ publie une fois complète : les apps installées la voient à leur prochaine vé
 ## Développer
 
 ```bash
-yarn check            # lint + typecheck + tests
+yarn run check        # lint + typecheck + tests (`yarn check` seul lance la vérification du lockfile de yarn)
 yarn package          # installeur pour l'OS courant, dans release/
 ```
 

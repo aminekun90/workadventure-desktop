@@ -6,7 +6,7 @@
 - **Jamais de push direct sur `main`** : branche → PR → CI `check` verte → merge.
 - Aucune signature d'outil IA (trailer `Co-authored-by`, « Generated with … ») nulle part : commits, PR,
   releases. Identité de commit : l'adresse `noreply` GitHub du dépôt, jamais un e-mail personnel.
-- `yarn check` vert avant tout commit ; lockfile committé avec tout changement de dépendance.
+- `yarn run check` vert avant tout commit ; lockfile committé avec tout changement de dépendance.
 
 ## Versions
 - `0.x.y-beta.n` → pre-release (canal beta) ; sans suffixe → release stable.

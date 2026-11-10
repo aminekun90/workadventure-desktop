@@ -13,7 +13,7 @@ les procédures dans `.claude/skills/`.
 ```bash
 ./run.sh                 # installe, compile, lance le launcher (profil dev séparé)
 ./run.sh --beta          # rejoint directement la beta ; --prod, --url=…, --launcher, --skip-build
-yarn check               # lint + typecheck + tests — obligatoire avant tout commit
+yarn run check           # lint + typecheck + tests, obligatoire avant tout commit (`yarn check` = commande interne de yarn)
 yarn build               # tsc + copie des assets du renderer dans dist/
 yarn package             # installeur de l'OS courant dans release/
 ```
