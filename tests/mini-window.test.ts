@@ -40,7 +40,7 @@ describe("mini window place", () => {
   it("raises a size saved below the minimum, and keeps the other preferences", () => {
     loadMiniWindowPreferences(preferencesFile({ auto: false, bounds: { x: 40, y: 60, width: 120, height: 90 } }));
     expect(isMiniWindowAuto()).toBe(false);
-    expect(miniWindowOptions(parent)).toMatchObject({ x: 40, y: 60, width: 160, height: 110 });
+    expect(miniWindowOptions(parent)).toMatchObject({ x: 40, y: 60, width: 250, height: 90 });
   });
 
   it("opens in the bottom-right corner of WorkAdventure's screen the first time", () => {

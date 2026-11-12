@@ -283,6 +283,12 @@ body {
   margin-left: auto;
 }
 
+/* The compact mode's grip and ✕ (below): hidden while the header carries the title and its own ✕. */
+.mini-grip,
+.mini-close-compact {
+  display: none;
+}
+
 .mini-back svg {
   display: none;
   width: 1rem;
@@ -321,38 +327,65 @@ body {
   }
 }
 
-/* Compact (below 260×220): only the tiles, and the whole window drags. Enlarge it to get the controls back. */
+/* Compact (below 260×220): only the buttons, centered; the window drags by its background. Enlarge it to see the
+   faces again. */
 @media (max-width: 16.25rem), (max-height: 13.75rem) {
   body {
     grid-template-rows: minmax(0, 1fr);
   }
 
   .mini-header,
-  .mini-music,
-  .mini-controls {
+  .mini-grid,
+  .mini-music {
     display: none;
   }
 
-  .mini-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr));
-    grid-auto-rows: minmax(2.5rem, 1fr);
-    gap: 0.25rem;
-    padding: 0.25rem;
+  .mini-controls {
+    gap: 0.375rem;
+    padding-inline: 0.375rem;
+    border-top: 0;
     -webkit-app-region: drag;
   }
 
-  .mini-tile {
-    min-height: 2.5rem;
+  /* Six dots: the strip moves by it (and by its whole background). */
+  .mini-grip {
+    display: block;
+    flex: none;
+    width: 0.75rem;
+    height: 1.25rem;
+    margin-right: auto;
+    border-radius: var(--radius-s);
+    background-image: radial-gradient(circle, var(--muted) 0.09rem, transparent 0.1rem);
+    background-size: 0.375rem 0.4167rem;
+    background-position: center;
+    cursor: grab;
   }
 
-  .mini-initial {
-    font-size: 1.125rem;
+  .mini-close-compact {
+    display: grid;
+    margin-left: auto;
   }
 
-  .mini-name {
-    left: 0.1875rem;
-    bottom: 0.1875rem;
-    font-size: 0.625rem;
+  .mini-controls button {
+    -webkit-app-region: no-drag;
+  }
+
+  .mini-toggle {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .mini-controls .button {
+    margin-left: 0;
+    padding: 0.5rem;
+  }
+
+  .mini-back svg {
+    display: block;
+  }
+
+  .mini-back span {
+    display: none;
   }
 }
 

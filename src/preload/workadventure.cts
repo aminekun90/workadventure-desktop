@@ -229,6 +229,8 @@ const IN_CONVERSATION = '[data-testid="pictureInPictureButton"]';
 /** WorkAdventure's screen share button (ScreenSharingMenuItem), clicked by main for the mini window. */
 const SCREEN_SHARE_BUTTON = '[data-testid="screenShareButton"]' satisfies typeof SCREEN_SHARE_BUTTON_SELECTOR;
 const CONVERSATION_CHECK_DELAY_MS = 300;
+/** The compact strip (buttons only), and the smallest size that shows the videos (mini-window.css thresholds). */
+const MINI_WINDOW_SIZES = { compact: { width: 260, height: 64 }, full: { width: 300, height: 240 } } as const;
 /** Streams and mute states change without DOM mutations: re-read while the mini window shows them. */
 const MINI_WINDOW_REFRESH_MS = 1000;
 
@@ -263,7 +265,7 @@ const MINI_WINDOW_HTML = `
   <header class="mini-header">
     <span class="mini-title">En réunion</span><span class="mini-count"></span>
     <select class="mini-status" aria-label="Statut" hidden></select>
-    <button class="mini-close" type="button" aria-label="Fermer la mini-fenêtre">${ICONS.close}</button>
+    <button class="mini-close" type="button" aria-label="Fermer et ne plus ouvrir automatiquement" title="Fermer et ne plus ouvrir automatiquement (le bouton picture-in-picture de WorkAdventure la remet)">${ICONS.close}</button>
   </header>
   <main class="mini-grid"></main>
   <section class="mini-music" hidden>
@@ -279,11 +281,13 @@ const MINI_WINDOW_HTML = `
     </div>
   </section>
   <footer class="mini-controls">
+    <span class="mini-grip" aria-hidden="true" title="Déplacer"></span>
     <button class="mini-toggle" type="button" data-action="toggle-microphone"></button>
     <button class="mini-toggle" type="button" data-action="toggle-camera"></button>
     <button class="mini-toggle" type="button" data-action="share" hidden>${ICONS.screen}</button>
     <button class="mini-toggle" type="button" data-action="music" aria-label="Afficher la musique" aria-pressed="false" hidden>${ICONS.music}</button>
     <button class="button primary mini-back" type="button" data-action="back" aria-label="Revenir dans WorkAdventure">${ICONS.back}<span>Revenir</span></button>
+    <button class="mini-close mini-close-compact" type="button" aria-label="Fermer et ne plus ouvrir automatiquement" title="Fermer et ne plus ouvrir automatiquement (le bouton picture-in-picture de WorkAdventure la remet)">${ICONS.close}</button>
   </footer>`;
 
 interface Participant {
@@ -325,6 +329,10 @@ let miniWindow: Window | null = null;
 let dismissed = false;
 /** Opened by WorkAdventure's picture-in-picture button: stays while WorkAdventure is shown, until closed. */
 let openedByHand = false;
+/** ✕: closed until this conversation ends; the next one opens it again (as the compact strip, see autoOpen). */
+let closedForCall = false;
+/** The size the mini window was last given for its mode: the user's own resizing is left alone in between. */
+let sizedFor: "full" | "compact" | undefined;
 let refreshTimer: ReturnType<typeof setInterval> | undefined;
 let appearance: { palette: string; font: string } | undefined;
 
@@ -345,8 +353,14 @@ window.addEventListener(
     if (!(event.target instanceof Element) || !event.target.closest(IN_CONVERSATION)) return;
     event.stopImmediatePropagation();
     event.preventDefault();
-    openedByHand = !(miniWindow && !miniWindow.closed);
-    dismissed = !openedByHand;
+    // A switch: open, it closes the mini window and turns its opening off; closed, it turns it on and opens it.
+    if (miniWindow && !miniWindow.closed && autoOpen) turnMiniWindowOff();
+    else {
+      setAutoOpen(true);
+      openedByHand = true;
+      closedForCall = false;
+      dismissed = false;
+    }
     syncMiniWindow();
   },
   true,
@@ -393,10 +407,14 @@ function watchConversationPreference(): void {
 function syncMiniWindow(): void {
   const participants = readParticipants();
   // WorkAdventure shows its picture-in-picture button during a remote conversation only; the user's own tile alone
-  // is not enough (a busy user loses it while still talking). Without the mini window, WorkAdventure keeps its own
-  // behavior when hidden (videos off, away status).
-  const inConversation = (document.querySelector(IN_CONVERSATION) !== null || participants.length > 1) && autoOpen;
-  setKeepVisible(inConversation);
+  // is not enough (a busy user loses it while still talking).
+  const inConversation = document.querySelector(IN_CONVERSATION) !== null || participants.length > 1;
+  if (!inConversation) {
+    openedByHand = false;
+    closedForCall = false;
+  }
+  // The compact strip shows no video: WorkAdventure then keeps its own behavior when hidden (videos off, away status).
+  setKeepVisible(inConversation && !closedForCall && (autoOpen || openedByHand));
   // Another window has the focus, or WorkAdventure is minimized, hidden or covered. The preload's world reads the real
   // visibility: the page shim only changes what WorkAdventure's world reads.
   const away = !windowFocused || document.visibilityState === "hidden";
@@ -405,9 +423,26 @@ function syncMiniWindow(): void {
     dismissed = true;
     forgetMiniWindow();
   }
-  if (!inConversation) openedByHand = false;
-  if (inConversation && (away || openedByHand) && !dismissed) showMiniWindow(participants);
+  if (inConversation && !closedForCall && (openedByHand || away) && !dismissed) showMiniWindow(participants);
   else closeMiniWindow();
+}
+
+/**
+ * ✕, or WorkAdventure's picture-in-picture button while it is open: closed for this conversation, and from the next
+ * one on, the compact strip (buttons only) instead of the videos, until turned back on.
+ */
+function turnMiniWindowOff(): void {
+  openedByHand = false;
+  closedForCall = true;
+  setAutoOpen(false);
+  closeMiniWindow();
+}
+
+/** Remembered by main (mini-window.json), like the menu bar's checkbox, which follows it. */
+function setAutoOpen(auto: boolean): void {
+  if (auto === autoOpen) return;
+  autoOpen = auto;
+  send("content:mini-window-auto-set", auto);
 }
 
 function readParticipants(): Participant[] {
@@ -434,8 +469,22 @@ function showMiniWindow(participants: Participant[]): void {
     if (!miniWindow) return;
     buildMiniWindow(miniWindow.document);
     refreshTimer = setInterval(syncMiniWindow, MINI_WINDOW_REFRESH_MS);
+    sizedFor = undefined;
   }
+  sizeForMode(miniWindow, autoOpen || openedByHand ? "full" : "compact");
   renderMiniWindow(miniWindow.document, participants);
+}
+
+/**
+ * The compact strip when the videos are off, back to a size that shows them when turned on (only when the mode
+ * changes: the user's own resizing stays). mini-window.css lays out each size.
+ */
+function sizeForMode(target: Window, mode: "full" | "compact"): void {
+  if (sizedFor === mode) return;
+  sizedFor = mode;
+  const { width, height } = MINI_WINDOW_SIZES[mode];
+  const fits = mode === "compact" ? target.innerWidth <= width && target.innerHeight <= height : target.innerWidth >= width && target.innerHeight >= height;
+  if (!fits) target.resizeTo(width, height);
 }
 
 function closeMiniWindow(): void {
@@ -454,11 +503,8 @@ function forgetMiniWindow(): void {
 function buildMiniWindow(doc: Document): void {
   doc.title = "WorkAdventure";
   doc.body.innerHTML = MINI_WINDOW_HTML;
-  doc.querySelector(".mini-close")?.addEventListener("click", () => {
-    dismissed = true;
-    openedByHand = false;
-    closeMiniWindow();
-  });
+  // The header's ✕, and the compact mode's own (the header is hidden there).
+  for (const close of doc.querySelectorAll(".mini-close")) close.addEventListener("click", () => turnMiniWindowOff());
   doc.querySelector('[data-action="back"]')?.addEventListener("click", () => {
     // Opened by hand, it stays over WorkAdventure until asked to go: going back is asking.
     openedByHand = false;

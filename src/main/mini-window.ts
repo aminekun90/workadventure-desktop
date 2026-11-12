@@ -12,8 +12,8 @@ const STYLESHEETS = ["../renderer/theme.css", "../renderer/mini-window/mini-wind
 /** theme.css loads it by a relative URL, which an about:blank page cannot resolve: inlined instead. */
 const PIXEL_FONT = fileURLToPath(new URL("../renderer/fonts/PixelifySans.ttf", import.meta.url));
 const DEFAULT_SIZE = { width: 280, height: 230 };
-/** Smallest mini window: only the tiles show below 260×220 (mini-window.css, compact mode). */
-const MIN_SIZE = { width: 160, height: 110 };
+/** Smallest mini window: one row of buttons, the compact mode below 260×220 (mini-window.css). */
+const MIN_SIZE = { width: 250, height: 60 };
 const MEETING_BAR_SIZE = { width: 600, height: 56 };
 /** Distance from the corner of the screen's usable area. */
 const MARGIN = 16;

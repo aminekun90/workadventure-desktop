@@ -21,7 +21,7 @@ import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-wi
 import { getAppearance, setAppearance } from "./appearance.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
-import { isMiniWindowAuto } from "./mini-window.js";
+import { isMiniWindowAuto, setMiniWindowAuto } from "./mini-window.js";
 import { ANNOTATION_URL, annotate, releaseAnnotationMouse } from "./annotation-window.js";
 import { ANNOTATION_CHANNELS, annotationCommandSchema } from "../shared/annotation-api.js";
 import { currentEnvironment, spotifyInstalled } from "./listen-along-install.js";
@@ -230,6 +230,13 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.attention, (event) => requestAttention(event.sender));
   ipcMain.on(CONTENT_CHANNELS.focus, (event) => focusWindowOf(event.sender));
   ipcMain.handle(CONTENT_CHANNELS.miniWindowAuto, (event) => isWorkAdventureContent(event.sender) && isMiniWindowAuto());
+  ipcMain.on(CONTENT_CHANNELS.miniWindowAutoSet, (event, payload: unknown) => {
+    const auto = z.boolean().safeParse(payload);
+    if (!auto.success || !isWorkAdventureContent(event.sender)) return;
+    setMiniWindowAuto(auto.data);
+    // The menu bar's checkbox follows: a controls change refreshes it.
+    updateControls(event.sender, {});
+  });
   ipcMain.handle(CONTENT_CHANNELS.spotifyInstalled, (event) => isWorkAdventureContent(event.sender) && spotifyInstalled(currentEnvironment()));
   ipcMain.on(CONTENT_CHANNELS.annotate, (event, payload: unknown) => {
     const command = annotationCommandSchema.safeParse(payload);

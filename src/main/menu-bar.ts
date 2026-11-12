@@ -124,7 +124,7 @@ function menuTemplate({ space, controls, maps, openAtLogin, miniWindowAuto }: Me
       click: (item) => actions.setOpenAtLogin(item.checked),
     },
     {
-      label: "Mini-fenêtre pendant les conversations",
+      label: "Mini-fenêtre avec les vidéos",
       type: "checkbox",
       checked: miniWindowAuto,
       click: (item) => actions.setMiniWindowAuto(item.checked),

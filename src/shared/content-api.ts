@@ -35,6 +35,8 @@ export const CONTENT_CHANNELS = {
   windowFocused: "content:window-focused",
   /** Page ⇄ main: whether the mini window opens by itself (asked by the preload, pushed when the user changes it). */
   miniWindowAuto: "content:mini-window-auto",
+  /** Page → main: the user turned the mini window's opening on or off (✕, WorkAdventure's picture-in-picture button). */
+  miniWindowAutoSet: "content:mini-window-auto-set",
   /** Page → main: start (true) or stop (false) reading the Spotify app of this Mac (window.WAD.watchSpotifyTrack). */
   spotifyWatch: "content:spotify-watch",
   /** Main → page: the track Spotify plays, or null. */
