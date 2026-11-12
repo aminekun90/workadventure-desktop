@@ -22,6 +22,7 @@ import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
 import { loadMiniWindowPreferences } from "./mini-window.js";
 import { logger, logToFile } from "./logger.js";
 import { showAboutWindow } from "./about-window.js";
+import { takeWhatsNew } from "./release-notes.js";
 import { buildMenu } from "./menu.js";
 import { createPolicy, isAllowedUrl, TRUSTED_DOMAINS } from "./navigation.js";
 import { logFilePath } from "./paths.js";
@@ -48,6 +49,7 @@ const settingsPath = join(app.getPath("userData"), "settings.json");
 const avatarPath = join(app.getPath("userData"), "avatar.json");
 const listenAlongPath = join(app.getPath("userData"), "listen-along.json");
 const spacesPath = join(app.getPath("userData"), "spaces.json");
+const whatsNewPath = join(app.getPath("userData"), "whats-new.json");
 loadAppearance(join(app.getPath("userData"), "appearance.json"));
 loadMiniWindowPreferences(join(app.getPath("userData"), "mini-window.json"));
 let policy = createPolicy(INSTANCES.prod.url);
@@ -73,6 +75,7 @@ if (app.requestSingleInstanceLock()) {
   app
     .whenReady()
     .then(start)
+    .then(showWhatsNewAfterUpdate)
     .catch((error: unknown) => {
       logger.fatal({ err: error }, "Startup failed");
       app.exit(1);
@@ -146,6 +149,11 @@ async function start(): Promise<void> {
     notice = `Impossible de joindre ${new URL(choiceUrl(startup.choice)).host}`;
     await openLauncher();
   }
+}
+
+/** Once per version, the About window opens on this version's notes (runs from sources never show it). */
+async function showWhatsNewAfterUpdate(): Promise<void> {
+  if (app.isPackaged && takeWhatsNew(whatsNewPath, app.getVersion())) await showAboutWindow({ whatsNew: true });
 }
 
 async function launch(request: Settings): Promise<void> {

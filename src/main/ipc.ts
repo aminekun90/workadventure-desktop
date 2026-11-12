@@ -1,4 +1,4 @@
-import { ipcMain, net, type IpcMainInvokeEvent, type WebContents } from "electron";
+import { app, ipcMain, net, type IpcMainInvokeEvent, type WebContents } from "electron";
 import { z } from "zod";
 import { ABOUT_CHANNELS, ABOUT_LINKS } from "../shared/about-api.js";
 import { APPEARANCE_CHANNELS, appearanceSchema } from "../shared/appearance-api.js";
@@ -24,6 +24,7 @@ import { logger } from "./logger.js";
 import { isMiniWindowAuto } from "./mini-window.js";
 import { currentEnvironment, spotifyInstalled } from "./listen-along-install.js";
 import { startSpotify } from "./spotify-launch.js";
+import { fetchReleaseNotes } from "./release-notes.js";
 import { SpotifyPlaybackCommand } from "../shared/content-api.js";
 import { watchSpotify } from "./spotify-player.js";
 import {
@@ -187,6 +188,10 @@ function registerAboutChannels(handlers: IpcHandlers): void {
   ipcMain.handle(ABOUT_CHANNELS.copyDiagnostics, (event) => {
     assertSender(event, ABOUT_URL);
     copyDiagnostics();
+  });
+  ipcMain.handle(ABOUT_CHANNELS.releaseNotes, (event) => {
+    assertSender(event, ABOUT_URL);
+    return fetchReleaseNotes(app.getVersion(), (url) => net.fetch(url));
   });
 }
 

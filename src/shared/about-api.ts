@@ -6,6 +6,7 @@ export const ABOUT_CHANNELS = {
   open: "about:open",
   checkForUpdates: "about:check-for-updates",
   copyDiagnostics: "about:copy-diagnostics",
+  releaseNotes: "about:release-notes",
 } as const;
 export type AboutChannel = (typeof ABOUT_CHANNELS)[keyof typeof ABOUT_CHANNELS];
 
@@ -23,6 +24,8 @@ export interface AboutInfo {
   system: string;
   arch: string;
   copyright: string;
+  /** Opened by itself after an update: the window shows this version's notes right away. */
+  whatsNew: boolean;
 }
 
 export interface AboutApi {
@@ -32,6 +35,8 @@ export interface AboutApi {
   checkForUpdates(): Promise<void>;
   /** Copies app, engine and OS versions, ready to paste in a bug report. */
   copyDiagnostics(): Promise<void>;
+  /** This version's notes from GitHub (Markdown), null when there are none or GitHub cannot be reached. */
+  releaseNotes(): Promise<string | null>;
   update: UpdateApi;
   appearance: AppearanceApi;
 }

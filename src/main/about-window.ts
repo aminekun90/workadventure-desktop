@@ -12,9 +12,12 @@ const REPOSITORY_URL = "https://github.com/aminekun90/workadventure-desktop";
 const SYSTEM_NAMES: Partial<Record<NodeJS.Platform, string>> = { darwin: "macOS", win32: "Windows", linux: "Linux" };
 
 let aboutWindow: BrowserWindow | undefined;
+/** Read by the page through getInfo: show this version's notes as soon as it loads. */
+let openOnWhatsNew = false;
 
 /** One About window at a time: asking again brings the open one to the front. */
-export async function showAboutWindow(): Promise<void> {
+export async function showAboutWindow({ whatsNew = false }: { whatsNew?: boolean } = {}): Promise<void> {
+  openOnWhatsNew = whatsNew;
   if (aboutWindow) {
     aboutWindow.focus();
     return;
@@ -52,6 +55,7 @@ export function aboutInfo(): AboutInfo {
     system: `${SYSTEM_NAMES[process.platform] ?? process.platform} ${process.getSystemVersion()}`,
     arch: process.arch,
     copyright: `© ${new Date().getFullYear()} Amine Bouzahar`,
+    whatsNew: openOnWhatsNew,
   };
 }
 
