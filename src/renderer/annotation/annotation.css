@@ -1,0 +1,23 @@
+/*
+ * The annotation overlay (src/main/annotation-window.ts): transparent over the shared screen, only the drawings show.
+ * theme.css gives the colors (--alert for the pen, --window-light for the laser); its background is removed here.
+ */
+html,
+body {
+  background: transparent;
+}
+
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+body[data-tool="pen"] canvas {
+  cursor: crosshair;
+}
+
+/* The laser dot is drawn: no cursor on top of it. */
+body[data-tool="laser"] canvas {
+  cursor: none;
+}

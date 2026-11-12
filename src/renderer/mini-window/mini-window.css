@@ -327,3 +327,16 @@ body.meeting-bar {
   background: var(--alert);
   filter: brightness(1.1);
 }
+
+.bar-tools {
+  display: flex;
+  gap: 0.125rem;
+  padding: 0 0.25rem;
+  border-right: 0.0625rem solid var(--line);
+  border-left: 0.0625rem solid var(--line);
+}
+
+.bar-tools .is-active {
+  color: var(--online);
+  background: var(--slate-raised);
+}

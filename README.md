@@ -50,6 +50,10 @@ Sous Windows, passer par Git Bash.
 - **Barre de réunion** : pendant un partage d'écran, une barre en haut de l'écran garde micro, caméra, retour à
   WorkAdventure et « Arrêter » à portée. Elle et la mini-fenêtre **n'apparaissent pas dans le partage** (macOS et
   Windows ; Linux ne sait pas exclure une fenêtre d'une capture).
+- **Annotations** : depuis la barre de réunion, **Stylo** (traits qui restent), **Laser** (trace qui s'efface),
+  **Souris** (rend la souris aux autres apps en gardant les dessins) et **Effacer**. Les dessins sont posés dans une
+  fenêtre transparente sur l'écran où est la souris, que le partage capture : les autres les voient. Tout s'arrête
+  avec le partage.
 - **Messages non lus** affichés sur l'icône du Dock et à côté de l'icône de barre de menu.
 - **Écouter en même temps** qu'un collègue, sur son propre Spotify et **sans Premium**, avec Spicetify et l'extension
   [workadventure-spicetify](https://github.com/aminekun90/workadventure-spicetify). Si Spotify est installé, le launcher

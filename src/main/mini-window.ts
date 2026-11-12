@@ -12,7 +12,7 @@ const STYLESHEETS = ["../renderer/theme.css", "../renderer/mini-window/mini-wind
 /** theme.css loads it by a relative URL, which an about:blank page cannot resolve: inlined instead. */
 const PIXEL_FONT = fileURLToPath(new URL("../renderer/fonts/PixelifySans.ttf", import.meta.url));
 const DEFAULT_SIZE = { width: 340, height: 300 };
-const MEETING_BAR_SIZE = { width: 440, height: 56 };
+const MEETING_BAR_SIZE = { width: 600, height: 56 };
 /** Distance from the corner of the screen's usable area. */
 const MARGIN = 16;
 const SAVE_BOUNDS_DELAY_MS = 500;

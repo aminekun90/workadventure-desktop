@@ -22,6 +22,8 @@ import { getAppearance, setAppearance } from "./appearance.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
 import { isMiniWindowAuto } from "./mini-window.js";
+import { annotate } from "./annotation-window.js";
+import { annotationCommandSchema } from "../shared/annotation-api.js";
 import { currentEnvironment, spotifyInstalled } from "./listen-along-install.js";
 import { startSpotify } from "./spotify-launch.js";
 import { SpotifyPlaybackCommand } from "../shared/content-api.js";
@@ -224,6 +226,10 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.focus, (event) => focusWindowOf(event.sender));
   ipcMain.handle(CONTENT_CHANNELS.miniWindowAuto, (event) => isWorkAdventureContent(event.sender) && isMiniWindowAuto());
   ipcMain.handle(CONTENT_CHANNELS.spotifyInstalled, (event) => isWorkAdventureContent(event.sender) && spotifyInstalled(currentEnvironment()));
+  ipcMain.on(CONTENT_CHANNELS.annotate, (event, payload: unknown) => {
+    const command = annotationCommandSchema.safeParse(payload);
+    if (command.success && isWorkAdventureContent(event.sender)) annotate(command.data);
+  });
   ipcMain.on(CONTENT_CHANNELS.spotifyStart, (event) => {
     if (isWorkAdventureContent(event.sender)) startSpotify(currentEnvironment());
   });
