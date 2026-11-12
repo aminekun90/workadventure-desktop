@@ -17,6 +17,9 @@
   (`isMiniWindow`, `isMeetingBar`), navigation bloquée, exclues des captures d'écran. Elles ne reçoivent que des
   flux vidéo et des textes lus dans la page, posés en `textContent` (jamais en HTML) ; leurs actions : bascules
   micro/caméra et statut de WA, Spotify (canaux validés par main), « Revenir », arrêt du partage d'écran.
+- Fenêtre d'annotation : page locale (`renderer/annotation/`), preload qui ne reçoit que des commandes validées
+  par zod (`annotationCommandSchema`) ; **volontairement capturée** par le partage (sinon personne ne voit les
+  dessins), traversée par la souris en mode « Souris », fermée à la fin du partage.
 
 ## IPC
 - Chaque canal vérifie l'expéditeur : `assertSender(event, URL_DE_LA_PAGE_LOCALE)` (launcher, barre,

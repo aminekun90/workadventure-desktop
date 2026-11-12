@@ -12,7 +12,7 @@ import {
   type ProbeResult,
 } from "../shared/launcher-api.js";
 import { newSpaceSchema, spaceRefSchema, type NewSpace, type SpaceRef } from "../shared/spaces.js";
-import { CONTENT_CHANNELS } from "../shared/content-api.js";
+import { CONTENT_CHANNELS, SCREEN_SHARE_BUTTON_SELECTOR } from "../shared/content-api.js";
 import { TOOLBAR_CHANNELS } from "../shared/toolbar-api.js";
 import { EnvironmentSetting } from "../shared/environment-api.js";
 import { environmentSchema } from "./environment.js";
@@ -22,6 +22,8 @@ import { getAppearance, setAppearance } from "./appearance.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
 import { isMiniWindowAuto } from "./mini-window.js";
+import { ANNOTATION_URL, annotate, releaseAnnotationMouse } from "./annotation-window.js";
+import { ANNOTATION_CHANNELS, annotationCommandSchema } from "../shared/annotation-api.js";
 import { currentEnvironment, spotifyInstalled } from "./listen-along-install.js";
 import { startSpotify } from "./spotify-launch.js";
 import { fetchReleaseNotes } from "./release-notes.js";
@@ -229,6 +231,20 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.focus, (event) => focusWindowOf(event.sender));
   ipcMain.handle(CONTENT_CHANNELS.miniWindowAuto, (event) => isWorkAdventureContent(event.sender) && isMiniWindowAuto());
   ipcMain.handle(CONTENT_CHANNELS.spotifyInstalled, (event) => isWorkAdventureContent(event.sender) && spotifyInstalled(currentEnvironment()));
+  ipcMain.on(CONTENT_CHANNELS.annotate, (event, payload: unknown) => {
+    const command = annotationCommandSchema.safeParse(payload);
+    if (command.success && isWorkAdventureContent(event.sender)) annotate(command.data, event.sender);
+  });
+  ipcMain.on(CONTENT_CHANNELS.startShare, (event) => {
+    if (!isWorkAdventureContent(event.sender)) return;
+    // The click comes from the mini window, another window: grant the page the user activation getDisplayMedia needs.
+    event.sender
+      .executeJavaScript(`document.querySelector(${JSON.stringify(SCREEN_SHARE_BUTTON_SELECTOR)})?.click()`, true)
+      .catch((error: unknown) => logger.warn({ err: error }, "Could not start the screen share from the mini window"));
+  });
+  ipcMain.on(ANNOTATION_CHANNELS.release, (event) => {
+    if (event.senderFrame?.url === ANNOTATION_URL) releaseAnnotationMouse();
+  });
   ipcMain.on(CONTENT_CHANNELS.spotifyStart, (event) => {
     if (isWorkAdventureContent(event.sender)) startSpotify(currentEnvironment());
   });

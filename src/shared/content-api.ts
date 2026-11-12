@@ -25,6 +25,12 @@ export const CONTENT_CHANNELS = {
   spotifyInstalled: "content:spotify-installed",
   /** Page → main: start this computer's Spotify app and its playback (the mini window's play button, on a click). */
   spotifyStart: "content:spotify-start",
+  /** Page → main: the meeting bar's annotation tools (annotation-api.ts), validated in main. */
+  annotate: "content:annotate",
+  /** Main → page: the annotation tool changed outside the meeting bar (Escape in the overlay). */
+  annotationTool: "content:annotation-tool",
+  /** Page → main: start a screen share from the mini window (main clicks WorkAdventure's button, with an activation). */
+  startShare: "content:start-share",
   /** Main → page: whether WorkAdventure's window has the focus (the page itself cannot tell, see the mini window). */
   windowFocused: "content:window-focused",
   /** Page ⇄ main: whether the mini window opens by itself (asked by the preload, pushed when the user changes it). */
@@ -80,6 +86,9 @@ export const MINI_WINDOW_NAME = "wa-desktop-mini-window";
 
 /** The meeting bar: opened by the same preload while the user shares their screen, kept out of the share. */
 export const MEETING_BAR_NAME = "wa-desktop-meeting-bar";
+
+/** WorkAdventure's screen share button (fork, ScreenSharingMenuItem.svelte). */
+export const SCREEN_SHARE_BUTTON_SELECTOR = '[data-testid="screenShareButton"]';
 
 /** The statuses that can be requested: the same choices as WorkAdventure's status menu. */
 export const STATUS_REQUESTS = ["online", "busy", "do-not-disturb", "back-in-a-moment"] as const;

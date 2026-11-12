@@ -45,11 +45,16 @@ Sous Windows, passer par Git Bash.
   caméra, et « Revenir ». Elle se ferme au retour dans WorkAdventure ou à la fin de la conversation ; fermée à la
   main (✕), elle ne revient qu'après un retour dans WorkAdventure. Couleurs et police suivent le thème choisi dans WA.
   Elle propose aussi le **statut** et un bouton **Spotify** : morceau et Jam, précédent, lecture/pause, suivant,
-  position cliquable ; Spotify fermé, la lecture le lance. Elle rouvre là où on l'a laissée. Réglage « Mini-fenêtre
+  position cliquable ; Spotify fermé, la lecture le lance. Elle permet aussi de **partager l'écran** (ou de l'arrêter),
+  et le bouton picture-in-picture de WorkAdventure l'ouvre à la demande. Elle rouvre là où on l'a laissée. Réglage « Mini-fenêtre
   pendant les conversations » dans le menu de la barre.
 - **Barre de réunion** : pendant un partage d'écran, une barre en haut de l'écran garde micro, caméra, retour à
   WorkAdventure et « Arrêter » à portée. Elle et la mini-fenêtre **n'apparaissent pas dans le partage** (macOS et
   Windows ; Linux ne sait pas exclure une fenêtre d'une capture).
+- **Annotations** : depuis la barre de réunion, **Stylo** (traits qui restent), **Laser** (trace qui s'efface),
+  **Souris** (rend la souris aux autres apps en gardant les dessins ; aussi avec <kbd>Échap</kbd>) et **Effacer**. Les dessins sont posés dans une
+  fenêtre transparente sur l'écran où est la souris, que le partage capture : les autres les voient. Tout s'arrête
+  avec le partage.
 - **Messages non lus** affichés sur l'icône du Dock et à côté de l'icône de barre de menu.
 - **Écouter en même temps** qu'un collègue, sur son propre Spotify et **sans Premium**, avec Spicetify et l'extension
   [workadventure-spicetify](https://github.com/aminekun90/workadventure-spicetify). Si Spotify est installé, le launcher
