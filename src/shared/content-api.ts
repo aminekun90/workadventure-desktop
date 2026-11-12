@@ -25,6 +25,10 @@ export const CONTENT_CHANNELS = {
   spotifyInstalled: "content:spotify-installed",
   /** Page → main: start this computer's Spotify app and its playback (the mini window's play button, on a click). */
   spotifyStart: "content:spotify-start",
+  /** Page → main: the meeting bar's annotation tools (annotation-api.ts), validated in main. */
+  annotate: "content:annotate",
+  /** Main → page: the annotation tool changed outside the meeting bar (Escape in the overlay). */
+  annotationTool: "content:annotation-tool",
   /** Main → page: whether WorkAdventure's window has the focus (the page itself cannot tell, see the mini window). */
   windowFocused: "content:window-focused",
   /** Page ⇄ main: whether the mini window opens by itself (asked by the preload, pushed when the user changes it). */

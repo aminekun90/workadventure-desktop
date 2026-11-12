@@ -1,6 +1,7 @@
 // Preload of the remote WorkAdventure page (see src/shared/content-api.ts for what may cross).
 // Sandboxed preloads can only require "electron": channel and command names are inlined, checked by type.
 import electron = require("electron");
+import type { AnnotationTool } from "../shared/annotation-api.js";
 import type { EnvironmentRequest } from "../shared/environment-api.js";
 import type {
   AvailabilityStatus,
@@ -239,6 +240,10 @@ const ICONS = {
   previous: icon('<path d="M19 20 9 12l10-8zM5 19V5"/>'),
   play: icon('<path d="m6 4 14 8-14 8z"/>'),
   pause: icon('<path d="M7 4v16M17 4v16"/>'),
+  pen: icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
+  laser: icon('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'),
+  mouse: icon('<path d="m4 4 7 17 2.5-7.5L21 11z"/>'),
+  clear: icon('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>'),
   next: icon('<path d="m5 4 10 8-10 8zM19 5v14"/>'),
 };
 /** The statuses the user can pick, as in WorkAdventure's status menu (and the menu bar's). */
@@ -625,10 +630,18 @@ function renderToggle(doc: Document, action: string, on: boolean, iconOn: string
 const MEETING_BAR = "wa-desktop-meeting-bar" satisfies typeof MEETING_BAR_NAME;
 /** Dispatched on the page's window: the page shim stops the share (DOM events reach both worlds). */
 const STOP_SHARE_EVENT = "workadventure-desktop:stop-share";
+/** Same values as ANNOTATION_TOOLS (annotation-api.ts): a sandboxed preload cannot import a local module. */
+const ANNOTATION_TOOL_NAMES = ["pen", "laser", "mouse"] as const satisfies readonly AnnotationTool[];
 const MEETING_BAR_HTML = `
   <div class="bar">
     <span class="bar-live" aria-hidden="true"></span>
     <span class="bar-label">Partage en cours</span>
+    <div class="bar-tools" role="group" aria-label="Annoter l'écran partagé">
+      <button class="mini-skip" type="button" data-tool="pen" aria-label="Stylo" aria-pressed="false">${ICONS.pen}</button>
+      <button class="mini-skip" type="button" data-tool="laser" aria-label="Laser" aria-pressed="false">${ICONS.laser}</button>
+      <button class="mini-skip" type="button" data-tool="mouse" aria-label="Souris (garder les dessins)" aria-pressed="false">${ICONS.mouse}</button>
+      <button class="mini-skip" type="button" data-action="clear" aria-label="Effacer les dessins">${ICONS.clear}</button>
+    </div>
     <button class="mini-toggle" type="button" data-action="toggle-microphone"></button>
     <button class="mini-toggle" type="button" data-action="toggle-camera"></button>
     <button class="button quiet" type="button" data-action="back">WorkAdventure</button>
@@ -637,6 +650,13 @@ const MEETING_BAR_HTML = `
 
 let screenSharing = false;
 let meetingBar: Window | null = null;
+/** The annotation tool in use, undefined until the user picks one (no overlay until then). */
+let annotationTool: AnnotationTool | undefined;
+
+ipcRenderer.on("content:annotation-tool" satisfies ContentChannel, (_event, tool: AnnotationTool) => {
+  annotationTool = ANNOTATION_TOOL_NAMES.find((name) => name === tool) ?? annotationTool;
+  if (meetingBar && !meetingBar.closed) renderMeetingBar(meetingBar.document);
+});
 
 function syncMeetingBar(): void {
   if (screenSharing) showMeetingBar();
@@ -660,6 +680,16 @@ function showMeetingBar(): void {
     }
     doc.querySelector('[data-action="back"]')?.addEventListener("click", () => send("content:focus"));
     doc.querySelector('[data-action="stop-share"]')?.addEventListener("click", () => window.dispatchEvent(new Event(STOP_SHARE_EVENT)));
+    for (const button of doc.querySelectorAll<HTMLElement>("[data-tool]")) {
+      button.addEventListener("click", () => {
+        const tool = ANNOTATION_TOOL_NAMES.find((name) => name === button.dataset["tool"]);
+        if (!tool) return;
+        annotationTool = tool;
+        send("content:annotate", { tool });
+        renderMeetingBar(doc);
+      });
+    }
+    doc.querySelector('[data-action="clear"]')?.addEventListener("click", () => send("content:annotate", { action: "clear" }));
   }
   renderMeetingBar(meetingBar.document);
 }
@@ -672,12 +702,21 @@ function renderMeetingBar(doc: Document): void {
   const media = readMedia();
   renderToggle(doc, "toggle-microphone", media.microphone, ICONS.microphone, ICONS.microphoneOff, "micro");
   renderToggle(doc, "toggle-camera", media.camera, ICONS.camera, ICONS.cameraOff, "caméra");
+  for (const button of doc.querySelectorAll<HTMLElement>("[data-tool]")) {
+    const active = button.dataset["tool"] === annotationTool;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
 }
 
+/** The share is over: the bar goes, and the drawings with it. */
 function closeMeetingBar(): void {
   const closing = meetingBar;
   meetingBar = null;
   closing?.close();
+  if (annotationTool === undefined) return;
+  annotationTool = undefined;
+  send("content:annotate", { action: "stop" });
 }
 
 function rememberAppearance(value: unknown): void {
