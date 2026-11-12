@@ -24,6 +24,14 @@
   `getDesktopCapturerSources` sans implémenter tout le sélecteur (WA basculerait sur son propre picker).
   Le statut (`onStatusRequest`, `reportStatus`) n'existe que dans le front du fork avec goyan/workadventure#62 :
   sans lui, l'entrée « Statut » reste grisée.
+- **Document Picture-in-Picture ne marche pas** (Electron 45) : `requestWindow()` résout, mais la fenêtre fait
+  0×0 et se ferme en ~36 ms ; le bouton PiP de WA est donc inopérant ici. La mini-fenêtre passe par `window.open`.
+- **App réduite ou cachée = WA retire ses vidéos** (`visibilityState: hidden`). `setBackgroundThrottling(false)`
+  les garderait mais coûte ~90 % de CPU réduit (contre ~6 %) : interdit. Pendant une conversation, le shim de la
+  page fait lire `visible` à WA (`keepVisible`) ; Chromium continue de ralentir la page. Le preload, dans son
+  monde isolé, lit toujours le vrai état.
+- **Page WA `visible` quand l'app est juste en arrière-plan** : seuls réduire, cacher ou recouvrir entièrement la
+  fenêtre la rendent `hidden`.
 - **Fermer la fenêtre quitte l'app** (et donc la salle), même avec l'icône de barre de menu.
 - **Profil dev séparé** (`WorkAdventure-dev`) : depuis les sources, l'app ne touche ni ne verrouille la
   session de l'app installée (verrou d'instance unique par profil).

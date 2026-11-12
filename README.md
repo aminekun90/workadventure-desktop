@@ -40,6 +40,10 @@ Sous Windows, passer par Git Bash.
 - **Raccourcis globaux**, même quand l'app n'est pas au premier plan : <kbd>⌘</kbd><kbd>⇧</kbd><kbd>M</kbd>
   micro, <kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd> caméra.
 - **Écran verrouillé ou Mac en veille** : micro et caméra coupés automatiquement (jamais rallumés seuls).
+- **Mini-fenêtre** : pendant une conversation, réduire, cacher ou recouvrir WorkAdventure ouvre une petite fenêtre
+  toujours au premier plan, sur tous les bureaux, avec les vidéos et les noms de la bulle, les boutons micro et
+  caméra, et « Revenir ». Elle se ferme au retour dans WorkAdventure ou à la fin de la conversation ; fermée à la
+  main (✕), elle ne revient qu'après un retour dans WorkAdventure. Couleurs et police suivent le thème choisi dans WA.
 - **Messages non lus** affichés sur l'icône du Dock et à côté de l'icône de barre de menu.
 - **Écouter en même temps** qu'un collègue, sur son propre Spotify et **sans Premium**, avec Spicetify et l'extension
   [workadventure-spicetify](https://github.com/aminekun90/workadventure-spicetify). Si Spotify est installé, le launcher

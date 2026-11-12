@@ -34,6 +34,10 @@ Fenêtres :
 - **WorkAdventure** (`workadventure-window.ts`) : la fenêtre porte la **barre d'outils** locale ; la page WA
   tourne dans une `WebContentsView` en dessous, avec un preload minimal (`preload/workadventure.cts`).
 - **À propos** (`about-window.ts`) : versions, mises à jour, logs.
+- **Mini-fenêtre** : ouverte (`window.open`, nom `MINI_WINDOW_NAME`) et rendue par le **preload** de la page WA
+  (section « Mini window » de `preload/workadventure.cts`) pendant une conversation quand WA n'est pas affiché ;
+  main l'autorise et lui donne ses options et les styles `theme.css` + `renderer/mini-window/mini-window.css`
+  (`mini-window.ts`).
 - **Hors fenêtres** (`desktop-integration.ts`) : icône de barre de menu (`menu-bar.ts`), raccourcis globaux,
   coupure micro/caméra au verrouillage, pastille de non-lus, lancement à l'ouverture de session (`system.ts`),
   liens `workadventure://` (`deep-links.ts`). L'état vient de la page WA via `workadventure-controls.ts`.

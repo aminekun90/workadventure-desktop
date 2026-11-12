@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createPolicy,
   isAllowedUrl,
+  isMiniWindow,
   isSafeExternalUrl,
   isSpotifyAuthorizationWindow,
   isSpotifyLoginUrl,
@@ -67,6 +68,15 @@ describe("nativeMusicAppUrl", () => {
   });
 });
 
+
+describe("mini window", () => {
+  it("lets only the empty mini window of the preload open in the app", () => {
+    expect(isMiniWindow({ url: "about:blank", frameName: "wa-desktop-mini-window" })).toBe(true);
+    expect(isMiniWindow({ url: "https://evil.example/", frameName: "wa-desktop-mini-window" })).toBe(false);
+    expect(isMiniWindow({ url: "about:blank", frameName: "" })).toBe(false);
+    expect(isMiniWindow({ url: "about:blank", frameName: "spotify-authorization" })).toBe(false);
+  });
+});
 
 describe("Spotify account linking window", () => {
   it("only lets the empty Spotify linking window open in the app", () => {

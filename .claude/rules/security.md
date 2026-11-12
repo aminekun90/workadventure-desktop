@@ -12,6 +12,9 @@
     le demande (partage Spotify activé), lu seulement si Spotify tourne déjà.
 - Le code exécuté dans la page (`executeJavaScript`, shim de notifications) ne fait jamais sortir le
   jeton WA (`authToken`) : il reste dans la page.
+- La mini-fenêtre est la seule fenêtre ouverte par le preload : nom exact `MINI_WINDOW_NAME` + `about:blank`
+  (`isMiniWindow`), navigation bloquée. Elle ne reçoit que des flux vidéo et des noms lus dans le DOM, posés en
+  `textContent` (jamais en HTML) ; ses seules actions sont les bascules micro/caméra de WA et « Revenir ».
 
 ## IPC
 - Chaque canal vérifie l'expéditeur : `assertSender(event, URL_DE_LA_PAGE_LOCALE)` (launcher, barre,
