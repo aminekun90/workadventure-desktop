@@ -61,7 +61,8 @@ function openOverlay(): BrowserWindow {
   // Above the apps, on every desktop, like the shared screen; below the meeting bar and the mini window ("status"),
   // which must stay clickable while the pen takes the clicks.
   window.setAlwaysOnTop(true, "floating");
-  window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  // skipTransformProcessType: otherwise macOS turns the app into an accessory, gone from the Dock and Cmd+Tab.
+  window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
   routeNavigation(window.webContents, (url) => url === ANNOTATION_URL);
   relayConsole(window.webContents);
   window.on("closed", () => {

@@ -27,6 +27,9 @@ const preferencesSchema = z.object({
 type Preferences = z.infer<typeof preferencesSchema>;
 
 let preferencesPath: string | undefined;
+/** The open mini window, and whether a screen share is going on (the meeting bar is open). */
+let miniWindow: BrowserWindow | undefined;
+let screenShared = false;
 let preferences: Preferences = { auto: true };
 
 /** The profile file holding the mini window's preferences; a missing or invalid file means the defaults. */
@@ -86,25 +89,40 @@ export function meetingBarOptions(parent: BrowserWindow): BrowserWindowConstruct
 
 /** The app's theme and font for the page the preload renders, no navigation away from it, and its place remembered. */
 export function prepareMiniWindow(child: WebContents): void {
-  const window = prepareFloatingWindow(child);
-  if (window) rememberBounds(window);
+  const window = prepareFloatingWindow(child, { protected: screenShared });
+  if (!window) return;
+  miniWindow = window;
+  window.once("closed", () => {
+    if (miniWindow === window) miniWindow = undefined;
+  });
+  rememberBounds(window);
 }
 
+/** The meeting bar lives as long as the share: while it is open, the mini window is kept out of the capture too. */
 export function prepareMeetingBar(child: WebContents): void {
-  prepareFloatingWindow(child);
+  const window = prepareFloatingWindow(child, { protected: true });
+  setScreenShared(true);
+  window?.once("closed", () => setScreenShared(false));
+}
+
+/** Out of a share's capture only during a share: otherwise, screenshot tools must see the mini window. */
+function setScreenShared(shared: boolean): void {
+  screenShared = shared;
+  if (miniWindow && !miniWindow.isDestroyed()) miniWindow.setContentProtection(shared);
 }
 
 /**
  * Shared by the mini window and the meeting bar: no navigation, every desktop, out of screen shares (macOS and
  * Windows; Linux cannot exclude a window from a capture), and the app's styles.
  */
-function prepareFloatingWindow(child: WebContents): BrowserWindow | null {
+function prepareFloatingWindow(child: WebContents, options: { protected: boolean }): BrowserWindow | null {
   routeNavigation(child, () => false);
   const window = BrowserWindow.fromWebContents(child);
   // Follows the user to every desktop (macOS Spaces), full-screen apps included.
-  window?.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  // The faces of the bubble and the controls never end up in what the user shares.
-  window?.setContentProtection(true);
+  // skipTransformProcessType: otherwise macOS turns the app into an accessory, gone from the Dock and Cmd+Tab.
+  window?.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+  // The faces of the bubble and the controls stay out of what the user shares.
+  window?.setContentProtection(options.protected);
   // Above the annotation overlay ("floating"): the meeting bar stays clickable while the pen takes the clicks.
   window?.setAlwaysOnTop(true, "status");
   const applyStyles = (): void => {
