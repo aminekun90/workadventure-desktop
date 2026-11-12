@@ -240,6 +240,7 @@ const ICONS = {
   camera: icon('<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3z"/>'),
   cameraOff: icon('<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3zM3 3l18 18"/>'),
   close: icon('<path d="M6 6l12 12M18 6 6 18"/>'),
+  back: icon('<path d="M15 18 9 12l6-6"/>'),
   music: icon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
   previous: icon('<path d="M19 20 9 12l10-8zM5 19V5"/>'),
   play: icon('<path d="m6 4 14 8-14 8z"/>'),
@@ -282,7 +283,7 @@ const MINI_WINDOW_HTML = `
     <button class="mini-toggle" type="button" data-action="toggle-camera"></button>
     <button class="mini-toggle" type="button" data-action="share" hidden>${ICONS.screen}</button>
     <button class="mini-toggle" type="button" data-action="music" aria-label="Afficher la musique" aria-pressed="false" hidden>${ICONS.music}</button>
-    <button class="button primary" type="button" data-action="back">Revenir</button>
+    <button class="button primary mini-back" type="button" data-action="back" aria-label="Revenir dans WorkAdventure">${ICONS.back}<span>Revenir</span></button>
   </footer>`;
 
 interface Participant {
@@ -512,7 +513,7 @@ function renderMiniWindow(doc: Document, participants: Participant[]): void {
     doc.documentElement.dataset["font"] = appearance.font;
   }
   const count = doc.querySelector(".mini-count");
-  if (count) count.textContent = `${participants.length} personnes`;
+  if (count) count.textContent = participants.length === 1 ? "1 personne" : `${participants.length} personnes`;
   const grid = doc.querySelector(".mini-grid");
   if (!grid) return;
   while (grid.children.length > participants.length) grid.lastElementChild?.remove();

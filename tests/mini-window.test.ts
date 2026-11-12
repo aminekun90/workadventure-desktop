@@ -37,9 +37,15 @@ describe("mini window preferences", () => {
 });
 
 describe("mini window place", () => {
+  it("raises a size saved below the minimum, and keeps the other preferences", () => {
+    loadMiniWindowPreferences(preferencesFile({ auto: false, bounds: { x: 40, y: 60, width: 120, height: 90 } }));
+    expect(isMiniWindowAuto()).toBe(false);
+    expect(miniWindowOptions(parent)).toMatchObject({ x: 40, y: 60, width: 160, height: 110 });
+  });
+
   it("opens in the bottom-right corner of WorkAdventure's screen the first time", () => {
     loadMiniWindowPreferences(preferencesFile());
-    expect(miniWindowOptions(parent)).toMatchObject({ x: 1440 - 340 - 16, y: 25 + 875 - 300 - 16, width: 340, height: 300 });
+    expect(miniWindowOptions(parent)).toMatchObject({ x: 1440 - 280 - 16, y: 25 + 875 - 230 - 16, width: 280, height: 230 });
   });
 
   it("reopens where the user left it, if that place is still on a screen", () => {
@@ -49,6 +55,6 @@ describe("mini window place", () => {
 
   it("falls back to the corner when the saved place is off every screen (screen unplugged)", () => {
     loadMiniWindowPreferences(preferencesFile({ auto: true, bounds: { x: 2000, y: 60, width: 400, height: 320 } }));
-    expect(miniWindowOptions(parent)).toMatchObject({ x: 1084, y: 584 });
+    expect(miniWindowOptions(parent)).toMatchObject({ x: 1144, y: 654 });
   });
 });
