@@ -20,14 +20,25 @@ export function framelessChrome({ height, color }: { height: number; color: stri
   };
 }
 
+/** A window the page opens with window.open, as Electron describes it. */
+export interface OpenedWindow {
+  url: string;
+  frameName: string;
+}
+
 /**
  * Keeps in-app URLs in the window and hands every other link to the default browser. `inAppWindow` names the windows
- * the page may open in the app (window.open); their own navigation is routed by `routeChild`.
+ * the page may open in the app (window.open), their window options (`optionsFor`), and routes their own navigation
+ * (`routeChild`).
  */
 export function routeNavigation(
   contents: WebContents,
   isInApp: (url: string) => boolean,
-  inAppWindow?: { allows: (details: { url: string; frameName: string }) => boolean; routeChild: (child: WebContents) => void },
+  inAppWindow?: {
+    allows: (details: OpenedWindow) => boolean;
+    optionsFor?: (details: OpenedWindow) => BrowserWindowConstructorOptions | undefined;
+    routeChild: (child: WebContents, details: OpenedWindow) => void;
+  },
 ): void {
   contents.on("will-navigate", (event) => {
     if (isInApp(event.url)) return;
@@ -35,11 +46,17 @@ export function routeNavigation(
     openExternal(event.url);
   });
   contents.setWindowOpenHandler(({ url, frameName }) => {
-    if (isInApp(url) || inAppWindow?.allows({ url, frameName })) return { action: "allow" };
+    if (isInApp(url)) return { action: "allow" };
+    if (inAppWindow?.allows({ url, frameName })) {
+      const overrideBrowserWindowOptions = inAppWindow.optionsFor?.({ url, frameName });
+      return overrideBrowserWindowOptions ? { action: "allow", overrideBrowserWindowOptions } : { action: "allow" };
+    }
     openExternal(url);
     return { action: "deny" };
   });
-  if (inAppWindow) contents.on("did-create-window", (child) => inAppWindow.routeChild(child.webContents));
+  if (inAppWindow) {
+    contents.on("did-create-window", (child, { url, frameName }) => inAppWindow.routeChild(child.webContents, { url, frameName }));
+  }
 }
 
 /** Surfaces the logs of our own pages (launcher, toolbar) in the main-process logger. */
