@@ -21,6 +21,9 @@ import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-wi
 import { getAppearance, setAppearance } from "./appearance.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
+import { isMiniWindowAuto } from "./mini-window.js";
+import { currentEnvironment, spotifyInstalled } from "./listen-along-install.js";
+import { startSpotify } from "./spotify-launch.js";
 import { SpotifyPlaybackCommand } from "../shared/content-api.js";
 import { watchSpotify } from "./spotify-player.js";
 import {
@@ -219,6 +222,11 @@ function registerContentChannels(): void {
   });
   ipcMain.on(CONTENT_CHANNELS.attention, (event) => requestAttention(event.sender));
   ipcMain.on(CONTENT_CHANNELS.focus, (event) => focusWindowOf(event.sender));
+  ipcMain.handle(CONTENT_CHANNELS.miniWindowAuto, (event) => isWorkAdventureContent(event.sender) && isMiniWindowAuto());
+  ipcMain.handle(CONTENT_CHANNELS.spotifyInstalled, (event) => isWorkAdventureContent(event.sender) && spotifyInstalled(currentEnvironment()));
+  ipcMain.on(CONTENT_CHANNELS.spotifyStart, (event) => {
+    if (isWorkAdventureContent(event.sender)) startSpotify(currentEnvironment());
+  });
   ipcMain.on(CONTENT_CHANNELS.controlsReady, (event) => {
     if (isWorkAdventureContent(event.sender)) updateControls(event.sender, { ready: true });
   });

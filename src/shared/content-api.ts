@@ -21,6 +21,14 @@ export const CONTENT_CHANNELS = {
   statusReady: "content:status-ready",
   /** Effective availability status: WorkAdventure enum name and its localized label. */
   status: "content:status",
+  /** Page → main: whether this computer has the Spotify app (asked by the preload, for the mini window). */
+  spotifyInstalled: "content:spotify-installed",
+  /** Page → main: start this computer's Spotify app and its playback (the mini window's play button, on a click). */
+  spotifyStart: "content:spotify-start",
+  /** Main → page: whether WorkAdventure's window has the focus (the page itself cannot tell, see the mini window). */
+  windowFocused: "content:window-focused",
+  /** Page ⇄ main: whether the mini window opens by itself (asked by the preload, pushed when the user changes it). */
+  miniWindowAuto: "content:mini-window-auto",
   /** Page → main: start (true) or stop (false) reading the Spotify app of this Mac (window.WAD.watchSpotifyTrack). */
   spotifyWatch: "content:spotify-watch",
   /** Main → page: the track Spotify plays, or null. */

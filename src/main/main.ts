@@ -19,6 +19,7 @@ import {
 } from "./listen-along-install.js";
 import { startSpicetifyBridge } from "./spicetify-bridge.js";
 import { createLauncherWindow, LAUNCHER_URL } from "./launcher-window.js";
+import { loadMiniWindowPreferences } from "./mini-window.js";
 import { logger, logToFile } from "./logger.js";
 import { showAboutWindow } from "./about-window.js";
 import { buildMenu } from "./menu.js";
@@ -48,6 +49,7 @@ const avatarPath = join(app.getPath("userData"), "avatar.json");
 const listenAlongPath = join(app.getPath("userData"), "listen-along.json");
 const spacesPath = join(app.getPath("userData"), "spaces.json");
 loadAppearance(join(app.getPath("userData"), "appearance.json"));
+loadMiniWindowPreferences(join(app.getPath("userData"), "mini-window.json"));
 let policy = createPolicy(INSTANCES.prod.url);
 let currentWindow: BrowserWindow | undefined;
 let notice: string | undefined;

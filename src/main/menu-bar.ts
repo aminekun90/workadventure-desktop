@@ -21,6 +21,8 @@ export interface MenuBarState {
   controls: ControlsState | undefined;
   maps: MenuItemConstructorOptions[];
   openAtLogin: boolean;
+  /** The mini window opens by itself during a conversation when WorkAdventure is not shown. */
+  miniWindowAuto: boolean;
 }
 
 export interface MenuBarActions {
@@ -32,6 +34,7 @@ export interface MenuBarActions {
   showWindow: () => void;
   openLauncher: () => void;
   setOpenAtLogin: (openAtLogin: boolean) => void;
+  setMiniWindowAuto: (auto: boolean) => void;
   checkForUpdates: () => void;
   showAbout: () => void;
   quit: () => void;
@@ -72,7 +75,7 @@ export function listeningItems(listening: Listening | undefined, actions: Pick<M
   return items;
 }
 
-function menuTemplate({ space, controls, maps, openAtLogin }: MenuBarState, actions: MenuBarActions): MenuItemConstructorOptions[] {
+function menuTemplate({ space, controls, maps, openAtLogin, miniWindowAuto }: MenuBarState, actions: MenuBarActions): MenuItemConstructorOptions[] {
   const ready = controls?.ready ?? false;
   const unread = controls?.unread ?? 0;
   return [
@@ -119,6 +122,12 @@ function menuTemplate({ space, controls, maps, openAtLogin }: MenuBarState, acti
       type: "checkbox",
       checked: openAtLogin,
       click: (item) => actions.setOpenAtLogin(item.checked),
+    },
+    {
+      label: "Mini-fenêtre pendant les conversations",
+      type: "checkbox",
+      checked: miniWindowAuto,
+      click: (item) => actions.setMiniWindowAuto(item.checked),
     },
     { label: "Rechercher les mises à jour…", click: actions.checkForUpdates },
     { label: "À propos de WorkAdventure", click: actions.showAbout },
