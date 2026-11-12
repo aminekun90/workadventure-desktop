@@ -11,13 +11,21 @@ const STYLESHEETS = ["../renderer/theme.css", "../renderer/mini-window/mini-wind
 );
 /** theme.css loads it by a relative URL, which an about:blank page cannot resolve: inlined instead. */
 const PIXEL_FONT = fileURLToPath(new URL("../renderer/fonts/PixelifySans.ttf", import.meta.url));
-const DEFAULT_SIZE = { width: 340, height: 300 };
+const DEFAULT_SIZE = { width: 280, height: 230 };
+/** Smallest mini window: only the tiles show below 260×220 (mini-window.css, compact mode). */
+const MIN_SIZE = { width: 160, height: 110 };
 const MEETING_BAR_SIZE = { width: 600, height: 56 };
 /** Distance from the corner of the screen's usable area. */
 const MARGIN = 16;
 const SAVE_BOUNDS_DELAY_MS = 500;
 
-const boundsSchema = z.object({ x: z.number().int(), y: z.number().int(), width: z.number().int().min(240), height: z.number().int().min(200) });
+// A size saved by an older version below today's minimum is raised to it, not rejected with the other preferences.
+const boundsSchema = z.object({
+  x: z.number().int(),
+  y: z.number().int(),
+  width: z.number().int().positive().transform((width) => Math.max(width, MIN_SIZE.width)),
+  height: z.number().int().positive().transform((height) => Math.max(height, MIN_SIZE.height)),
+});
 const preferencesSchema = z.object({
   /** Opens by itself during a conversation when WorkAdventure is not shown. */
   auto: z.boolean().default(true),
@@ -35,6 +43,7 @@ let preferences: Preferences = { auto: true };
 /** The profile file holding the mini window's preferences; a missing or invalid file means the defaults. */
 export function loadMiniWindowPreferences(filePath: string): void {
   preferencesPath = filePath;
+  preferences = { auto: true };
   const content = readJsonFile(filePath);
   if (content === undefined) return;
   const result = preferencesSchema.safeParse(content);
@@ -57,8 +66,8 @@ export function setMiniWindowAuto(auto: boolean): void {
 export function miniWindowOptions(parent: BrowserWindow): BrowserWindowConstructorOptions {
   return {
     ...(savedBoundsOnScreen() ?? defaultBounds(parent)),
-    minWidth: 240,
-    minHeight: 200,
+    minWidth: MIN_SIZE.width,
+    minHeight: MIN_SIZE.height,
     title: "WorkAdventure",
     frame: false,
     alwaysOnTop: true,
