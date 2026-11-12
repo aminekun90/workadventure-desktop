@@ -78,6 +78,9 @@ export type ContentChannel = (typeof CONTENT_CHANNELS)[keyof typeof CONTENT_CHAN
  */
 export const MINI_WINDOW_NAME = "wa-desktop-mini-window";
 
+/** The meeting bar: opened by the same preload while the user shares their screen, kept out of the share. */
+export const MEETING_BAR_NAME = "wa-desktop-meeting-bar";
+
 /** The statuses that can be requested: the same choices as WorkAdventure's status menu. */
 export const STATUS_REQUESTS = ["online", "busy", "do-not-disturb", "back-in-a-moment"] as const;
 export type StatusRequest = (typeof STATUS_REQUESTS)[number];

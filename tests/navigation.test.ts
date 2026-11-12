@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createPolicy,
   isAllowedUrl,
+  isMeetingBar,
   isMiniWindow,
   isSafeExternalUrl,
   isSpotifyAuthorizationWindow,
@@ -75,6 +76,12 @@ describe("mini window", () => {
     expect(isMiniWindow({ url: "https://evil.example/", frameName: "wa-desktop-mini-window" })).toBe(false);
     expect(isMiniWindow({ url: "about:blank", frameName: "" })).toBe(false);
     expect(isMiniWindow({ url: "about:blank", frameName: "spotify-authorization" })).toBe(false);
+  });
+
+  it("lets only the empty meeting bar of the preload open in the app", () => {
+    expect(isMeetingBar({ url: "about:blank", frameName: "wa-desktop-meeting-bar" })).toBe(true);
+    expect(isMeetingBar({ url: "https://evil.example/", frameName: "wa-desktop-meeting-bar" })).toBe(false);
+    expect(isMeetingBar({ url: "about:blank", frameName: "wa-desktop-mini-window" })).toBe(false);
   });
 });
 

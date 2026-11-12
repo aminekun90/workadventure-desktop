@@ -7,6 +7,7 @@ import type {
   ContentChannel,
   ContentCommand,
   MediaState,
+  MEETING_BAR_NAME,
   MINI_WINDOW_NAME,
   QueueState,
   SpotifyTrack,
@@ -176,6 +177,11 @@ contextBridge.exposeInMainWorld("workadventureDesktop", {
   mediaChanged: reportMedia,
   // Read by the page shim: while true, WorkAdventure sees its page as shown (see the mini window below).
   keepVisible: () => keepVisible,
+  // The page shim reports the user's screen share: the meeting bar shows while it lasts.
+  screenShareChanged: (sharing: boolean) => {
+    screenSharing = sharing === true;
+    syncMeetingBar();
+  },
 });
 
 function reportMedia(): void {
@@ -613,6 +619,67 @@ function renderToggle(doc: Document, action: string, on: boolean, iconOn: string
   button.setAttribute("aria-label", on ? `Couper le ${device}` : `Activer le ${device}`);
 }
 
+// --- Meeting bar --------------------------------------------------------------------------------------------
+// While the user shares their screen, a strip at the top of the screen keeps the meeting at hand: microphone,
+// camera, the way back, and stopping the share. Main keeps it, like the mini window, out of the share.
+const MEETING_BAR = "wa-desktop-meeting-bar" satisfies typeof MEETING_BAR_NAME;
+/** Dispatched on the page's window: the page shim stops the share (DOM events reach both worlds). */
+const STOP_SHARE_EVENT = "workadventure-desktop:stop-share";
+const MEETING_BAR_HTML = `
+  <div class="bar">
+    <span class="bar-live" aria-hidden="true"></span>
+    <span class="bar-label">Partage en cours</span>
+    <button class="mini-toggle" type="button" data-action="toggle-microphone"></button>
+    <button class="mini-toggle" type="button" data-action="toggle-camera"></button>
+    <button class="button quiet" type="button" data-action="back">WorkAdventure</button>
+    <button class="button bar-stop" type="button" data-action="stop-share">Arrêter</button>
+  </div>`;
+
+let screenSharing = false;
+let meetingBar: Window | null = null;
+
+function syncMeetingBar(): void {
+  if (screenSharing) showMeetingBar();
+  else closeMeetingBar();
+}
+
+function showMeetingBar(): void {
+  if (!meetingBar || meetingBar.closed) {
+    meetingBar = window.open("about:blank", MEETING_BAR);
+    if (!meetingBar) return;
+    const doc = meetingBar.document;
+    doc.title = "WorkAdventure";
+    doc.body.classList.add("meeting-bar");
+    doc.body.innerHTML = MEETING_BAR_HTML;
+    for (const type of ["toggle-microphone", "toggle-camera"] as const) {
+      doc.querySelector(`[data-action="${type}"]`)?.addEventListener("click", () => {
+        toggles[type]?.();
+        // WorkAdventure writes the new state to localStorage right away: show it.
+        setTimeout(() => renderMeetingBar(doc), 100);
+      });
+    }
+    doc.querySelector('[data-action="back"]')?.addEventListener("click", () => send("content:focus"));
+    doc.querySelector('[data-action="stop-share"]')?.addEventListener("click", () => window.dispatchEvent(new Event(STOP_SHARE_EVENT)));
+  }
+  renderMeetingBar(meetingBar.document);
+}
+
+function renderMeetingBar(doc: Document): void {
+  if (appearance) {
+    doc.documentElement.dataset["palette"] = appearance.palette;
+    doc.documentElement.dataset["font"] = appearance.font;
+  }
+  const media = readMedia();
+  renderToggle(doc, "toggle-microphone", media.microphone, ICONS.microphone, ICONS.microphoneOff, "micro");
+  renderToggle(doc, "toggle-camera", media.camera, ICONS.camera, ICONS.cameraOff, "caméra");
+}
+
+function closeMeetingBar(): void {
+  const closing = meetingBar;
+  meetingBar = null;
+  closing?.close();
+}
+
 function rememberAppearance(value: unknown): void {
   if (typeof value !== "object" || value === null) return;
   const { palette, font } = value as Record<string, unknown>;
@@ -681,6 +748,32 @@ const PAGE_SHIM = `(() => {
   window.addEventListener("visibilitychange", (event) => {
     if (event.isTrusted && desktop.keepVisible()) event.stopImmediatePropagation();
   }, true);
+
+  const shares = new Set();
+  const reportShares = () => desktop.screenShareChanged(shares.size > 0);
+  const getDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getDisplayMedia = async (constraints) => {
+    const stream = await getDisplayMedia(constraints);
+    const track = stream.getVideoTracks()[0];
+    if (!track) return stream;
+    shares.add(track);
+    reportShares();
+    // WorkAdventure stops its share with track.stop(), which fires no "ended": check the state instead.
+    const check = setInterval(() => {
+      if (track.readyState !== "ended") return;
+      clearInterval(check);
+      shares.delete(track);
+      reportShares();
+    }, 1000);
+    return stream;
+  };
+  // The meeting bar's stop button: ended as if the user stopped it from the system, so WorkAdventure stops sharing.
+  window.addEventListener(${JSON.stringify(STOP_SHARE_EVENT)}, () => {
+    for (const track of shares) {
+      track.stop();
+      track.dispatchEvent(new Event("ended"));
+    }
+  });
 })();`;
 
 void webFrame.executeJavaScript(PAGE_SHIM);
