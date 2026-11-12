@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, net, WebContentsView, type MenuItemConstructorOptions, type WebContents } from "electron";
 import { once } from "node:events";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { CONTENT_CHANNELS } from "../shared/content-api.js";
 import { TOOLBAR_CHANNELS, type ToolbarState } from "../shared/toolbar-api.js";
 import { logger } from "./logger.js";
 import { currentMapPath, fetchMaps, mapUrl } from "./maps.js";
@@ -66,6 +67,13 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   partsByToolbar.set(window.webContents, parts);
   partsByContent.set(content.webContents, parts);
   window.on("closed", () => content.webContents.close());
+  // The page stays visible and focused for Chromium while the user works in another window: tell it.
+  const reportFocus = (): void => {
+    if (!content.webContents.isDestroyed()) content.webContents.send(CONTENT_CHANNELS.windowFocused, window.isFocused());
+  };
+  window.on("focus", reportFocus);
+  window.on("blur", reportFocus);
+  content.webContents.on("did-stop-loading", reportFocus);
 
   routeNavigation(window.webContents, (target) => target === TOOLBAR_URL);
   relayConsole(window.webContents);

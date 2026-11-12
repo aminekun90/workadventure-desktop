@@ -70,13 +70,21 @@ contextBridge.exposeInMainWorld("WAD", {
   reportAppearance: (appearance: unknown) => {
     send("content:appearance", appearance);
     rememberAppearance(appearance);
+    refreshMiniWindow();
   },
   reportStatus: (name: string, label: string) => {
     const status: AvailabilityStatus = { name, label };
     send("content:status", status);
+    currentStatus = status;
+    refreshMiniWindow();
   },
   // What the user shares about their listening, whatever its source (fork, Api/Desktop/index.ts). Validated in main.
-  reportListening: (listening: unknown) => send("content:listening", listening),
+  reportListening: (listening: unknown) => {
+    send("content:listening", listening);
+    currentListening = readListening(listening);
+    if (currentListening?.title && currentListening.source === "spotify") lastSpotifyTrack = currentListening;
+    refreshMiniWindow();
+  },
   // Listening along, through the WorkAdventure Spicetify extension (fork, Spotify/ListeningFollower.ts).
   followListening: (target: unknown) => send("content:follow", target),
   onListenAlongAvailable: (callback: (available: boolean) => void) => {
@@ -106,7 +114,8 @@ contextBridge.exposeInMainWorld("WAD", {
     return () => {
       if (onSpotifyPlayback !== callback) return;
       onSpotifyPlayback = undefined;
-      send("content:spotify-playback-watch", false);
+      // One subscription per page, shared with the mini window's play/pause button.
+      if (!miniWindowWatchesPlayback) send("content:spotify-playback-watch", false);
     };
   },
   refreshSpotifyQueue: () => send("content:queue-refresh"),
@@ -131,6 +140,9 @@ ipcRenderer.on("content:spotify-music" satisfies ContentChannel, (_event, frame:
 });
 ipcRenderer.on("content:spotify-playback-state" satisfies ContentChannel, (_event, state: SpotifyPlaybackState | null) => {
   onSpotifyPlayback?.(state);
+  playing = state?.playing === true;
+  progress = state && state.durationMs > 0 ? { positionMs: state.positionMs, durationMs: state.durationMs, at: Date.now() } : undefined;
+  refreshMiniWindow();
 });
 
 ipcRenderer.on("content:spotify-track" satisfies ContentChannel, (_event, track: SpotifyTrack | null) => {
@@ -147,6 +159,8 @@ ipcRenderer.on("content:queue-request" satisfies ContentChannel, (_event, uris: 
 
 ipcRenderer.on("content:listen-along-available" satisfies ContentChannel, (_event, available: boolean) => {
   onListenAlongAvailable?.(available);
+  spotifyConnected = available === true;
+  refreshMiniWindow();
 });
 
 ipcRenderer.on("content:command" satisfies ContentChannel, (_event, command: ContentCommand) => {
@@ -201,6 +215,8 @@ function watchUnreadBadge(): void {
 const MINI_WINDOW = "wa-desktop-mini-window" satisfies typeof MINI_WINDOW_NAME;
 /** A participant's tile in WorkAdventure's camera strip (VideoMediaBox.svelte), the user's own included. */
 const TILE = ".camera-box";
+/** WorkAdventure's picture-in-picture button (PictureInPictureMenuItem.svelte), shown in a remote conversation only. */
+const IN_CONVERSATION = '[data-testid="pictureInPictureButton"]';
 const CONVERSATION_CHECK_DELAY_MS = 300;
 /** Streams and mute states change without DOM mutations: re-read while the mini window shows them. */
 const MINI_WINDOW_REFRESH_MS = 1000;
@@ -213,16 +229,42 @@ const ICONS = {
   camera: icon('<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3z"/>'),
   cameraOff: icon('<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3zM3 3l18 18"/>'),
   close: icon('<path d="M6 6l12 12M18 6 6 18"/>'),
+  music: icon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+  previous: icon('<path d="M19 20 9 12l10-8zM5 19V5"/>'),
+  play: icon('<path d="m6 4 14 8-14 8z"/>'),
+  pause: icon('<path d="M7 4v16M17 4v16"/>'),
+  next: icon('<path d="m5 4 10 8-10 8zM19 5v14"/>'),
 };
+/** The statuses the user can pick, as in WorkAdventure's status menu (and the menu bar's). */
+const STATUS_CHOICES: readonly { request: StatusRequest; name: string; label: string }[] = [
+  { request: "online", name: "ONLINE", label: "En ligne" },
+  { request: "busy", name: "BUSY", label: "Occupé" },
+  { request: "do-not-disturb", name: "DO_NOT_DISTURB", label: "Ne pas déranger" },
+  { request: "back-in-a-moment", name: "BACK_IN_A_MOMENT", label: "De retour bientôt" },
+];
 const MINI_WINDOW_HTML = `
   <header class="mini-header">
     <span class="mini-title">En réunion</span><span class="mini-count"></span>
+    <select class="mini-status" aria-label="Statut" hidden></select>
     <button class="mini-close" type="button" aria-label="Fermer la mini-fenêtre">${ICONS.close}</button>
   </header>
   <main class="mini-grid"></main>
+  <section class="mini-music" hidden>
+    ${ICONS.music}
+    <div class="mini-music-text"><span class="mini-music-title"></span><span class="mini-music-detail"></span></div>
+    <button class="mini-skip" type="button" data-action="previous" aria-label="Morceau précédent">${ICONS.previous}</button>
+    <button class="mini-skip" type="button" data-action="play-pause"></button>
+    <button class="mini-skip" type="button" data-action="next" aria-label="Morceau suivant">${ICONS.next}</button>
+    <div class="mini-progress" hidden>
+      <span class="mini-time"></span>
+      <button class="mini-track" type="button" aria-label="Aller à cette position"><span class="mini-track-fill"></span></button>
+      <span class="mini-time"></span>
+    </div>
+  </section>
   <footer class="mini-controls">
     <button class="mini-toggle" type="button" data-action="toggle-microphone"></button>
     <button class="mini-toggle" type="button" data-action="toggle-camera"></button>
+    <button class="mini-toggle" type="button" data-action="music" aria-label="Afficher la musique" aria-pressed="false" hidden>${ICONS.music}</button>
     <button class="button primary" type="button" data-action="back">Revenir</button>
   </footer>`;
 
@@ -232,7 +274,34 @@ interface Participant {
   stream: MediaStream | null;
 }
 
+/** What the user shares, as WorkAdventure reports it; empty title when nothing is shared. */
+interface MiniListening {
+  title: string;
+  artist: string;
+  jamAreaName: string;
+  source: string;
+}
+
 let keepVisible = false;
+/** The user's choice (menu bar), from main: the mini window opens by itself during a conversation. */
+let autoOpen = true;
+/** From main: the page cannot tell when the user switches to another window, it stays visible and focused. */
+let windowFocused = true;
+let currentStatus: AvailabilityStatus | undefined;
+let currentListening: MiniListening | undefined;
+/** The music controls, opened by the music button; kept from one mini window to the next. */
+let musicOpen = false;
+/** This computer's Spotify plays (Spicetify), while the mini window or WorkAdventure watches the playback. */
+let playing = false;
+/** Where the track was when Spotify last reported (`at`, ms since the epoch); it moves on while playing. */
+let progress: { positionMs: number; durationMs: number; at: number } | undefined;
+let miniWindowWatchesPlayback = false;
+/** This computer's Spotify app is connected (Spicetify): the controls stay, to resume a stopped track. */
+let spotifyConnected = false;
+/** This computer has the Spotify app: the music button stays, to start it, even while it is closed. */
+let spotifyInstalled = false;
+/** The last track this computer's Spotify shared: shown, paused, once WorkAdventure no longer shares anything. */
+let lastSpotifyTrack: MiniListening | undefined;
 let miniWindow: Window | null = null;
 /** Closed by hand: stays closed until the user comes back to WorkAdventure. */
 let dismissed = false;
@@ -260,12 +329,42 @@ function watchConversation(): void {
   }).observe(document.body, { childList: true, subtree: true });
 }
 
+ipcRenderer.on("content:window-focused" satisfies ContentChannel, (_event, focused: boolean) => {
+  windowFocused = focused === true;
+  syncMiniWindow();
+});
+
+ipcRenderer.on("content:mini-window-auto" satisfies ContentChannel, (_event, auto: boolean) => {
+  autoOpen = auto === true;
+  syncMiniWindow();
+});
+
+function watchConversationPreference(): void {
+  ipcRenderer
+    .invoke("content:mini-window-auto" satisfies ContentChannel)
+    .then((auto: unknown) => {
+      autoOpen = auto === true;
+      syncMiniWindow();
+    })
+    .catch(() => undefined);
+  ipcRenderer
+    .invoke("content:spotify-installed" satisfies ContentChannel)
+    .then((installed: unknown) => {
+      spotifyInstalled = installed === true;
+    })
+    .catch(() => undefined);
+}
+
 function syncMiniWindow(): void {
   const participants = readParticipants();
-  const inConversation = participants.length > 1;
+  // WorkAdventure shows its picture-in-picture button during a remote conversation only; the user's own tile alone
+  // is not enough (a busy user loses it while still talking). Without the mini window, WorkAdventure keeps its own
+  // behavior when hidden (videos off, away status).
+  const inConversation = (document.querySelector(IN_CONVERSATION) !== null || participants.length > 1) && autoOpen;
   setKeepVisible(inConversation);
-  // The preload's world reads the real state: the page shim only changes what WorkAdventure's world reads.
-  const away = document.visibilityState === "hidden";
+  // Another window has the focus, or WorkAdventure is minimized, hidden or covered. The preload's world reads the real
+  // visibility: the page shim only changes what WorkAdventure's world reads.
+  const away = !windowFocused || document.visibilityState === "hidden";
   if (!away) dismissed = false;
   if (miniWindow?.closed) {
     dismissed = true;
@@ -310,6 +409,7 @@ function closeMiniWindow(): void {
 }
 
 function forgetMiniWindow(): void {
+  watchPlayback(false);
   clearInterval(refreshTimer);
   refreshTimer = undefined;
   miniWindow = null;
@@ -326,6 +426,38 @@ function buildMiniWindow(doc: Document): void {
   for (const type of ["toggle-microphone", "toggle-camera"] as const) {
     doc.querySelector(`[data-action="${type}"]`)?.addEventListener("click", () => toggles[type]?.());
   }
+  doc.querySelector('[data-action="music"]')?.addEventListener("click", () => {
+    musicOpen = !musicOpen;
+    renderListening(doc);
+  });
+  for (const command of ["previous", "next"] as const) {
+    doc.querySelector(`[data-action="${command}"]`)?.addEventListener("click", () => send("content:spotify-playback", { command }));
+  }
+  const track = doc.querySelector<HTMLElement>(".mini-track");
+  track?.addEventListener("click", (event) => {
+    if (!progress) return;
+    const { left, width } = track.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (event.clientX - left) / width));
+    const value = Math.round(ratio * progress.durationMs);
+    send("content:spotify-playback", { command: "seek", value });
+    progress = { ...progress, positionMs: value, at: Date.now() };
+    renderListening(doc);
+  });
+  doc.querySelector('[data-action="play-pause"]')?.addEventListener("click", () => {
+    // Spotify closed (or its extension not connected yet): main starts it, then plays.
+    if (!spotifyConnected) send("content:spotify-start");
+    else send("content:spotify-playback", { command: playing ? "pause" : "play" });
+  });
+  const status = doc.querySelector("select");
+  status?.addEventListener("change", () => {
+    const choice = STATUS_CHOICES.find(({ request }) => request === status.value);
+    if (choice) requestStatus?.(choice.request);
+  });
+}
+
+/** Status and listening changes show right away, without waiting for the next refresh. */
+function refreshMiniWindow(): void {
+  if (miniWindow && !miniWindow.closed) renderMiniWindow(miniWindow.document, readParticipants());
 }
 
 function renderMiniWindow(doc: Document, participants: Participant[]): void {
@@ -344,6 +476,99 @@ function renderMiniWindow(doc: Document, participants: Participant[]): void {
   const media = readMedia();
   renderToggle(doc, "toggle-microphone", media.microphone, ICONS.microphone, ICONS.microphoneOff, "micro");
   renderToggle(doc, "toggle-camera", media.camera, ICONS.camera, ICONS.cameraOff, "caméra");
+  renderStatus(doc);
+  renderListening(doc);
+}
+
+/** Only with WorkAdventure builds that accept status requests; a status the user cannot pick shows as is. */
+function renderStatus(doc: Document): void {
+  const select = doc.querySelector("select");
+  if (!select) return;
+  select.hidden = requestStatus === undefined || currentStatus === undefined;
+  if (select.hidden || !currentStatus) return;
+  const current = STATUS_CHOICES.find(({ name }) => name === currentStatus?.name);
+  const key = `${currentStatus.name}|${currentStatus.label}`;
+  if (select.dataset["status"] === key) return;
+  select.dataset["status"] = key;
+  select.replaceChildren(
+    ...(current ? [] : [new Option(currentStatus.label, "", true, true)]),
+    ...STATUS_CHOICES.map(({ request, label }) => new Option(label, request, false, request === current?.request)),
+  );
+  if (!current) select.options[0]?.setAttribute("disabled", "");
+}
+
+function renderListening(doc: Document): void {
+  const section = doc.querySelector<HTMLElement>(".mini-music");
+  const button = doc.querySelector<HTMLElement>('[data-action="music"]');
+  if (!section || !button) return;
+  const sharing = Boolean(currentListening?.title);
+  // Nothing shared: the last track (or Spotify itself), paused, to resume it; Spotify closed, to start it.
+  const idle = { ...(lastSpotifyTrack ?? { title: "Spotify" }), jamAreaName: "", source: "spotify" };
+  const listening = sharing
+    ? currentListening
+    : spotifyConnected
+      ? { ...idle, artist: "En pause" }
+      : spotifyInstalled
+        ? { ...idle, artist: "Spotify n'est pas lancé" }
+        : undefined;
+  button.hidden = !listening?.title;
+  button.classList.toggle("is-active", musicOpen);
+  button.setAttribute("aria-pressed", String(musicOpen));
+  button.setAttribute("aria-label", musicOpen ? "Masquer la musique" : "Afficher la musique");
+  section.hidden = !listening?.title || !musicOpen;
+  if (!listening?.title) return;
+  const title = section.querySelector(".mini-music-title");
+  if (title) title.textContent = listening.title;
+  const detail = section.querySelector(".mini-music-detail");
+  if (detail) detail.textContent = listening.jamAreaName ? `${listening.artist}, Jam ${listening.jamAreaName}` : listening.artist;
+  // The controls drive this computer's Spotify app (Spicetify), the only source the app can control.
+  const controllable = listening.source === "spotify";
+  for (const control of section.querySelectorAll<HTMLElement>(".mini-skip")) {
+    // Spotify closed: only the play button, which starts it.
+    control.hidden = !controllable || (!spotifyConnected && control.dataset["action"] !== "play-pause");
+  }
+  watchPlayback(controllable && musicOpen && spotifyConnected);
+  renderProgress(section, controllable && spotifyConnected);
+  const playPause = section.querySelector('[data-action="play-pause"]');
+  if (playPause && playPause.getAttribute("data-state") !== String(playing)) {
+    playPause.setAttribute("data-state", String(playing));
+    playPause.innerHTML = playing ? ICONS.pause : ICONS.play;
+    playPause.setAttribute("aria-label", playing ? "Mettre en pause" : "Lire");
+  }
+}
+
+/** Elapsed and total time, and the bar (a click seeks); between two reports, the position moves on while playing. */
+function renderProgress(section: Element, shown: boolean): void {
+  const bar = section.querySelector<HTMLElement>(".mini-progress");
+  if (!bar) return;
+  bar.hidden = !shown || !progress;
+  if (bar.hidden || !progress) return;
+  const elapsed = Math.min(progress.durationMs, progress.positionMs + (playing ? Date.now() - progress.at : 0));
+  bar.style.setProperty("--progress", String(elapsed / progress.durationMs));
+  const [start, end] = bar.querySelectorAll(".mini-time");
+  if (start) start.textContent = formatTime(elapsed);
+  if (end) end.textContent = formatTime(progress.durationMs);
+}
+
+function formatTime(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+/** The play/pause button needs the playback state: one subscription per page, shared with WorkAdventure's player. */
+function watchPlayback(watch: boolean): void {
+  if (watch === miniWindowWatchesPlayback) return;
+  miniWindowWatchesPlayback = watch;
+  if (watch || !onSpotifyPlayback) send("content:spotify-playback-watch", watch);
+}
+
+function readListening(value: unknown): MiniListening | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const text = (key: string): string => {
+    const field = (value as Record<string, unknown>)[key];
+    return typeof field === "string" ? field.slice(0, 200) : "";
+  };
+  return { title: text("title"), artist: text("artist"), jamAreaName: text("jamAreaName"), source: text("source") };
 }
 
 function createTile(doc: Document): HTMLElement {
@@ -398,6 +623,7 @@ window.addEventListener("DOMContentLoaded", () => {
   reportMedia();
   watchUnreadBadge();
   watchConversation();
+  watchConversationPreference();
 });
 
 /**

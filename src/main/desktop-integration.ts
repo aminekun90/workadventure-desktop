@@ -1,5 +1,6 @@
 import { app, type MenuItemConstructorOptions, type WebContents } from "electron";
-import type { ContentCommand } from "../shared/content-api.js";
+import { CONTENT_CHANNELS, type ContentCommand } from "../shared/content-api.js";
+import { isMiniWindowAuto, setMiniWindowAuto } from "./mini-window.js";
 import { logger } from "./logger.js";
 import { createMenuBarItem } from "./menu-bar.js";
 import { isOpenAtLogin, onStepAway, registerGlobalShortcuts, setOpenAtLogin, setUnreadBadge } from "./system.js";
@@ -47,6 +48,11 @@ export function startDesktopIntegration(options: DesktopIntegrationOptions): Des
       setOpenAtLogin(openAtLogin);
       refresh();
     },
+    setMiniWindowAuto: (auto) => {
+      setMiniWindowAuto(auto);
+      options.currentContent()?.send(CONTENT_CHANNELS.miniWindowAuto, auto);
+      refresh();
+    },
     checkForUpdates: options.checkForUpdates,
     showAbout: options.showAbout,
     quit: () => app.quit(),
@@ -55,7 +61,7 @@ export function startDesktopIntegration(options: DesktopIntegrationOptions): Des
   const refresh = (): void => {
     const content = options.currentContent();
     const controls = content && controlsOf(content);
-    menuBar.update({ space, controls, maps, openAtLogin: isOpenAtLogin() });
+    menuBar.update({ space, controls, maps, openAtLogin: isOpenAtLogin(), miniWindowAuto: isMiniWindowAuto() });
     setUnreadBadge(controls?.unread ?? 0);
   };
 
