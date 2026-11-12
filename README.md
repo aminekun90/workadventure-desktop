@@ -47,6 +47,9 @@ Sous Windows, passer par Git Bash.
   Elle propose aussi le **statut** et un bouton **Spotify** : morceau et Jam, précédent, lecture/pause, suivant,
   position cliquable ; Spotify fermé, la lecture le lance. Elle rouvre là où on l'a laissée. Réglage « Mini-fenêtre
   pendant les conversations » dans le menu de la barre.
+- **Barre de réunion** : pendant un partage d'écran, une barre en haut de l'écran garde micro, caméra, retour à
+  WorkAdventure et « Arrêter » à portée. Elle et la mini-fenêtre **n'apparaissent pas dans le partage** (macOS et
+  Windows ; Linux ne sait pas exclure une fenêtre d'une capture).
 - **Messages non lus** affichés sur l'icône du Dock et à côté de l'icône de barre de menu.
 - **Écouter en même temps** qu'un collègue, sur son propre Spotify et **sans Premium**, avec Spicetify et l'extension
   [workadventure-spicetify](https://github.com/aminekun90/workadventure-spicetify). Si Spotify est installé, le launcher

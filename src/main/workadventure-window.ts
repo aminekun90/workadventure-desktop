@@ -8,8 +8,8 @@ import { currentMapPath, fetchMaps, mapUrl } from "./maps.js";
 import { controlsOf, resetControls } from "./workadventure-controls.js";
 import { showEnvironmentMenu } from "./environment.js";
 import type { EnvironmentSetting, EnvironmentState } from "../shared/environment-api.js";
-import { isAllowedUrl, isMiniWindow, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
-import { miniWindowOptions, prepareMiniWindow } from "./mini-window.js";
+import { isAllowedUrl, isMeetingBar, isMiniWindow, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
+import { meetingBarOptions, miniWindowOptions, prepareMeetingBar, prepareMiniWindow } from "./mini-window.js";
 import { BACKGROUND, framelessChrome, relayConsole, routeNavigation, screenWorkArea } from "./window-common.js";
 
 const TOOLBAR_HTML = fileURLToPath(new URL("../renderer/toolbar/index.html", import.meta.url));
@@ -80,10 +80,12 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   routeNavigation(content.webContents, (target) => isAllowedUrl(target, policy), {
     // Linking a Spotify account: Spotify's pages, then WorkAdventure's callback, which hands the code to the page.
     // The mini window: the preload renders the conversation into it while WorkAdventure is not shown.
-    allows: (details) => isSpotifyAuthorizationWindow(details) || isMiniWindow(details),
-    optionsFor: (details) => (isMiniWindow(details) ? miniWindowOptions(window) : undefined),
+    allows: (details) => isSpotifyAuthorizationWindow(details) || isMiniWindow(details) || isMeetingBar(details),
+    optionsFor: (details) =>
+      isMiniWindow(details) ? miniWindowOptions(window) : isMeetingBar(details) ? meetingBarOptions(window) : undefined,
     routeChild: (child, details) => {
       if (isMiniWindow(details)) prepareMiniWindow(child);
+      else if (isMeetingBar(details)) prepareMeetingBar(child);
       else routeNavigation(child, (target) => isSpotifyLoginUrl(target) || isAllowedUrl(target, policy));
     },
   });

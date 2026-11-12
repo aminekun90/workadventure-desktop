@@ -1,4 +1,4 @@
-import { MINI_WINDOW_NAME } from "../shared/content-api.js";
+import { MEETING_BAR_NAME, MINI_WINDOW_NAME } from "../shared/content-api.js";
 
 /** Every WorkAdventure service (play, auth, Jitsi, map storage) lives under these domains. */
 export const TRUSTED_DOMAINS = ["goyan.fr"] as const;
@@ -43,6 +43,11 @@ export function isSpotifyAuthorizationWindow({ url, frameName }: { url: string; 
 /** The mini window the preload opens, empty, to show the conversation while WorkAdventure is not shown. */
 export function isMiniWindow({ url, frameName }: { url: string; frameName: string }): boolean {
   return frameName === MINI_WINDOW_NAME && url === "about:blank";
+}
+
+/** The meeting bar the preload opens, empty, while the user shares their screen. */
+export function isMeetingBar({ url, frameName }: { url: string; frameName: string }): boolean {
+  return frameName === MEETING_BAR_NAME && url === "about:blank";
 }
 
 export function isSafeExternalUrl(url: string): boolean {

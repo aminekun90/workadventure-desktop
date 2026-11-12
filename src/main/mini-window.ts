@@ -12,6 +12,7 @@ const STYLESHEETS = ["../renderer/theme.css", "../renderer/mini-window/mini-wind
 /** theme.css loads it by a relative URL, which an about:blank page cannot resolve: inlined instead. */
 const PIXEL_FONT = fileURLToPath(new URL("../renderer/fonts/PixelifySans.ttf", import.meta.url));
 const DEFAULT_SIZE = { width: 340, height: 300 };
+const MEETING_BAR_SIZE = { width: 440, height: 56 };
 /** Distance from the corner of the screen's usable area. */
 const MARGIN = 16;
 const SAVE_BOUNDS_DELAY_MS = 500;
@@ -65,13 +66,45 @@ export function miniWindowOptions(parent: BrowserWindow): BrowserWindowConstruct
   };
 }
 
+/** The meeting bar: a strip at the top of the screen WorkAdventure is on, over every app, while the user shares. */
+export function meetingBarOptions(parent: BrowserWindow): BrowserWindowConstructorOptions {
+  const area = screen.getDisplayMatching(parent.getBounds()).workArea;
+  return {
+    ...MEETING_BAR_SIZE,
+    x: Math.round(area.x + (area.width - MEETING_BAR_SIZE.width) / 2),
+    y: area.y + MARGIN,
+    title: "WorkAdventure",
+    frame: false,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    fullscreenable: false,
+    minimizable: false,
+    backgroundColor: BACKGROUND,
+  };
+}
+
 /** The app's theme and font for the page the preload renders, no navigation away from it, and its place remembered. */
 export function prepareMiniWindow(child: WebContents): void {
+  const window = prepareFloatingWindow(child);
+  if (window) rememberBounds(window);
+}
+
+export function prepareMeetingBar(child: WebContents): void {
+  prepareFloatingWindow(child);
+}
+
+/**
+ * Shared by the mini window and the meeting bar: no navigation, every desktop, out of screen shares (macOS and
+ * Windows; Linux cannot exclude a window from a capture), and the app's styles.
+ */
+function prepareFloatingWindow(child: WebContents): BrowserWindow | null {
   routeNavigation(child, () => false);
   const window = BrowserWindow.fromWebContents(child);
   // Follows the user to every desktop (macOS Spaces), full-screen apps included.
   window?.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  if (window) rememberBounds(window);
+  // The faces of the bubble and the controls never end up in what the user shares.
+  window?.setContentProtection(true);
   const applyStyles = (): void => {
     // The font last: of two faces of the same family, the last one wins, and theme.css's one cannot load here.
     for (const css of [...STYLESHEETS.map((path) => readFileSync(path, "utf8")), fontFace()]) {
@@ -80,6 +113,7 @@ export function prepareMiniWindow(child: WebContents): void {
   };
   if (child.isLoading()) child.once("did-finish-load", applyStyles);
   else applyStyles();
+  return window;
 }
 
 function rememberBounds(window: BrowserWindow): void {

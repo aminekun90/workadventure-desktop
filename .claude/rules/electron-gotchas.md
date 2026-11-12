@@ -32,6 +32,11 @@
   monde isolé, lit toujours le vrai état.
 - **Page WA `visible` quand l'app est juste en arrière-plan** : seuls réduire, cacher ou recouvrir entièrement la
   fenêtre la rendent `hidden`.
+- **Partage d'écran** : WA passe par `getDisplayMedia` (on n'expose pas `getDesktopCapturerSources`), donc par
+  `setDisplayMediaRequestHandler` + sélecteur système macOS, qui ne demande pas l'autorisation « Enregistrement de
+  l'écran » à l'app. Le shim de la page enveloppe `getDisplayMedia` pour la barre de réunion ; WA arrête un partage
+  par `track.stop()`, qui n'émet pas `ended` : le shim surveille `readyState`. `setContentProtection(true)` exclut
+  bien la barre d'une capture macOS (vérifié avec `screencapture` sur sa zone).
 - **Fermer la fenêtre quitte l'app** (et donc la salle), même avec l'icône de barre de menu.
 - **Profil dev séparé** (`WorkAdventure-dev`) : depuis les sources, l'app ne touche ni ne verrouille la
   session de l'app installée (verrou d'instance unique par profil).
