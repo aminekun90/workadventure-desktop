@@ -141,3 +141,50 @@ h1 {
   color: var(--muted);
   background: var(--night-deep);
 }
+
+/* What's new: this version's notes, over the window (opened by "Nouveautés", and once after an update). */
+.notes {
+  position: fixed;
+  inset: 2.5rem 0 0;
+  z-index: 3;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 1.25rem;
+  background: var(--night);
+}
+
+.notes h2 {
+  font: 600 1.125rem var(--font-pixel);
+}
+
+.notes-content {
+  overflow: auto;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text);
+  user-select: text;
+}
+
+.notes-content > * + * {
+  margin-top: 0.625rem;
+}
+
+.notes-content h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.notes-content ul {
+  padding-left: 1.25rem;
+}
+
+.notes-content li + li {
+  margin-top: 0.25rem;
+}
+
+.notes-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

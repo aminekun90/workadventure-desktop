@@ -29,6 +29,7 @@ const api: AboutApi = {
   open: (link) => invoke("about:open", link),
   checkForUpdates: () => invoke("about:check-for-updates"),
   copyDiagnostics: () => invoke("about:copy-diagnostics"),
+  releaseNotes: () => invoke("about:release-notes"),
   update,
   appearance,
 };

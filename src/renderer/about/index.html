@@ -39,12 +39,21 @@
       </section>
 
       <nav class="links" aria-label="Liens">
-        <button id="release-notes" class="button quiet" type="button">Notes de version</button>
+        <button id="release-notes" class="button quiet" type="button">Nouveautés</button>
         <button id="repository" class="button quiet" type="button">Code source</button>
         <button id="logs" class="button quiet" type="button">Ouvrir les logs</button>
         <button id="copy" class="button quiet" type="button">Copier les infos</button>
       </nav>
     </main>
+
+    <section id="notes" class="notes" aria-labelledby="notes-title" hidden>
+      <h2 id="notes-title"></h2>
+      <div id="notes-content" class="notes-content" aria-live="polite"></div>
+      <div class="notes-actions">
+        <button id="notes-github" class="button quiet" type="button">Voir sur GitHub</button>
+        <button id="notes-close" class="button primary" type="button">Fermer</button>
+      </div>
+    </section>
 
     <div class="city">
       <svg id="skyline" class="skyline" aria-hidden="true"></svg>
