@@ -62,6 +62,10 @@ canvas.addEventListener("pointermove", (event) => {
   }
 });
 
+// Escape gives the mouse back to the apps underneath, as the meeting bar's mouse button does.
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && tool !== "mouse") window.annotationBridge.release();
+});
 canvas.addEventListener("pointerup", () => (current = undefined));
 canvas.addEventListener("pointercancel", () => (current = undefined));
 window.addEventListener("resize", resize);

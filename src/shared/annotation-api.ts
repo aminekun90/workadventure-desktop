@@ -17,10 +17,14 @@ export type AnnotationCommand = z.infer<typeof annotationCommandSchema>;
 export const ANNOTATION_CHANNELS = {
   /** Main → overlay page: the tool to draw with, or clear. */
   command: "annotation:command",
+  /** Overlay page → main: Escape, back to the mouse (drawings kept). */
+  release: "annotation:release",
 } as const;
 export type AnnotationChannel = (typeof ANNOTATION_CHANNELS)[keyof typeof ANNOTATION_CHANNELS];
 
 /** Exposed to the overlay page by src/preload/annotation.cts. */
 export interface AnnotationApi {
   onCommand(listener: (command: AnnotationCommand) => void): void;
+  /** Escape: back to the mouse. */
+  release(): void;
 }

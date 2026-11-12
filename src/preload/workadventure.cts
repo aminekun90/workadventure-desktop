@@ -653,6 +653,11 @@ let meetingBar: Window | null = null;
 /** The annotation tool in use, undefined until the user picks one (no overlay until then). */
 let annotationTool: AnnotationTool | undefined;
 
+ipcRenderer.on("content:annotation-tool" satisfies ContentChannel, (_event, tool: AnnotationTool) => {
+  annotationTool = ANNOTATION_TOOL_NAMES.find((name) => name === tool) ?? annotationTool;
+  if (meetingBar && !meetingBar.closed) renderMeetingBar(meetingBar.document);
+});
+
 function syncMeetingBar(): void {
   if (screenSharing) showMeetingBar();
   else closeMeetingBar();

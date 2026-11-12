@@ -6,6 +6,7 @@ const api: AnnotationApi = {
   onCommand: (listener) => {
     electron.ipcRenderer.on("annotation:command" satisfies AnnotationChannel, (_event, command: AnnotationCommand) => listener(command));
   },
+  release: () => electron.ipcRenderer.send("annotation:release" satisfies AnnotationChannel),
 };
 
 electron.contextBridge.exposeInMainWorld("annotationBridge", api);

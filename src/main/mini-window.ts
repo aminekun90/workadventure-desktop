@@ -105,6 +105,8 @@ function prepareFloatingWindow(child: WebContents): BrowserWindow | null {
   window?.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   // The faces of the bubble and the controls never end up in what the user shares.
   window?.setContentProtection(true);
+  // Above the annotation overlay ("floating"): the meeting bar stays clickable while the pen takes the clicks.
+  window?.setAlwaysOnTop(true, "status");
   const applyStyles = (): void => {
     // The font last: of two faces of the same family, the last one wins, and theme.css's one cannot load here.
     for (const css of [...STYLESHEETS.map((path) => readFileSync(path, "utf8")), fontFace()]) {
