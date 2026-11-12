@@ -12,7 +12,7 @@ import {
   type ProbeResult,
 } from "../shared/launcher-api.js";
 import { newSpaceSchema, spaceRefSchema, type NewSpace, type SpaceRef } from "../shared/spaces.js";
-import { CONTENT_CHANNELS } from "../shared/content-api.js";
+import { CONTENT_CHANNELS, SCREEN_SHARE_BUTTON_SELECTOR } from "../shared/content-api.js";
 import { TOOLBAR_CHANNELS } from "../shared/toolbar-api.js";
 import { EnvironmentSetting } from "../shared/environment-api.js";
 import { environmentSchema } from "./environment.js";
@@ -229,6 +229,13 @@ function registerContentChannels(): void {
   ipcMain.on(CONTENT_CHANNELS.annotate, (event, payload: unknown) => {
     const command = annotationCommandSchema.safeParse(payload);
     if (command.success && isWorkAdventureContent(event.sender)) annotate(command.data, event.sender);
+  });
+  ipcMain.on(CONTENT_CHANNELS.startShare, (event) => {
+    if (!isWorkAdventureContent(event.sender)) return;
+    // The click comes from the mini window, another window: grant the page the user activation getDisplayMedia needs.
+    event.sender
+      .executeJavaScript(`document.querySelector(${JSON.stringify(SCREEN_SHARE_BUTTON_SELECTOR)})?.click()`, true)
+      .catch((error: unknown) => logger.warn({ err: error }, "Could not start the screen share from the mini window"));
   });
   ipcMain.on(ANNOTATION_CHANNELS.release, (event) => {
     if (event.senderFrame?.url === ANNOTATION_URL) releaseAnnotationMouse();

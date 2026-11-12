@@ -10,6 +10,7 @@ import type {
   MediaState,
   MEETING_BAR_NAME,
   MINI_WINDOW_NAME,
+  SCREEN_SHARE_BUTTON_SELECTOR,
   QueueState,
   SpotifyTrack,
   SpotifyMusicFrame,
@@ -182,6 +183,7 @@ contextBridge.exposeInMainWorld("workadventureDesktop", {
   screenShareChanged: (sharing: boolean) => {
     screenSharing = sharing === true;
     syncMeetingBar();
+    refreshMiniWindow();
   },
 });
 
@@ -224,6 +226,8 @@ const MINI_WINDOW = "wa-desktop-mini-window" satisfies typeof MINI_WINDOW_NAME;
 const TILE = ".camera-box";
 /** WorkAdventure's picture-in-picture button (PictureInPictureMenuItem.svelte), shown in a remote conversation only. */
 const IN_CONVERSATION = '[data-testid="pictureInPictureButton"]';
+/** WorkAdventure's screen share button (ScreenSharingMenuItem), clicked by main for the mini window. */
+const SCREEN_SHARE_BUTTON = '[data-testid="screenShareButton"]' satisfies typeof SCREEN_SHARE_BUTTON_SELECTOR;
 const CONVERSATION_CHECK_DELAY_MS = 300;
 /** Streams and mute states change without DOM mutations: re-read while the mini window shows them. */
 const MINI_WINDOW_REFRESH_MS = 1000;
@@ -243,6 +247,7 @@ const ICONS = {
   pen: icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
   laser: icon('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'),
   mouse: icon('<path d="m4 4 7 17 2.5-7.5L21 11z"/>'),
+  screen: icon('<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'),
   clear: icon('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>'),
   next: icon('<path d="m5 4 10 8-10 8zM19 5v14"/>'),
 };
@@ -275,6 +280,7 @@ const MINI_WINDOW_HTML = `
   <footer class="mini-controls">
     <button class="mini-toggle" type="button" data-action="toggle-microphone"></button>
     <button class="mini-toggle" type="button" data-action="toggle-camera"></button>
+    <button class="mini-toggle" type="button" data-action="share" hidden>${ICONS.screen}</button>
     <button class="mini-toggle" type="button" data-action="music" aria-label="Afficher la musique" aria-pressed="false" hidden>${ICONS.music}</button>
     <button class="button primary" type="button" data-action="back">Revenir</button>
   </footer>`;
@@ -316,6 +322,8 @@ let lastSpotifyTrack: MiniListening | undefined;
 let miniWindow: Window | null = null;
 /** Closed by hand: stays closed until the user comes back to WorkAdventure. */
 let dismissed = false;
+/** Opened by WorkAdventure's picture-in-picture button: stays while WorkAdventure is shown, until closed. */
+let openedByHand = false;
 let refreshTimer: ReturnType<typeof setInterval> | undefined;
 let appearance: { palette: string; font: string } | undefined;
 
@@ -324,6 +332,21 @@ window.addEventListener(
   "visibilitychange",
   (event) => {
     if (event.isTrusted) syncMiniWindow();
+  },
+  true,
+);
+
+// WorkAdventure's picture-in-picture button relies on Document Picture-in-Picture, which Electron cannot open: the
+// mini window takes its place. Captured before WorkAdventure's own handler, which would only fail.
+window.addEventListener(
+  "click",
+  (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest(IN_CONVERSATION)) return;
+    event.stopImmediatePropagation();
+    event.preventDefault();
+    openedByHand = !(miniWindow && !miniWindow.closed);
+    dismissed = !openedByHand;
+    syncMiniWindow();
   },
   true,
 );
@@ -376,12 +399,13 @@ function syncMiniWindow(): void {
   // Another window has the focus, or WorkAdventure is minimized, hidden or covered. The preload's world reads the real
   // visibility: the page shim only changes what WorkAdventure's world reads.
   const away = !windowFocused || document.visibilityState === "hidden";
-  if (!away) dismissed = false;
+  if (!away && !openedByHand) dismissed = false;
   if (miniWindow?.closed) {
     dismissed = true;
     forgetMiniWindow();
   }
-  if (inConversation && away && !dismissed) showMiniWindow(participants);
+  if (!inConversation) openedByHand = false;
+  if (inConversation && (away || openedByHand) && !dismissed) showMiniWindow(participants);
   else closeMiniWindow();
 }
 
@@ -431,12 +455,23 @@ function buildMiniWindow(doc: Document): void {
   doc.body.innerHTML = MINI_WINDOW_HTML;
   doc.querySelector(".mini-close")?.addEventListener("click", () => {
     dismissed = true;
+    openedByHand = false;
     closeMiniWindow();
   });
-  doc.querySelector('[data-action="back"]')?.addEventListener("click", () => send("content:focus"));
+  doc.querySelector('[data-action="back"]')?.addEventListener("click", () => {
+    // Opened by hand, it stays over WorkAdventure until asked to go: going back is asking.
+    openedByHand = false;
+    send("content:focus");
+    syncMiniWindow();
+  });
   for (const type of ["toggle-microphone", "toggle-camera"] as const) {
     doc.querySelector(`[data-action="${type}"]`)?.addEventListener("click", () => toggles[type]?.());
   }
+  // WorkAdventure starts the share itself: main clicks its button with a user activation (getDisplayMedia needs one).
+  doc.querySelector('[data-action="share"]')?.addEventListener("click", () => {
+    if (screenSharing) window.dispatchEvent(new Event(STOP_SHARE_EVENT));
+    else send("content:start-share");
+  });
   doc.querySelector('[data-action="music"]')?.addEventListener("click", () => {
     musicOpen = !musicOpen;
     renderListening(doc);
@@ -487,8 +522,19 @@ function renderMiniWindow(doc: Document, participants: Participant[]): void {
   const media = readMedia();
   renderToggle(doc, "toggle-microphone", media.microphone, ICONS.microphone, ICONS.microphoneOff, "micro");
   renderToggle(doc, "toggle-camera", media.camera, ICONS.camera, ICONS.cameraOff, "caméra");
+  renderShareButton(doc);
   renderStatus(doc);
   renderListening(doc);
+}
+
+/** Offered when WorkAdventure offers it (in a conversation); shows and stops a share in progress. */
+function renderShareButton(doc: Document): void {
+  const button = doc.querySelector<HTMLElement>('[data-action="share"]');
+  if (!button) return;
+  button.hidden = !screenSharing && document.querySelector(SCREEN_SHARE_BUTTON) === null;
+  button.classList.toggle("is-active", screenSharing);
+  button.setAttribute("aria-pressed", String(screenSharing));
+  button.setAttribute("aria-label", screenSharing ? "Arrêter le partage d'écran" : "Partager l'écran");
 }
 
 /** Only with WorkAdventure builds that accept status requests; a status the user cannot pick shows as is. */
