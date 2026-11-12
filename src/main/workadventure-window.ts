@@ -7,7 +7,8 @@ import { currentMapPath, fetchMaps, mapUrl } from "./maps.js";
 import { controlsOf, resetControls } from "./workadventure-controls.js";
 import { showEnvironmentMenu } from "./environment.js";
 import type { EnvironmentSetting, EnvironmentState } from "../shared/environment-api.js";
-import { isAllowedUrl, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
+import { isAllowedUrl, isMiniWindow, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
+import { miniWindowOptions, prepareMiniWindow } from "./mini-window.js";
 import { BACKGROUND, framelessChrome, relayConsole, routeNavigation, screenWorkArea } from "./window-common.js";
 
 const TOOLBAR_HTML = fileURLToPath(new URL("../renderer/toolbar/index.html", import.meta.url));
@@ -70,8 +71,13 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   relayConsole(window.webContents);
   routeNavigation(content.webContents, (target) => isAllowedUrl(target, policy), {
     // Linking a Spotify account: Spotify's pages, then WorkAdventure's callback, which hands the code to the page.
-    allows: isSpotifyAuthorizationWindow,
-    routeChild: (child) => routeNavigation(child, (target) => isSpotifyLoginUrl(target) || isAllowedUrl(target, policy)),
+    // The mini window: the preload renders the conversation into it while WorkAdventure is not shown.
+    allows: (details) => isSpotifyAuthorizationWindow(details) || isMiniWindow(details),
+    optionsFor: (details) => (isMiniWindow(details) ? miniWindowOptions(window) : undefined),
+    routeChild: (child, details) => {
+      if (isMiniWindow(details)) prepareMiniWindow(child);
+      else routeNavigation(child, (target) => isSpotifyLoginUrl(target) || isAllowedUrl(target, policy));
+    },
   });
   keepContentBelowToolbar(window, content);
   reloadOnCrash(content.webContents);

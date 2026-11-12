@@ -64,6 +64,12 @@ export const CONTENT_CHANNELS = {
 } as const;
 export type ContentChannel = (typeof CONTENT_CHANNELS)[keyof typeof CONTENT_CHANNELS];
 
+/**
+ * The mini window: opened by the preload of the WorkAdventure page (window.open) while the user is in a conversation and
+ * WorkAdventure is not shown; main allows this name only and gives it its floating window options.
+ */
+export const MINI_WINDOW_NAME = "wa-desktop-mini-window";
+
 /** The statuses that can be requested: the same choices as WorkAdventure's status menu. */
 export const STATUS_REQUESTS = ["online", "busy", "do-not-disturb", "back-in-a-moment"] as const;
 export type StatusRequest = (typeof STATUS_REQUESTS)[number];

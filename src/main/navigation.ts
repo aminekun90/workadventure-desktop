@@ -1,3 +1,5 @@
+import { MINI_WINDOW_NAME } from "../shared/content-api.js";
+
 /** Every WorkAdventure service (play, auth, Jitsi, map storage) lives under these domains. */
 export const TRUSTED_DOMAINS = ["goyan.fr"] as const;
 
@@ -36,6 +38,11 @@ export function isSpotifyLoginUrl(url: string): boolean {
 /** The Spotify linking window opens empty, then goes to Spotify: nothing else may open a window in the app. */
 export function isSpotifyAuthorizationWindow({ url, frameName }: { url: string; frameName: string }): boolean {
   return frameName === SPOTIFY_AUTHORIZATION_WINDOW && (url === "" || url === "about:blank");
+}
+
+/** The mini window the preload opens, empty, to show the conversation while WorkAdventure is not shown. */
+export function isMiniWindow({ url, frameName }: { url: string; frameName: string }): boolean {
+  return frameName === MINI_WINDOW_NAME && url === "about:blank";
 }
 
 export function isSafeExternalUrl(url: string): boolean {
