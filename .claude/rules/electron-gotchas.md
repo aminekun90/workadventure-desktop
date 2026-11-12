@@ -37,6 +37,9 @@
   l'écran » à l'app. Le shim de la page enveloppe `getDisplayMedia` pour la barre de réunion ; WA arrête un partage
   par `track.stop()`, qui n'émet pas `ended` : le shim surveille `readyState`. `setContentProtection(true)` exclut
   bien la barre d'une capture macOS (vérifié avec `screencapture` sur sa zone).
+- **Niveaux « toujours au premier plan »** (macOS : `floating` < `status` < … < `screen-saver`) : la fenêtre
+  d'annotation est `floating`, la barre de réunion et la mini-fenêtre `status`, sinon le stylo prend les clics de
+  la barre. Un clic simulé par CDP dans une page ne voit pas ce recouvrement : tester à la vraie souris.
 - **Fermer la fenêtre quitte l'app** (et donc la salle), même avec l'icône de barre de menu.
 - **Profil dev séparé** (`WorkAdventure-dev`) : depuis les sources, l'app ne touche ni ne verrouille la
   session de l'app installée (verrou d'instance unique par profil).
