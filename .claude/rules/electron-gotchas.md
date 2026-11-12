@@ -40,6 +40,11 @@
 - **Niveaux « toujours au premier plan »** (macOS : `floating` < `status` < … < `screen-saver`) : la fenêtre
   d'annotation est `floating`, la barre de réunion et la mini-fenêtre `status`, sinon le stylo prend les clics de
   la barre. Un clic simulé par CDP dans une page ne voit pas ce recouvrement : tester à la vraie souris.
+- **`setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })`** transforme l'app macOS en app accessoire :
+  elle **disparaît du Dock et de Cmd+Tab** et clignote à chaque appel (vérifié : `background only` passe à true).
+  Toujours passer `skipTransformProcessType: true`.
+- **Content protection** : la mini-fenêtre n'est exclue des captures que **pendant un partage** (sinon l'outil de
+  capture de macOS ne la voit pas) ; la barre de réunion l'est toujours.
 - **Fermer la fenêtre quitte l'app** (et donc la salle), même avec l'icône de barre de menu.
 - **Profil dev séparé** (`WorkAdventure-dev`) : depuis les sources, l'app ne touche ni ne verrouille la
   session de l'app installée (verrou d'instance unique par profil).
