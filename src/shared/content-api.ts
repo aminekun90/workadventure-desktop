@@ -31,8 +31,10 @@ export const CONTENT_CHANNELS = {
   annotationTool: "content:annotation-tool",
   /** Page → main: start a screen share from the mini window (main clicks WorkAdventure's button, with an activation). */
   startShare: "content:start-share",
-  /** Main → page: whether WorkAdventure's window has the focus (the page itself cannot tell, see the mini window). */
-  windowFocused: "content:window-focused",
+  /** Page → main: a conversation started (true) or ended (false): main watches whether WorkAdventure is seen meanwhile. */
+  conversation: "content:conversation",
+  /** Main → page (macOS): whether some part of WorkAdventure's window is on screen (window-visibility.ts). */
+  windowVisible: "content:window-visible",
   /** Page ⇄ main: whether the mini window opens by itself (asked by the preload, pushed when the user changes it). */
   miniWindowAuto: "content:mini-window-auto",
   /** Page → main: the user turned the mini window's opening on or off (✕, WorkAdventure's picture-in-picture button). */

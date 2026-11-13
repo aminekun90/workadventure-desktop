@@ -40,16 +40,17 @@ Sous Windows, passer par Git Bash.
 - **Raccourcis globaux**, même quand l'app n'est pas au premier plan : <kbd>⌘</kbd><kbd>⇧</kbd><kbd>M</kbd>
   micro, <kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd> caméra.
 - **Écran verrouillé ou Mac en veille** : micro et caméra coupés automatiquement (jamais rallumés seuls).
-- **Mini-fenêtre** : pendant une conversation, passer à une autre fenêtre ou réduire WorkAdventure ouvre une petite fenêtre
-  toujours au premier plan, sur tous les bureaux, avec les vidéos et les noms de la bulle, les boutons micro et
-  caméra, et « Revenir ». Elle se ferme au retour dans WorkAdventure ou à la fin de la conversation. Fermée à la
-  main (✕), elle ne revient plus de l'appel ; aux appels suivants, elle s'ouvre en **barre de boutons** (sans vidéo)
-  tant que le bouton picture-in-picture de WorkAdventure ne la remet pas en grand. Toute petite, elle passe aussi en
-  barre de boutons, avec une poignée pour la déplacer et un ✕. Couleurs et police suivent le thème choisi dans WA.
-  Elle propose aussi le **statut** et un bouton **Spotify** : morceau et Jam, précédent, lecture/pause, suivant,
-  position cliquable ; Spotify fermé, la lecture le lance. Elle permet aussi de **partager l'écran** (ou de l'arrêter),
-  et le bouton picture-in-picture de WorkAdventure l'ouvre à la demande. Elle rouvre là où on l'a laissée. Réglage « Mini-fenêtre
-  avec les vidéos » dans le menu de la barre (décoché : barre de boutons).
+- **Mini-fenêtre** : pendant une conversation, quand WorkAdventure **n'est plus visible** (réduit, sur un autre bureau,
+  ou entièrement recouvert par d'autres fenêtres), une petite fenêtre s'ouvre, toujours au premier plan, sur tous les
+  bureaux, avec les vidéos et les noms de la bulle, les boutons micro et caméra, et « Revenir ». Tant qu'une partie de
+  WorkAdventure reste à l'écran, même sur un autre écran et sans le focus, elle ne s'ouvre pas (comme Teams). Elle se
+  ferme quand WorkAdventure redevient visible ou à la fin de la conversation. Fermée à la main (✕), elle ne revient plus
+  de l'appel et **ne s'ouvre plus d'elle-même** ; le bouton picture-in-picture de WorkAdventure sert d'interrupteur et la
+  rallume. Toute petite, elle passe en barre de boutons, avec une poignée pour la déplacer et un ✕. Couleurs et police
+  suivent le thème choisi dans WA. Elle propose aussi le **statut** et un bouton **Spotify** : morceau et Jam, précédent,
+  lecture/pause, suivant, position cliquable ; Spotify fermé, la lecture le lance. Elle permet aussi de **partager
+  l'écran** (ou de l'arrêter). Elle rouvre là où on l'a laissée. Réglage « Mini-fenêtre avec les vidéos » dans le menu
+  de la barre (décoché : elle ne s'ouvre qu'avec le bouton picture-in-picture).
 - **Barre de réunion** : pendant un partage d'écran, une barre en haut de l'écran garde micro, caméra, retour à
   WorkAdventure et « Arrêter » à portée. Elle et la mini-fenêtre **n'apparaissent pas dans le partage** (macOS et
   Windows ; Linux ne sait pas exclure une fenêtre d'une capture).
