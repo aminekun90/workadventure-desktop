@@ -21,6 +21,13 @@
   par zod (`annotationCommandSchema`) ; **volontairement capturée** par le partage (sinon personne ne voit les
   dessins), traversée par la souris en mode « Souris », fermée à la fin du partage.
 
+## Son du système (lumières du Jukebox)
+- Spotify ne donne plus l'analyse des morceaux (audio-analysis en 404) : `music-capture.ts` capte le son du système
+  (getDisplayMedia + `audio: "loopback"`, session `music-capture` à part, sans le sélecteur système) dans une page
+  locale cachée, **seulement** pendant que WA demande la musique d'un Jukebox, que Spotify joue et que l'extension
+  n'a pas d'analyse. Rien n'est enregistré ni envoyé : la page ne transmet que des mesures (niveau, attaque, brillance,
+  temps fort) validées par zod, que main convertit en trames au format de l'extension.
+
 ## IPC
 - Chaque canal vérifie l'expéditeur : `assertSender(event, URL_DE_LA_PAGE_LOCALE)` (launcher, barre,
   À propos). Les signaux de la page WA sont ignorés si l'expéditeur n'est pas une vue WA connue.

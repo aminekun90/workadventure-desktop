@@ -26,6 +26,7 @@ import { ANNOTATION_URL, annotate, releaseAnnotationMouse } from "./annotation-w
 import { ANNOTATION_CHANNELS, annotationCommandSchema } from "../shared/annotation-api.js";
 import { currentEnvironment, spotifyInstalled } from "./listen-along-install.js";
 import { startSpotify } from "./spotify-launch.js";
+import { watchJukeboxMusic } from "./jukebox-music.js";
 import { fetchReleaseNotes } from "./release-notes.js";
 import { SpotifyPlaybackCommand } from "../shared/content-api.js";
 import { watchSpotify } from "./spotify-player.js";
@@ -40,8 +41,6 @@ import {
   moveInSpicetifyQueue,
   onSpicetifyChange,
   onSpicetifyQueue,
-  onSpicetifyMusic,
-  spicetifyMusic,
   onSpicetifyQueueRequest,
   setHomeJamOnSpicetify,
   spicetifyQueue,
@@ -373,11 +372,10 @@ function registerContentChannels(): void {
       previous?.();
       return;
     }
-    const stop = onSpicetifyMusic((frame) => {
+    previous?.();
+    const stop = watchJukeboxMusic((frame) => {
       if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyMusic, frame);
     });
-    previous?.();
-    page.send(CONTENT_CHANNELS.spotifyMusic, spicetifyMusic());
     musicSubscriptions.set(page, stop);
     page.once("destroyed", stop);
   });
