@@ -13,6 +13,9 @@ exports.default = async function signMacStable(context) {
     console.log("sign-mac-stable: no certificate, the ad hoc signature stays");
     return;
   }
+  // electron-builder may lock keychains while it packages: unlocked again right before signing.
+  const password = process.env.MAC_SIGNING_KEYCHAIN_PASSWORD;
+  if (password) execFileSync("security", ["unlock-keychain", "-p", password, keychain], { stdio: "inherit" });
   const app = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
   const entitlements = path.join(__dirname, "..", "build", "entitlements.mac.plist");
   execFileSync(
