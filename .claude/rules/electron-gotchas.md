@@ -17,7 +17,11 @@
 - **`window.focus()` depuis une `WebContentsView`** ne remonte pas la fenêtre → signal `focusWindow`.
 - **`loadURL` rejette `ERR_ABORTED`** quand WA redirige vers l'OpenID avant la fin du chargement : normal.
 - **macOS sans Developer ID** : signature ad hoc (`identity: "-"`) + entitlement
-  `disable-library-validation`. Squirrel.Mac refuse ces mises à jour → installeur maison `mac-update.ts`.
+  `disable-library-validation`. Ad hoc, macOS identifie l'app par l'empreinte du build (`designated => cdhash …`) :
+  chaque mise à jour redemande caméra et micro (et le trousseau des cookies). En CI, `scripts/sign-mac-stable.cjs`
+  (afterSign) re-signe avec le certificat auto-signé du projet (secrets `MAC_SIGNING_P12`/`MAC_SIGNING_PASSWORD`,
+  créés une fois par `scripts/create-mac-signing-certificate.sh`) : identité `certificate leaf = H"…"` stable. Ne
+  jamais régénérer ce certificat (nouvelle identité = autorisations perdues pour tous). Squirrel.Mac refuse ces mises à jour → installeur maison `mac-update.ts`.
   Les notifications ne sont autorisées que si l'app tourne depuis un dossier **Applications**.
 - **`window.WAD`** est l'API desktop prévue par WA (`play/src/front/Api/Desktop/index.ts`) : WA y enregistre
   ses bascules micro/caméra au montage. On n'expose que les membres que WA appelle ; ne pas exposer

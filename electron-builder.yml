@@ -28,11 +28,13 @@ electronFuses:
   enableNodeCliInspectArguments: false
   onlyLoadAppFromAsar: true
 
+afterSign: scripts/sign-mac-stable.cjs
 mac:
   category: public.app-category.business
   target: [dmg, zip]
   hardenedRuntime: true
-  # Ad-hoc signature until an Apple Developer ID is available: Apple Silicon refuses unsigned bundles.
+  # Ad-hoc signature until an Apple Developer ID is available: Apple Silicon refuses unsigned bundles. In CI, the
+  # afterSign hook signs again with the project's self-signed certificate (scripts/sign-mac-stable.cjs).
   identity: "-"
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
