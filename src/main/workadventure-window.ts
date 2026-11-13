@@ -9,7 +9,7 @@ import { controlsOf, resetControls } from "./workadventure-controls.js";
 import { showEnvironmentMenu } from "./environment.js";
 import type { EnvironmentSetting, EnvironmentState } from "../shared/environment-api.js";
 import { isAllowedUrl, isMeetingBar, isMiniWindow, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
-import { meetingBarOptions, miniWindowOptions, prepareMeetingBar, prepareMiniWindow } from "./mini-window.js";
+import { closeFloatingWindows, meetingBarOptions, miniWindowOptions, prepareMeetingBar, prepareMiniWindow } from "./mini-window.js";
 import { watchWindowVisibility } from "./window-visibility.js";
 import { BACKGROUND, framelessChrome, relayConsole, routeNavigation, screenWorkArea } from "./window-common.js";
 
@@ -91,6 +91,7 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   content.webContents.on("did-navigate", () => {
     resetControls(content.webContents);
     watchVisibility(content.webContents, false);
+    closeFloatingWindows();
   });
   content.webContents.on("did-stop-loading", () => {
     if (currentMapPath(content.webContents.getURL())) onRoomLoaded(content.webContents);

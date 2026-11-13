@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { BrowserWindow } from "electron";
+import { BrowserWindow as ElectronBrowserWindow, type BrowserWindow, type WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
 const WORK_AREA = { x: 0, y: 25, width: 1440, height: 875 };
@@ -10,7 +10,8 @@ vi.mock("electron", () => ({
   screen: { getAllDisplays: () => [{ workArea: WORK_AREA }], getDisplayMatching: () => ({ workArea: WORK_AREA }) },
 }));
 
-const { isMiniWindowAuto, loadMiniWindowPreferences, miniWindowOptions, setMiniWindowAuto } = await import("../src/main/mini-window.js");
+const { closeFloatingWindows, isMiniWindowAuto, loadMiniWindowPreferences, miniWindowOptions, prepareMeetingBar, prepareMiniWindow, setMiniWindowAuto } =
+  await import("../src/main/mini-window.js");
 
 const parent = { getBounds: () => WORK_AREA } as unknown as BrowserWindow;
 
@@ -56,5 +57,48 @@ describe("mini window place", () => {
   it("falls back to the corner when the saved place is off every screen (screen unplugged)", () => {
     loadMiniWindowPreferences(preferencesFile({ auto: true, bounds: { x: 2000, y: 60, width: 400, height: 320 } }));
     expect(miniWindowOptions(parent)).toMatchObject({ x: 1144, y: 654 });
+  });
+});
+
+describe("floating windows after a reload of WorkAdventure", () => {
+  function floatingWindow(): { window: BrowserWindow; contents: WebContents; close: ReturnType<typeof vi.fn> } {
+    const closedListeners: (() => void)[] = [];
+    const close = vi.fn(() => {
+      for (const listener of closedListeners) listener();
+    });
+    const window = {
+      setVisibleOnAllWorkspaces: vi.fn(),
+      setContentProtection: vi.fn(),
+      setAlwaysOnTop: vi.fn(),
+      isDestroyed: () => close.mock.calls.length > 0,
+      close,
+      on: vi.fn(),
+      once: (event: string, listener: () => void) => {
+        if (event === "closed") closedListeners.push(listener);
+      },
+    } as unknown as BrowserWindow;
+    const contents = {
+      on: vi.fn(),
+      setWindowOpenHandler: vi.fn(),
+      isLoading: () => true,
+      once: vi.fn(),
+    } as unknown as WebContents;
+    return { window, contents, close };
+  }
+
+  it("closes the mini window and the meeting bar, frozen once the page that rendered them is gone", () => {
+    const mini = floatingWindow();
+    const bar = floatingWindow();
+    vi.mocked(ElectronBrowserWindow.fromWebContents).mockImplementation((contents) =>
+      contents === mini.contents ? mini.window : bar.window,
+    );
+    prepareMiniWindow(mini.contents);
+    prepareMeetingBar(bar.contents);
+
+    closeFloatingWindows();
+    closeFloatingWindows();
+
+    expect(mini.close).toHaveBeenCalledTimes(1);
+    expect(bar.close).toHaveBeenCalledTimes(1);
   });
 });

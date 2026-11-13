@@ -37,6 +37,7 @@ type Preferences = z.infer<typeof preferencesSchema>;
 let preferencesPath: string | undefined;
 /** The open mini window, and whether a screen share is going on (the meeting bar is open). */
 let miniWindow: BrowserWindow | undefined;
+let meetingBar: BrowserWindow | undefined;
 let screenShared = false;
 let preferences: Preferences = { auto: true };
 
@@ -111,7 +112,21 @@ export function prepareMiniWindow(child: WebContents): void {
 export function prepareMeetingBar(child: WebContents): void {
   const window = prepareFloatingWindow(child, { protected: true });
   setScreenShared(true);
-  window?.once("closed", () => setScreenShared(false));
+  meetingBar = window ?? undefined;
+  window?.once("closed", () => {
+    if (meetingBar === window) meetingBar = undefined;
+    setScreenShared(false);
+  });
+}
+
+/**
+ * The page that opened them is gone (reload, reconnection to a new version, crash, another map): the preload that
+ * rendered them went with it, so they would stay frozen, and the new page does not know them.
+ */
+export function closeFloatingWindows(): void {
+  for (const window of [miniWindow, meetingBar]) {
+    if (window && !window.isDestroyed()) window.close();
+  }
 }
 
 /** Out of a share's capture only during a share: otherwise, screenshot tools must see the mini window. */
