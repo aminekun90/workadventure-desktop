@@ -1,0 +1,50 @@
+name: macOS signing
+
+# A change to the macOS signing is proven on a real runner before a release depends on it: the app is packaged
+# (without publishing) and its signature must use the project certificate.
+on:
+  pull_request:
+    paths:
+      - scripts/sign-mac-stable.cjs
+      - electron-builder.yml
+      - .github/workflows/ci.yml
+      - .github/workflows/mac-signing.yml
+
+jobs:
+  sign:
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - name: Prepare the macOS signing certificate
+        env:
+          MAC_SIGNING_P12: ${{ secrets.MAC_SIGNING_P12 }}
+          MAC_SIGNING_PASSWORD: ${{ secrets.MAC_SIGNING_PASSWORD }}
+        run: |
+          if [ -z "$MAC_SIGNING_P12" ]; then echo "No MAC_SIGNING_P12 secret: ad hoc signature"; exit 0; fi
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password=$(openssl rand -base64 24)
+          echo "$MAC_SIGNING_P12" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/signing.p12" -k "$keychain" -P "$MAC_SIGNING_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" > /dev/null
+          # codesign only finds an identity in a keychain of the search list.
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/signing.p12"
+          identity=$(security find-identity -p codesigning "$keychain" | awk '/\)/ {print $2; exit}')
+          echo "MAC_SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          echo "MAC_SIGNING_IDENTITY=$identity" >> "$GITHUB_ENV"
+          echo "MAC_SIGNING_KEYCHAIN_PASSWORD=$keychain_password" >> "$GITHUB_ENV"
+      - run: yarn build && yarn electron-builder --mac dir --arm64 --publish never
+      - name: The app is signed with the project certificate
+        run: |
+          codesign --verify --deep --strict release/mac-arm64/WorkAdventure.app
+          codesign --display --requirements - release/mac-arm64/WorkAdventure.app 2>&1 | tee /dev/stderr | grep -q "certificate leaf"
