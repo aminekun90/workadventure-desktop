@@ -229,8 +229,10 @@ const IN_CONVERSATION = '[data-testid="pictureInPictureButton"]';
 /** WorkAdventure's screen share button (ScreenSharingMenuItem), clicked by main for the mini window. */
 const SCREEN_SHARE_BUTTON = '[data-testid="screenShareButton"]' satisfies typeof SCREEN_SHARE_BUTTON_SELECTOR;
 const CONVERSATION_CHECK_DELAY_MS = 300;
-/** The compact strip (buttons only), and the smallest size that shows the videos (mini-window.css thresholds). */
-const MINI_WINDOW_SIZES = { compact: { width: 260, height: 64 }, full: { width: 300, height: 240 } } as const;
+/** How long WorkAdventure may hide its conversation (a redraw) before it counts as ended. */
+const CONVERSATION_END_DELAY_MS = 2000;
+/** The smallest size that shows the videos (mini-window.css thresholds). */
+const VIDEOS_SIZE = { width: 300, height: 240 } as const;
 /** Streams and mute states change without DOM mutations: re-read while the mini window shows them. */
 const MINI_WINDOW_REFRESH_MS = 1000;
 
@@ -307,8 +309,15 @@ interface MiniListening {
 let keepVisible = false;
 /** The user's choice (menu bar), from main: the mini window opens by itself during a conversation. */
 let autoOpen = true;
-/** From main: the page cannot tell when the user switches to another window, it stays visible and focused. */
-let windowFocused = true;
+/**
+ * From main (macOS, during a conversation): whether some part of WorkAdventure's window is on screen. Chromium keeps
+ * the page visible while another app covers it; undefined elsewhere, where the page's own visibility is used.
+ */
+let windowVisible: boolean | undefined;
+/** The conversation as last reported to main, and when WorkAdventure last showed one (see CONVERSATION_END_DELAY_MS). */
+let conversationReported = false;
+let conversationSeenAt = -Infinity;
+let conversationEndTimer: ReturnType<typeof setTimeout> | undefined;
 let currentStatus: AvailabilityStatus | undefined;
 let currentListening: MiniListening | undefined;
 /** The music controls, opened by the music button; kept from one mini window to the next. */
@@ -329,10 +338,8 @@ let miniWindow: Window | null = null;
 let dismissed = false;
 /** Opened by WorkAdventure's picture-in-picture button: stays while WorkAdventure is shown, until closed. */
 let openedByHand = false;
-/** ✕: closed until this conversation ends; the next one opens it again (as the compact strip, see autoOpen). */
+/** ✕: closed until this conversation ends; it then no longer opens by itself (autoOpen) until turned back on. */
 let closedForCall = false;
-/** The size the mini window was last given for its mode: the user's own resizing is left alone in between. */
-let sizedFor: "full" | "compact" | undefined;
 let refreshTimer: ReturnType<typeof setInterval> | undefined;
 let appearance: { palette: string; font: string } | undefined;
 
@@ -378,8 +385,8 @@ function watchConversation(): void {
   }).observe(document.body, { childList: true, subtree: true });
 }
 
-ipcRenderer.on("content:window-focused" satisfies ContentChannel, (_event, focused: boolean) => {
-  windowFocused = focused === true;
+ipcRenderer.on("content:window-visible" satisfies ContentChannel, (_event, visible: boolean) => {
+  windowVisible = visible === true;
   syncMiniWindow();
 });
 
@@ -406,30 +413,53 @@ function watchConversationPreference(): void {
 
 function syncMiniWindow(): void {
   const participants = readParticipants();
-  // WorkAdventure shows its picture-in-picture button during a remote conversation only; the user's own tile alone
-  // is not enough (a busy user loses it while still talking).
-  const inConversation = document.querySelector(IN_CONVERSATION) !== null || participants.length > 1;
+  const inConversation = isInConversation(participants);
   if (!inConversation) {
     openedByHand = false;
     closedForCall = false;
   }
-  // The compact strip shows no video: WorkAdventure then keeps its own behavior when hidden (videos off, away status).
   setKeepVisible(inConversation && !closedForCall && (autoOpen || openedByHand));
-  // Another window has the focus, or WorkAdventure is minimized, hidden or covered. The preload's world reads the real
-  // visibility: the page shim only changes what WorkAdventure's world reads.
-  const away = !windowFocused || document.visibilityState === "hidden";
+  // WorkAdventure cannot be seen: minimized, hidden, or (macOS) covered by other apps' windows on every screen. Having
+  // the focus does not matter: with several screens, WorkAdventure stays in sight while the user works elsewhere.
+  // The preload's world reads the real visibility: the page shim only changes what WorkAdventure's world reads.
+  const away = document.visibilityState === "hidden" || windowVisible === false;
   if (!away && !openedByHand) dismissed = false;
   if (miniWindow?.closed) {
     dismissed = true;
     forgetMiniWindow();
   }
-  if (inConversation && !closedForCall && (openedByHand || away) && !dismissed) showMiniWindow(participants);
+  // Turned off, it never opens by itself: only WorkAdventure's picture-in-picture button opens it (openedByHand).
+  const wanted = openedByHand || (away && autoOpen);
+  if (inConversation && !closedForCall && wanted && !dismissed) showMiniWindow(participants);
   else closeMiniWindow();
 }
 
 /**
- * ✕, or WorkAdventure's picture-in-picture button while it is open: closed for this conversation, and from the next
- * one on, the compact strip (buttons only) instead of the videos, until turned back on.
+ * WorkAdventure shows its picture-in-picture button during a remote conversation only; the user's own tile alone is
+ * not enough (a busy user loses it while still talking). WorkAdventure redraws its bar and tiles now and then: the
+ * conversation only ends once neither has been seen for CONVERSATION_END_DELAY_MS, so a redraw does not close the
+ * mini window or forget its ✕. Main is told, to watch whether WorkAdventure can be seen meanwhile.
+ */
+function isInConversation(participants: Participant[]): boolean {
+  const now = Date.now();
+  if (document.querySelector(IN_CONVERSATION) !== null || participants.length > 1) conversationSeenAt = now;
+  const inConversation = now - conversationSeenAt < CONVERSATION_END_DELAY_MS;
+  clearTimeout(conversationEndTimer);
+  // Nothing else may change on the page meanwhile: check again once the delay is over.
+  if (inConversation && conversationSeenAt !== now) {
+    conversationEndTimer = setTimeout(syncMiniWindow, CONVERSATION_END_DELAY_MS - (now - conversationSeenAt));
+  }
+  if (inConversation !== conversationReported) {
+    conversationReported = inConversation;
+    if (!inConversation) windowVisible = undefined;
+    send("content:conversation", inConversation);
+  }
+  return inConversation;
+}
+
+/**
+ * ✕, or WorkAdventure's picture-in-picture button while it is open: closed for this conversation, and no longer opened
+ * by itself afterwards, until WorkAdventure's picture-in-picture button (or the menu bar) turns it back on.
  */
 function turnMiniWindowOff(): void {
   openedByHand = false;
@@ -469,22 +499,18 @@ function showMiniWindow(participants: Participant[]): void {
     if (!miniWindow) return;
     buildMiniWindow(miniWindow.document);
     refreshTimer = setInterval(syncMiniWindow, MINI_WINDOW_REFRESH_MS);
-    sizedFor = undefined;
+    showVideos(miniWindow);
   }
-  sizeForMode(miniWindow, autoOpen || openedByHand ? "full" : "compact");
   renderMiniWindow(miniWindow.document, participants);
 }
 
 /**
- * The compact strip when the videos are off, back to a size that shows them when turned on (only when the mode
- * changes: the user's own resizing stays). mini-window.css lays out each size.
+ * Opens big enough to show the videos, even if last left as the compact strip; resized by the user afterwards, it
+ * stays as they left it. mini-window.css lays out each size.
  */
-function sizeForMode(target: Window, mode: "full" | "compact"): void {
-  if (sizedFor === mode) return;
-  sizedFor = mode;
-  const { width, height } = MINI_WINDOW_SIZES[mode];
-  const fits = mode === "compact" ? target.innerWidth <= width && target.innerHeight <= height : target.innerWidth >= width && target.innerHeight >= height;
-  if (!fits) target.resizeTo(width, height);
+function showVideos(target: Window): void {
+  if (target.innerWidth >= VIDEOS_SIZE.width && target.innerHeight >= VIDEOS_SIZE.height) return;
+  target.resizeTo(Math.max(target.innerWidth, VIDEOS_SIZE.width), Math.max(target.innerHeight, VIDEOS_SIZE.height));
 }
 
 function closeMiniWindow(): void {

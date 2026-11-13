@@ -61,7 +61,7 @@ import {
   unreadSchema,
   updateControls,
 } from "./workadventure-controls.js";
-import { focusWindowOf, isWorkAdventureContent, reloadContent, reportEnvironment, requestAttention, showEnvironment, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
+import { focusWindowOf, isWorkAdventureContent, watchVisibility, reloadContent, reportEnvironment, requestAttention, showEnvironment, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
 const PROBE_TIMEOUT_MS = 4000;
 const availabilitySubscriptions = new WeakMap<WebContents, () => void>();
@@ -229,6 +229,10 @@ function registerContentChannels(): void {
   });
   ipcMain.on(CONTENT_CHANNELS.attention, (event) => requestAttention(event.sender));
   ipcMain.on(CONTENT_CHANNELS.focus, (event) => focusWindowOf(event.sender));
+  ipcMain.on(CONTENT_CHANNELS.conversation, (event, payload: unknown) => {
+    const active = z.boolean().safeParse(payload);
+    if (active.success && isWorkAdventureContent(event.sender)) watchVisibility(event.sender, active.data);
+  });
   ipcMain.handle(CONTENT_CHANNELS.miniWindowAuto, (event) => isWorkAdventureContent(event.sender) && isMiniWindowAuto());
   ipcMain.on(CONTENT_CHANNELS.miniWindowAutoSet, (event, payload: unknown) => {
     const auto = z.boolean().safeParse(payload);

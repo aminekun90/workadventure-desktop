@@ -30,8 +30,13 @@
   les garderait mais coûte ~90 % de CPU réduit (contre ~6 %) : interdit. Pendant une conversation, le shim de la
   page fait lire `visible` à WA (`keepVisible`) ; Chromium continue de ralentir la page. Le preload, dans son
   monde isolé, lit toujours le vrai état.
-- **Page WA `visible` quand l'app est juste en arrière-plan** : seuls réduire, cacher ou recouvrir entièrement la
-  fenêtre la rendent `hidden`.
+- **Page WA `visible` quand l'app est juste en arrière-plan, et même entièrement recouverte (macOS)** : seuls réduire
+  ou cacher la fenêtre la rendent `hidden`. Ni `--enable-features=MacWebContentsOcclusion(Checker)` ni
+  `NSWindow.occlusionState` (lu par FFI) ne voient le recouvrement par une autre app ; `occlusionState` reste aussi
+  « visible » pendant tout enregistrement d'écran (appel Teams…). Vérifié sur Electron 45 avec une fenêtre Finder par-dessus.
+  La mini-fenêtre décide donc avec `window-visibility.ts` : liste des fenêtres à l'écran (`CGWindowListCopyWindowInfo`
+  via `osascript -l JavaScript`, sans permission pour les positions), lancée seulement pendant une conversation
+  (~0,1 % CPU). Ne pas revenir au focus : avec plusieurs écrans, WA reste visible sans l'avoir.
 - **Partage d'écran** : WA passe par `getDisplayMedia` (on n'expose pas `getDesktopCapturerSources`), donc par
   `setDisplayMediaRequestHandler` + sélecteur système macOS, qui ne demande pas l'autorisation « Enregistrement de
   l'écran » à l'app. Le shim de la page enveloppe `getDisplayMedia` pour la barre de réunion ; WA arrête un partage

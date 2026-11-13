@@ -10,6 +10,7 @@ import { showEnvironmentMenu } from "./environment.js";
 import type { EnvironmentSetting, EnvironmentState } from "../shared/environment-api.js";
 import { isAllowedUrl, isMeetingBar, isMiniWindow, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
 import { meetingBarOptions, miniWindowOptions, prepareMeetingBar, prepareMiniWindow } from "./mini-window.js";
+import { watchWindowVisibility } from "./window-visibility.js";
 import { BACKGROUND, framelessChrome, relayConsole, routeNavigation, screenWorkArea } from "./window-common.js";
 
 const TOOLBAR_HTML = fileURLToPath(new URL("../renderer/toolbar/index.html", import.meta.url));
@@ -31,6 +32,7 @@ interface WindowParts {
 /** IPC arrives from a WebContents (toolbar or page): these find the window it belongs to. */
 const partsByToolbar = new WeakMap<WebContents, WindowParts>();
 const partsByContent = new WeakMap<WebContents, WindowParts>();
+const stopWatchingVisibility = new WeakMap<WebContents, () => void>();
 
 export interface WorkAdventureTarget {
   url: string;
@@ -67,13 +69,7 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   partsByToolbar.set(window.webContents, parts);
   partsByContent.set(content.webContents, parts);
   window.on("closed", () => content.webContents.close());
-  // The page stays visible and focused for Chromium while the user works in another window: tell it.
-  const reportFocus = (): void => {
-    if (!content.webContents.isDestroyed()) content.webContents.send(CONTENT_CHANNELS.windowFocused, window.isFocused());
-  };
-  window.on("focus", reportFocus);
-  window.on("blur", reportFocus);
-  content.webContents.on("did-stop-loading", reportFocus);
+  window.on("closed", () => watchVisibility(content.webContents, false));
 
   routeNavigation(window.webContents, (target) => target === TOOLBAR_URL);
   relayConsole(window.webContents);
@@ -92,7 +88,10 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   keepContentBelowToolbar(window, content);
   reloadOnCrash(content.webContents);
   syncToolbar(window.webContents, content.webContents, label);
-  content.webContents.on("did-navigate", () => resetControls(content.webContents));
+  content.webContents.on("did-navigate", () => {
+    resetControls(content.webContents);
+    watchVisibility(content.webContents, false);
+  });
   content.webContents.on("did-stop-loading", () => {
     if (currentMapPath(content.webContents.getURL())) onRoomLoaded(content.webContents);
   });
@@ -107,6 +106,21 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
   // Shown only once the server answered: until then the launcher stays up with its spinner.
   window.show();
   return window;
+}
+
+/**
+ * During a conversation, tells the page whether its window can be seen (macOS): the mini window opens only when it
+ * cannot. Chromium keeps the page visible while another app covers the window.
+ */
+export function watchVisibility(content: WebContents, active: boolean): void {
+  stopWatchingVisibility.get(content)?.();
+  stopWatchingVisibility.delete(content);
+  const window = partsByContent.get(content)?.window;
+  if (!active || !window || window.isDestroyed()) return;
+  const stop = watchWindowVisibility(window, (visible) => {
+    if (!content.isDestroyed()) content.send(CONTENT_CHANNELS.windowVisible, visible);
+  });
+  stopWatchingVisibility.set(content, stop);
 }
 
 export function isWorkAdventureContent(contents: WebContents): boolean {
