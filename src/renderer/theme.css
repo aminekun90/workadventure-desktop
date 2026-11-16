@@ -1,3 +1,6 @@
+@font-face { font-family: "Press Start 2P"; src: url("./fonts/press-start-2p-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Roboto"; src: url("./fonts/roboto-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Roboto"; src: url("./fonts/roboto-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
 /*
  * Shared by the launcher, the toolbar and the About window.
  * Palette taken from WorkAdventure's own interface (night navy, slate panels, its blue buttons,
@@ -11,7 +14,8 @@
   font-display: block;
 }
 
-:root {
+:root,
+[data-preview-palette="night"] {
   color-scheme: dark;
   --night: #141a29;
   --night-deep: #0e1320;
@@ -52,7 +56,8 @@
  * the titles in the chosen font. Pixel and arcade keep the pixel titles (arcade's font is not bundled here); the
  * readable fonts make titles readable too.
  */
-:root[data-palette="forest"] {
+:root[data-palette="forest"],
+[data-preview-palette="forest"] {
   --night: hsl(140 26% 10%);
   --night-deep: hsl(140 28% 7%);
   --slate: hsl(140 24% 14%);
@@ -64,7 +69,8 @@
   --accent-hover: hsl(145 48% 52%);
 }
 
-:root[data-palette="ember"] {
+:root[data-palette="ember"],
+[data-preview-palette="ember"] {
   --night: hsl(12 24% 11%);
   --night-deep: hsl(12 26% 8%);
   --slate: hsl(12 22% 16%);
@@ -76,7 +82,8 @@
   --accent-hover: hsl(24 82% 60%);
 }
 
-:root[data-palette="gameboy"] {
+:root[data-palette="gameboy"],
+[data-preview-palette="gameboy"] {
   --night: hsl(112 28% 10%);
   --night-deep: hsl(114 30% 7%);
   --slate: hsl(110 26% 14%);
@@ -88,7 +95,8 @@
   --accent-hover: hsl(75 75% 46%);
 }
 
-:root[data-palette="light"] {
+:root[data-palette="light"],
+[data-preview-palette="light"] {
   color-scheme: light;
   /* By day: a morning sky, pale facades whose glass reflects it, the sun catching a few panes. */
   --backdrop-top: hsl(220 45% 99%);
@@ -111,11 +119,18 @@
   --accent-hover: hsl(233 76% 55%);
 }
 
-:root[data-font="system"] {
+:root[data-font="system"],
+[data-preview-font="system"] {
   --font-pixel: var(--font-ui);
 }
 
-:root[data-font="classic"] {
+:root[data-font="arcade"],
+[data-preview-font="arcade"] {
+  --font-pixel: "Press Start 2P", "Pixelify Sans", monospace;
+}
+
+:root[data-font="classic"],
+[data-preview-font="classic"] {
   --font-pixel: Roboto, var(--font-ui);
 }
 
@@ -342,3 +357,5 @@ kbd {
     transition: none !important;
   }
 }
+
+[data-preview-font="pixel"] { --font-pixel: "Pixelify Sans", var(--font-ui); }

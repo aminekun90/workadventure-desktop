@@ -5,9 +5,9 @@ import { CONTENT_CHANNELS } from "../shared/content-api.js";
 import { TOOLBAR_CHANNELS, type ToolbarState } from "../shared/toolbar-api.js";
 import { logger } from "./logger.js";
 import { currentMapPath, fetchMaps, mapUrl } from "./maps.js";
-import { controlsOf, resetControls } from "./workadventure-controls.js";
+import { controlsOf, resetControls, sendCommand } from "./workadventure-controls.js";
 import { showEnvironmentMenu } from "./environment.js";
-import type { EnvironmentSetting, EnvironmentState } from "../shared/environment-api.js";
+import type { EnvironmentRequest, EnvironmentSetting, EnvironmentState } from "../shared/environment-api.js";
 import { isAllowedUrl, isMeetingBar, isMiniWindow, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
 import { closeFloatingWindows, meetingBarOptions, miniWindowOptions, prepareMeetingBar, prepareMiniWindow } from "./mini-window.js";
 import { watchWindowVisibility } from "./window-visibility.js";
@@ -27,6 +27,8 @@ interface WindowParts {
   window: BrowserWindow;
   content: WebContents;
   origin: string;
+  panelOpen: boolean;
+  layout: () => void;
 }
 
 /** IPC arrives from a WebContents (toolbar or page): these find the window it belongs to. */
@@ -65,7 +67,7 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
     },
   });
   window.contentView.addChildView(content);
-  const parts: WindowParts = { window, content: content.webContents, origin: new URL(url).origin };
+  const parts: WindowParts = { window, content: content.webContents, origin: new URL(url).origin, panelOpen: false, layout: () => undefined };
   partsByToolbar.set(window.webContents, parts);
   partsByContent.set(content.webContents, parts);
   window.on("closed", () => content.webContents.close());
@@ -85,7 +87,11 @@ export async function createWorkAdventureWindow({ url, label, policy, onRoomLoad
       else routeNavigation(child, (target) => isSpotifyLoginUrl(target) || isAllowedUrl(target, policy));
     },
   });
-  keepContentBelowToolbar(window, content);
+  parts.layout = keepContentBelowToolbar(window, content, () => parts.panelOpen);
+  window.webContents.on("did-start-loading", () => {
+    parts.panelOpen = false;
+    parts.layout();
+  });
   reloadOnCrash(content.webContents);
   syncToolbar(window.webContents, content.webContents, label);
   content.webContents.on("did-navigate", () => {
@@ -170,6 +176,18 @@ export function reportEnvironment(content: WebContents, state: EnvironmentState 
   liveWindowOf(content)?.webContents.send(TOOLBAR_CHANNELS.environment, state);
 }
 
+export function setSettingsPanel(toolbar: WebContents, open: boolean): void {
+  const parts = partsByToolbar.get(toolbar);
+  if (!parts) return;
+  parts.panelOpen = open;
+  parts.layout();
+}
+
+export function setEnvironment(toolbar: WebContents, request: EnvironmentRequest): void {
+  const parts = partsByToolbar.get(toolbar);
+  if (parts) sendCommand(parts.content, { type: "set-environment", request });
+}
+
 export function showEnvironment(toolbar: WebContents, setting: EnvironmentSetting, anchor: { x: number; y: number }): void {
   const parts = partsByToolbar.get(toolbar);
   if (parts) showEnvironmentMenu(parts.window, parts.content, setting, anchor);
@@ -209,11 +227,11 @@ async function mapMenuItems({ content, origin }: WindowParts): Promise<MenuItemC
 }
 
 /** The toolbar steps aside while a video is in HTML fullscreen. */
-function keepContentBelowToolbar(window: BrowserWindow, content: WebContentsView): void {
+function keepContentBelowToolbar(window: BrowserWindow, content: WebContentsView, panelOpen: () => boolean): () => void {
   let top = TOOLBAR_HEIGHT;
   const layout = (): void => {
     const { width, height } = window.getContentBounds();
-    content.setBounds({ x: 0, y: top, width, height: height - top });
+    content.setBounds({ x: 0, y: top, width: width - (top !== 0 && panelOpen() ? 360 : 0), height: height - top });
   };
   layout();
   window.on("resize", layout);
@@ -225,6 +243,7 @@ function keepContentBelowToolbar(window: BrowserWindow, content: WebContentsView
     top = TOOLBAR_HEIGHT;
     layout();
   });
+  return layout;
 }
 
 function reloadOnCrash(content: WebContents): void {

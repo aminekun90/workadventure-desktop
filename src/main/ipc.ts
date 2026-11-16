@@ -1,4 +1,4 @@
-import { app, ipcMain, net, type IpcMainInvokeEvent, type WebContents } from "electron";
+import { app, BrowserWindow, ipcMain, net, type IpcMainInvokeEvent, type WebContents } from "electron";
 import { z } from "zod";
 import { ABOUT_CHANNELS, ABOUT_LINKS } from "../shared/about-api.js";
 import { APPEARANCE_CHANNELS, appearanceSchema } from "../shared/appearance-api.js";
@@ -15,10 +15,10 @@ import { newSpaceSchema, spaceRefSchema, type NewSpace, type SpaceRef } from "..
 import { CONTENT_CHANNELS, SCREEN_SHARE_BUTTON_SELECTOR } from "../shared/content-api.js";
 import { TOOLBAR_CHANNELS } from "../shared/toolbar-api.js";
 import { EnvironmentSetting } from "../shared/environment-api.js";
-import { environmentSchema } from "./environment.js";
+import { environmentRequestSchema, environmentSchema } from "./environment.js";
 import { UPDATE_CHANNELS, type UpdateStatus } from "../shared/update-api.js";
 import { ABOUT_URL, aboutInfo, copyDiagnostics, openAboutLink } from "./about-window.js";
-import { getAppearance, setAppearance } from "./appearance.js";
+import { getAppearance, setAppearance, setLocalAppearance, pendingAppearance, confirmAppearance } from "./appearance.js";
 import { LAUNCHER_URL } from "./launcher-window.js";
 import { logger } from "./logger.js";
 import { isMiniWindowAuto, setMiniWindowAuto } from "./mini-window.js";
@@ -59,8 +59,9 @@ import {
   statusSchema,
   unreadSchema,
   updateControls,
+  sendCommand,
 } from "./workadventure-controls.js";
-import { focusWindowOf, isWorkAdventureContent, watchVisibility, reloadContent, reportEnvironment, requestAttention, showEnvironment, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
+import { contentOf, focusWindowOf, isWorkAdventureContent, watchVisibility, reloadContent, reportEnvironment, requestAttention, showEnvironment, setEnvironment, setSettingsPanel, showMapMenu, TOOLBAR_URL } from "./workadventure-window.js";
 
 const PROBE_TIMEOUT_MS = 4000;
 const availabilitySubscriptions = new WeakMap<WebContents, () => void>();
@@ -149,6 +150,15 @@ function registerListenAlongChannels(handlers: IpcHandlers): void {
 }
 
 function registerToolbarChannels(handlers: IpcHandlers): void {
+  ipcMain.handle(TOOLBAR_CHANNELS.setEnvironment, (event, payload: unknown) => {
+    assertSender(event, TOOLBAR_URL);
+    setEnvironment(event.sender, environmentRequestSchema.parse(payload));
+  });
+  ipcMain.handle(TOOLBAR_CHANNELS.settingsPanel, (event, payload: unknown) => {
+    assertSender(event, TOOLBAR_URL);
+    setSettingsPanel(event.sender, z.boolean().parse(payload));
+  });
+
   ipcMain.handle(TOOLBAR_CHANNELS.openLauncher, (event) => {
     assertSender(event, TOOLBAR_URL);
     return handlers.openLauncher();
@@ -198,6 +208,15 @@ function registerAboutChannels(handlers: IpcHandlers): void {
 
 /** Every local page follows the look chosen in WorkAdventure. */
 function registerAppearanceChannels(): void {
+  ipcMain.handle(APPEARANCE_CHANNELS.set, (event, payload: unknown) => {
+    assertSender(event, LAUNCHER_URL, TOOLBAR_URL);
+    const appearance = appearanceSchema.parse(payload);
+    setLocalAppearance(appearance);
+    for (const window of BrowserWindow.getAllWindows()) {
+      const content = contentOf(window);
+      if (content) sendCommand(content, { type: "set-environment", request: { setting: EnvironmentSetting.Appearance, value: appearance } });
+    }
+  });
   ipcMain.handle(APPEARANCE_CHANNELS.get, (event) => {
     assertSender(event, LAUNCHER_URL, TOOLBAR_URL, ABOUT_URL);
     return getAppearance();
@@ -224,6 +243,9 @@ function registerContentChannels(): void {
     const state = environmentSchema.safeParse(payload);
     if (!state.success) return;
     updateControls(event.sender, { environment: state.data });
+    confirmAppearance(state.data?.appearance);
+    const pending = pendingAppearance();
+    if (state.data && pending) sendCommand(event.sender, { type: "set-environment", request: { setting: EnvironmentSetting.Appearance, value: pending } });
     reportEnvironment(event.sender, state.data);
   });
   ipcMain.on(CONTENT_CHANNELS.attention, (event) => requestAttention(event.sender));
@@ -274,7 +296,7 @@ function registerContentChannels(): void {
   });
   ipcMain.on(CONTENT_CHANNELS.appearance, (event, payload: unknown) => {
     const appearance = appearanceSchema.safeParse(payload);
-    if (appearance.success && isWorkAdventureContent(event.sender)) setAppearance(appearance.data);
+    if (appearance.success && isWorkAdventureContent(event.sender) && !pendingAppearance()) setAppearance(appearance.data);
   });
   ipcMain.on(CONTENT_CHANNELS.spotifyWatch, (event, payload: unknown) => {
     const watching = z.boolean().safeParse(payload);

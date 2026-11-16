@@ -1,11 +1,11 @@
 import type { BrowserWindow, WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
-import { Christmas, EnvironmentSetting, Ground, Night, Seasonal, Weather, type EnvironmentState } from "../src/shared/environment-api.js";
+import { Christmas, EnvironmentSetting, Ground, LampMusicSource, Night, Seasonal, SoundSetting, Weather, WeatherFrequency, type EnvironmentState } from "../src/shared/environment-api.js";
 import { controlsOf, resetControls, sendCommand, updateControls } from "../src/main/workadventure-controls.js";
 
 const buildMenu = vi.hoisted(() => vi.fn());
 vi.mock("electron", () => ({ Menu: { buildFromTemplate: buildMenu } }));
-const { environmentSchema, showEnvironmentMenu } = await import("../src/main/environment.js");
+const { environmentRequestSchema, environmentSchema, showEnvironmentMenu } = await import("../src/main/environment.js");
 const state: EnvironmentState = { weather: Weather.Rain, displayWeather: Weather.Rain, night: Night.Server, ground: Ground.Seasonal,
   christmas: Christmas.Auto, isNight: false, effects: true, canEditWeather: false, busy: false, error: "" };
 
@@ -15,6 +15,126 @@ function fixture(): { content: WebContents; send: ReturnType<typeof vi.fn> } {
 }
 
 describe("direct environment controls", () => {
+  it("keeps the map detected when a newer front reports unknown sound families", () => {
+    const parsed = environmentSchema.parse({ ...state, sounds: { [SoundSetting.Jungle]: 0.15, futureSoundVolume: 0.2 } });
+    expect(parsed?.sounds).toEqual({ [SoundSetting.Jungle]: 0.15 });
+    expect(environmentSchema.safeParse({ ...state, sounds: { [SoundSetting.Jungle]: 2 } }).success).toBe(false);
+  });
+
+  it("validates panel requests before forwarding them to the game", () => {
+    for (const request of [
+      { setting: EnvironmentSetting.Appearance, value: { palette: "forest", font: "arcade" } },
+      { setting: EnvironmentSetting.LampEffects, value: false },
+      { setting: EnvironmentSetting.LampMusicSource, value: LampMusicSource.Personal },
+      { setting: EnvironmentSetting.Night, value: Night.Disabled },
+      { setting: EnvironmentSetting.Sounds, value: { sound: SoundSetting.Doors, volume: 0.35 } },
+      { setting: EnvironmentSetting.CloudsHeight, value: 1 },
+    ]) expect(environmentRequestSchema.parse(request)).toEqual(request);
+    for (const request of [
+      { setting: EnvironmentSetting.Appearance, value: { palette: "unknown", font: "system" } },
+      { setting: EnvironmentSetting.LampMusicSource, value: "arbitrary-room" },
+      { setting: EnvironmentSetting.LampEffects, value: "false" },
+      { setting: EnvironmentSetting.Sounds, value: { sound: SoundSetting.Doors, volume: 1.1 } },
+      { setting: EnvironmentSetting.CloudsHeight, value: -1 },
+      { setting: "unknown", value: true },
+    ]) expect(environmentRequestSchema.safeParse(request).success).toBe(false);
+  });
+  it("selects the music source and rejects stale unsupported clicks", () => {
+    const { content, send } = fixture();
+    updateControls(content, { environment: { ...state, lampEffects: true, lampMusicSource: LampMusicSource.Rooms } });
+    buildMenu.mockReturnValue({ popup: vi.fn() });
+    showEnvironmentMenu({} as unknown as BrowserWindow, content, EnvironmentSetting.LampEffects, { x: 0, y: 44 });
+    const items = buildMenu.mock.lastCall?.[0] as { label: string; checked: boolean; click: () => void }[];
+    expect(items.find((item) => item.label?.startsWith("Musique des salons"))?.checked).toBe(true);
+    const personal = items.find((item) => item.label?.startsWith("Ma musique"));
+    personal?.click();
+    expect(send).toHaveBeenLastCalledWith("content:command", { type: "set-environment", request: { setting: EnvironmentSetting.LampMusicSource, value: LampMusicSource.Personal } });
+    send.mockClear();
+    updateControls(content, { environment: state });
+    personal?.click();
+    expect(send).not.toHaveBeenCalled();
+    expect(environmentSchema.safeParse({ ...state, lampMusicSource: "other" }).success).toBe(false);
+  });
+
+  it("shows modern weather choices and preserves live automatic settings on a menu click", () => {
+    const { content, send } = fixture();
+    const auto = { frequency: WeatherFrequency.Normal, include: [Weather.Rain], clouds: true };
+    updateControls(content, { environment: { ...state, canEditWeather: true, mapWeather: Weather.Real, weatherAuto: auto } });
+    buildMenu.mockReturnValue({ popup: vi.fn() });
+    showEnvironmentMenu({} as unknown as BrowserWindow, content, EnvironmentSetting.Weather, { x: 0, y: 44 });
+    const items = buildMenu.mock.lastCall?.[0] as { label: string; checked: boolean; click: () => void; submenu?: { label: string; click: () => void }[] }[];
+    expect(items.find((item) => item.label?.startsWith("Météo réelle"))?.checked).toBe(true);
+    expect(items.some((item) => item.label === "Nuageux")).toBe(true);
+    updateControls(content, { environment: { ...state, canEditWeather: true, mapWeather: Weather.Real, weatherAuto: { ...auto, include: [Weather.Fog] } } });
+    items.find((item) => item.label === "Fréquence du mode automatique")?.submenu?.find((item) => item.label === "Calme")?.click();
+    expect(send).toHaveBeenLastCalledWith("content:command", { type: "set-environment", request: { setting: EnvironmentSetting.WeatherAuto, value: { ...auto, frequency: WeatherFrequency.Calm, include: [Weather.Fog] } } });
+    send.mockClear();
+    updateControls(content, { environment: state });
+    items.find((item) => item.label === "Nuageux")?.click();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("keeps cloud visibility personal and validates cloud height", () => {
+    const { content, send } = fixture();
+    updateControls(content, { environment: { ...state, clouds: true, cloudsHeight: 0.5 } });
+    buildMenu.mockReturnValue({ popup: vi.fn() });
+    showEnvironmentMenu({} as unknown as BrowserWindow, content, EnvironmentSetting.Clouds, { x: 0, y: 44 });
+    const items = buildMenu.mock.lastCall?.[0] as { checked: boolean; click: () => void }[];
+    items[0]?.click();
+    expect(send).toHaveBeenLastCalledWith("content:command", { type: "set-environment", request: { setting: EnvironmentSetting.Clouds, value: false } });
+    expect(environmentSchema.safeParse({ ...state, cloudsHeight: 2 }).success).toBe(false);
+  });
+
+  it("keeps new personal settings optional and validates reported volumes", () => {
+    expect(environmentSchema.parse({ ...state, lampEffects: false, lampDemo: true, sounds: { [SoundSetting.Weather]: 0.15 } })).toMatchObject({ lampEffects: false, sounds: { [SoundSetting.Weather]: 0.15 } });
+    for (const volume of [-1, 1.1, NaN, "0.5"]) {
+      expect(environmentSchema.safeParse({ ...state, sounds: { [SoundSetting.Weather]: volume } }).success).toBe(false);
+    }
+    expect(environmentSchema.safeParse({ ...state, lampEffects: "false" }).success).toBe(false);
+  });
+
+  it("toggles music lights and demo from their live state and ignores unsupported fronts", () => {
+    const { content, send } = fixture();
+    updateControls(content, { environment: { ...state, lampEffects: true, lampDemo: false } });
+    buildMenu.mockReturnValue({ popup: vi.fn() });
+    showEnvironmentMenu({} as unknown as BrowserWindow, content, EnvironmentSetting.LampEffects, { x: 0, y: 44 });
+    const items = buildMenu.mock.lastCall?.[0] as { label: string; checked: boolean; click: () => void }[];
+    expect(items.map(({ label, checked }) => ({ label, checked }))).toEqual([
+      { label: "Suivre la musique", checked: true }, { label: "Lampes de démonstration près de mon avatar", checked: false },
+    ]);
+    items[0]?.click();
+    expect(send).toHaveBeenLastCalledWith("content:command", { type: "set-environment", request: { setting: EnvironmentSetting.LampEffects, value: false } });
+    updateControls(content, { environment: { ...state, lampEffects: false, lampDemo: false } });
+    items[0]?.click();
+    expect(send).toHaveBeenLastCalledWith("content:command", { type: "set-environment", request: { setting: EnvironmentSetting.LampEffects, value: true } });
+    items[1]?.click();
+    expect(send).toHaveBeenLastCalledWith("content:command", { type: "set-environment", request: { setting: EnvironmentSetting.LampDemo, value: true } });
+    send.mockClear();
+    updateControls(content, { environment: state });
+    items[0]?.click();
+    items[1]?.click();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("adjusts only the selected sound and blocks stale unsupported sound menu clicks", () => {
+    const { content, send } = fixture();
+    updateControls(content, { environment: { ...state, sounds: { [SoundSetting.Weather]: 0.37, [SoundSetting.Doors]: 0.15 } } });
+    buildMenu.mockReturnValue({ popup: vi.fn() });
+    showEnvironmentMenu({} as unknown as BrowserWindow, content, EnvironmentSetting.Sounds, { x: 0, y: 44 });
+    const items = buildMenu.mock.lastCall?.[0] as { label: string; submenu: { label: string; checked: boolean; click: () => void }[] }[];
+    expect(items.map(({ label }) => label)).toEqual(["Météo : 37 %", "Portes : 15 %"]);
+    expect(items[0]?.submenu.find(({ checked }) => checked)?.label).toBe("37 %");
+    const mute = items[0]?.submenu.find(({ label }) => label === "Muet");
+    mute?.click();
+    expect(send).toHaveBeenLastCalledWith("content:command", { type: "set-environment", request: { setting: EnvironmentSetting.Sounds, value: { sound: SoundSetting.Weather, volume: 0 } } });
+    send.mockClear();
+    updateControls(content, { environment: { ...state, sounds: { [SoundSetting.Doors]: 0.15 } } });
+    mute?.click();
+    updateControls(content, { environment: state });
+    mute?.click();
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("validates reported settings and disables them when the room leaves", () => {
     expect(environmentSchema.safeParse(state).success).toBe(true);
     expect(environmentSchema.safeParse(null).success).toBe(true);

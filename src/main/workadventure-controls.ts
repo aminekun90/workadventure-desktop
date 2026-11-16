@@ -1,6 +1,6 @@
 import type { WebContents } from "electron";
 import { z } from "zod";
-import { EnvironmentSetting, type EnvironmentState } from "../shared/environment-api.js";
+import { EnvironmentSetting, Weather, type EnvironmentState } from "../shared/environment-api.js";
 import {
   CONTENT_CHANNELS,
   type AvailabilityStatus,
@@ -133,9 +133,13 @@ export function sendCommand(content: WebContents, command: ContentCommand): void
   const state = controlsOf(content);
   if (command.type === "set-environment") {
     if (!state.environment || state.environment.busy) return;
-    if (state.environment[command.request.setting] === undefined) return;
+    if (command.request.setting === EnvironmentSetting.SoundPreview) {
+      if (state.environment.sounds?.[command.request.value] === undefined) return;
+    } else if (state.environment[command.request.setting] === undefined) return;
+    if (command.request.setting === EnvironmentSetting.Sounds && state.environment.sounds?.[command.request.value.sound] === undefined) return;
     if (state.environment.seasonal !== undefined && (command.request.setting === EnvironmentSetting.Ground || command.request.setting === EnvironmentSetting.Christmas)) return;
-    if (command.request.setting === EnvironmentSetting.Weather && !state.environment.canEditWeather) return;
+    if ((command.request.setting === EnvironmentSetting.Weather || command.request.setting === EnvironmentSetting.WeatherAuto) && !state.environment.canEditWeather) return;
+    if (command.request.setting === EnvironmentSetting.Weather && state.environment.mapWeather === undefined && [Weather.Real, Weather.Cloudy, Weather.Fog].includes(command.request.value)) return;
     content.send(CONTENT_CHANNELS.command, command);
     return;
   }

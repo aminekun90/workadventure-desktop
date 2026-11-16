@@ -446,3 +446,17 @@ h2 {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Settings blend upwards into the welcome screen. */
+.settings-panel { position: fixed; top: 5rem; z-index: 10; display: flex; flex-direction: column; max-width: 100vw; overflow: visible; border-left: 0; opacity: 1; transform: translateY(0); transition: opacity 220ms ease, transform 220ms ease, display 220ms allow-discrete; }
+.settings-panel::before { content: ""; position: absolute; bottom: 100%; left: 0; right: 0; height: 5rem; background: linear-gradient(to bottom, transparent, var(--slate)); pointer-events: none; }
+.settings-panel fieldset { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding-bottom: 12rem; scroll-padding-bottom: 12rem; }
+.settings-panel section { display: block; }
+#settings { position: fixed; top: 0.5rem; right: 1rem; z-index: 11; -webkit-app-region: no-drag; }
+.settings-panel[hidden] { opacity: 0; transform: translateY(0.5rem); }
+@starting-style {
+  .settings-panel:not([hidden]) { opacity: 0; transform: translateY(0.5rem); }
+}
+
+.city { position: relative; z-index: 12; pointer-events: none; }
+.city .footer { pointer-events: auto; }

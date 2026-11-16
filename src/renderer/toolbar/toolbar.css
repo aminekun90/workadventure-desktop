@@ -113,3 +113,63 @@ body[data-loading="true"] .dot {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+
+/* Width matches the reserved game-view space in workadventure-window.ts. */
+.settings-panel { position: absolute; top: 2.75rem; bottom: 0; right: 0; width: 22.5rem; padding: 1.25rem; overflow-y: auto; border-left: 0.0625rem solid var(--line); background: var(--slate); font-family: var(--font-pixel); }
+.settings-heading { display: flex; justify-content: space-between; align-items: center; }
+.settings-heading h1 { margin: 0; font: 600 1.375rem var(--font-pixel); }
+.settings-panel h2 { font: 600 1.0625rem var(--font-pixel); margin: 0 0 1.25rem; }
+.settings-hint { color: var(--muted); font-size: 0.8125rem; line-height: 1.6; margin: 0.75rem 0 1rem; }
+#settings-status { font-size: 0.8125rem; color: var(--alert); }
+.settings-panel fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.settings-panel section { padding: 1.25rem 0; border-top: 0.0625rem solid var(--line); }
+.setting-row { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.875rem 0; font-size: 0.875rem; border-bottom: 0.0625rem solid var(--line); }
+.setting-row select { max-width: 11rem; padding: 0.5rem; border: 0.0625rem solid var(--line); border-radius: var(--radius-s); background: var(--slate-raised); color: var(--text); font: inherit; }
+.settings-panel input { accent-color: var(--accent); }
+.setting-row input[type="checkbox"] { appearance: none; position: relative; flex: none; width: 2.5rem; height: 1.375rem; margin: 0; border: 0.0625rem solid var(--line); border-radius: 1rem; background: var(--slate-raised); }
+.setting-row input[type="checkbox"]::before { content: ""; position: absolute; top: 0.125rem; left: 0.125rem; width: 1rem; height: 1rem; border-radius: 50%; background: var(--text); }
+.setting-row input[type="checkbox"]:checked { background: var(--accent); }
+.setting-row input[type="checkbox"]:checked::before { left: 1.25rem; }
+.setting-row input[type="range"] { width: 7rem; }
+.setting-row output { display: block; color: var(--muted); font-size: 0.75rem; }
+.sound-row { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; padding: 0.875rem 0; font-size: 0.875rem; border-bottom: 0.0625rem solid var(--line); }
+.sound-row output { color: var(--muted); font-variant-numeric: tabular-nums; }
+.sound-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+.sound-row label { display: flex; align-items: center; gap: 0.625rem; }
+.sound-row output { grid-column: 2; }
+.sound-row input { grid-column: 1 / 3; width: 100%; }
+.sound-preview { grid-column: 3; grid-row: 1 / 3; padding: 0.5rem; align-self: center; }
+.sound-group h3 { font: 500 0.8125rem var(--font-pixel); color: var(--muted); margin: 1.5rem 0 0.25rem; }
+#settings[aria-expanded="true"] { background: var(--slate-raised); color: var(--text); }
+.settings-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; padding: 0.5rem 0 0.25rem; }
+.settings-tabs .button { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem 0.125rem; font: inherit; font-size: 0.6875rem; border-radius: var(--radius-s); }
+.settings-tabs [aria-selected="true"] { color: var(--text); background: var(--slate-raised); box-shadow: inset 0 -0.125rem var(--accent); }
+.settings-panel svg { flex: none; width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.setting-row > span, .sound-row > span { display: flex; align-items: center; gap: 0.625rem; }
+.choice-group { margin: 1.25rem 0; }
+.choice-group h3 { font: 500 0.875rem var(--font-pixel); margin: 0 0 0.75rem; }
+.choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; }
+.choice-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; min-width: 0; padding: 0.875rem; border: 0.0625rem solid var(--line); border-radius: var(--radius-m); cursor: default; font-size: 0.8125rem; background: var(--slate); }
+.choice-card:hover { background: var(--slate-raised); }
+.choice-card:has(input:checked) { border-color: var(--accent); background: var(--slate-raised); }
+.choice-card:has(input:focus-visible) { outline: 0.125rem solid var(--accent-hover); outline-offset: 0.125rem; }
+.choice-card input { position: absolute; width: 0.0625rem; height: 0.0625rem; opacity: 0; }
+.choice-card:has(input:checked)::after { content: ""; position: absolute; top: 0.875rem; right: 0.875rem; width: 0.5rem; height: 0.25rem; border-left: 0.125rem solid var(--accent); border-bottom: 0.125rem solid var(--accent); transform: rotate(-45deg); }
+.choice-card small { color: var(--muted); font-size: 0.6875rem; line-height: 1.5; }
+.palette-preview { display: flex; align-items: center; gap: 0.25rem; width: 100%; height: 2.75rem; padding: 0.625rem; background: var(--night); border: 0.0625rem solid var(--line); border-radius: var(--radius-s); color: var(--text); }
+.palette-preview i { width: 0.625rem; height: 1.25rem; border-radius: 0.125rem; background: var(--slate-raised); }
+.palette-preview i:nth-child(2) { background: var(--muted); height: 0.875rem; }
+.palette-preview i:nth-child(3) { background: var(--accent); height: 1.625rem; }
+.palette-preview svg { margin-left: auto; }
+.font-preview { font: 400 1.25rem var(--font-pixel); height: 2.75rem; display: flex; align-items: center; }
+:root[data-font="arcade"] .settings-tabs .button { font-size: 0.5rem; }
+:root[data-font="arcade"] .settings-hint { font-size: 0.625rem; }
+
+.setting-row:has(:disabled), .sound-row:has(input:disabled), .choice-card:has(input:disabled) { opacity: 0.45; }
+.choice-card:has(input:disabled):hover { background: var(--slate); }
+.settings-panel input:focus-visible { outline: 0.125rem solid var(--accent-hover); outline-offset: 0.125rem; }
+
+.cloud-height { flex-direction: column; align-items: stretch; }
+.cloud-height input[type="range"] { width: 100%; }
+.cloud-height small { color: var(--muted); font-size: 0.75rem; line-height: 1.6; }

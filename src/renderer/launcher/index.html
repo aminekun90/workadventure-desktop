@@ -8,11 +8,13 @@
     />
     <title>WorkAdventure</title>
     <link rel="stylesheet" href="../theme.css" />
+    <link rel="stylesheet" href="../toolbar/toolbar.css" />
     <link rel="stylesheet" href="launcher.css" />
     <script type="module" src="main.js"></script>
   </head>
   <body>
     <div class="titlebar" aria-hidden="true"></div>
+    <button id="settings" class="button quiet" type="button" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6m8 4v6" /></svg> Réglages</button>
 
     <main class="layout">
       <section class="hero">
@@ -95,6 +97,8 @@
         <span>Revenir ici à tout moment <kbd id="shortcut">Ctrl ⇧ L</kbd></span>
       </footer>
     </div>
+
+    <!-- settings-panel -->
 
     <template id="instance-template">
       <label class="card">
