@@ -15,6 +15,7 @@ export const DEFAULT_APPEARANCE: Appearance = { palette: "night", font: "pixel" 
 
 export const APPEARANCE_CHANNELS = {
   get: "appearance:get",
+  set: "appearance:set",
   changed: "appearance:changed",
 } as const;
 export type AppearanceChannel = (typeof APPEARANCE_CHANNELS)[keyof typeof APPEARANCE_CHANNELS];
@@ -22,5 +23,6 @@ export type AppearanceChannel = (typeof APPEARANCE_CHANNELS)[keyof typeof APPEAR
 /** Shared by the launcher, toolbar and About bridges. */
 export interface AppearanceApi {
   get(): Promise<Appearance>;
+  set(appearance: Appearance): Promise<void>;
   onChange(listener: (appearance: Appearance) => void): void;
 }

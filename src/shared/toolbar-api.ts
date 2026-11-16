@@ -1,5 +1,5 @@
 import type { AppearanceApi } from "./appearance-api.js";
-import type { EnvironmentSetting, EnvironmentState } from "./environment-api.js";
+import type { EnvironmentRequest, EnvironmentSetting, EnvironmentState } from "./environment-api.js";
 import type { UpdateApi } from "./update-api.js";
 
 export const TOOLBAR_CHANNELS = {
@@ -9,6 +9,8 @@ export const TOOLBAR_CHANNELS = {
   state: "toolbar:state",
   showEnvironment: "toolbar:show-environment",
   environment: "toolbar:environment",
+  setEnvironment: "toolbar:set-environment",
+  settingsPanel: "toolbar:settings-panel",
 } as const;
 export type ToolbarChannel = (typeof TOOLBAR_CHANNELS)[keyof typeof TOOLBAR_CHANNELS];
 
@@ -28,6 +30,8 @@ export interface ToolbarApi {
   showMaps(anchor: { x: number; y: number }): Promise<void>;
   onState(listener: (state: ToolbarState) => void): void;
   showEnvironment(setting: EnvironmentSetting, anchor: { x: number; y: number }): Promise<void>;
+  setEnvironment(request: EnvironmentRequest): Promise<void>;
+  settingsPanel(open: boolean): Promise<void>;
   onEnvironment(listener: (state: EnvironmentState | null) => void): void;
   update: UpdateApi;
   appearance: AppearanceApi;

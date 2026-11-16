@@ -9,6 +9,7 @@ const invoke = <T,>(channel: AboutChannel, ...args: unknown[]): Promise<T> => el
 // Same in every local-page preload: the look chosen in WorkAdventure.
 const appearance: AppearanceApi = {
   get: () => electron.ipcRenderer.invoke("appearance:get" satisfies AppearanceChannel),
+  set: (value) => electron.ipcRenderer.invoke("appearance:set" satisfies AppearanceChannel, value),
   onChange: (listener) => {
     electron.ipcRenderer.on("appearance:changed" satisfies AppearanceChannel, (_event, value: Appearance) => listener(value));
   },

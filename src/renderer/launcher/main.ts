@@ -1,3 +1,4 @@
+import { mountSettingsPanel } from "../toolbar/settings-panel.js";
 import { showAvatar } from "./avatar.js";
 import { api } from "./bridge.js";
 import { setupDeviceCheck } from "./devices.js";
@@ -22,13 +23,14 @@ byId("shortcut", HTMLElement).textContent = api.platform === "darwin" ? "⌘ ⇧
 drawSkyline(byId("skyline", SVGSVGElement));
 mountUpdateStatus(api.update);
 mountAppearance(api.appearance);
+mountSettingsPanel({ appearance: api.appearance, settingsPanel: async () => undefined, setEnvironment: async () => undefined, onEnvironment: () => undefined });
 if (state.avatar) showAvatar(state.avatar);
 if (state.notice) showError(state.notice);
 if (state.offerListenAlong) setupListenAlongOffer();
 
 enterButton.addEventListener("click", () => void enter());
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && !enterButton.disabled) void enter();
+  if (event.key === "Enter" && !enterButton.disabled && byId("settings-panel", HTMLElement).hidden) void enter();
 });
 
 async function enter(): Promise<void> {

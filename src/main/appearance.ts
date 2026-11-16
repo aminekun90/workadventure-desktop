@@ -5,12 +5,14 @@ import { logger } from "./logger.js";
 
 let filePath: string | undefined;
 let current: Appearance = DEFAULT_APPEARANCE;
+let pending: Appearance | undefined;
 
 /** Reads the appearance remembered from the last WorkAdventure session: the launcher shows it before any page. */
 export function loadAppearance(path: string): void {
   filePath = path;
   const stored = appearanceSchema.safeParse(readJsonFile(path));
   current = stored.success ? stored.data : DEFAULT_APPEARANCE;
+  pending = stored.success ? stored.data : undefined;
 }
 
 export function getAppearance(): Appearance {
@@ -24,4 +26,18 @@ export function setAppearance(appearance: Appearance): void {
   if (filePath) writeJsonFile(filePath, appearance);
   logger.info(appearance, "Appearance changed");
   for (const window of BrowserWindow.getAllWindows()) window.webContents.send(APPEARANCE_CHANNELS.changed, appearance);
+}
+
+/** A desktop choice remains pending while no compatible map is open. */
+export function setLocalAppearance(appearance: Appearance): void {
+  pending = appearance;
+  setAppearance(appearance);
+}
+
+export function pendingAppearance(): Appearance | undefined {
+  return pending;
+}
+
+export function confirmAppearance(appearance: Appearance | undefined): void {
+  if (pending && appearance?.palette === pending.palette && appearance.font === pending.font) pending = undefined;
 }
