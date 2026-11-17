@@ -114,6 +114,26 @@ describe("Spicetify bridge", () => {
     vi.useRealTimers();
     expect(bridge.spicetifyConnected()).toBe(false);
   });
+  it("relays the analysis of a track while watched, refusing malformed segments, and clears it on disconnect", async () => {
+    client = await connect(await start(), SPOTIFY_ORIGIN);
+    const watches: unknown[] = [];
+    client.on("message", (data) => { watches[watches.length] = JSON.parse(String(data)); });
+    const received: unknown[] = [];
+    const stop = bridge.onSpicetifyAnalysis((analysis) => { received[received.length] = analysis; });
+    await vi.waitFor(() => expect(watches).toContainEqual({ type: "analysis-watch", watching: true }));
+    const analysis = {
+      uri: "spotify:track:abc",
+      segments: [[8608, 174, -18, "741035209222"]],
+      lyrics: [[33470, "أنت نور الله فجرا"], [40000, ""]],
+    };
+    client.send(JSON.stringify({ type: "analysis", analysis: { ...analysis, segments: [[8608, 174, -18, "74103520922"]] } }));
+    client.send(JSON.stringify({ type: "analysis", analysis }));
+    await vi.waitFor(() => expect(received).toEqual([analysis]));
+    client.close();
+    await vi.waitFor(() => expect(received).toEqual([analysis, null]));
+    stop();
+  });
+
   it("validates musical frames, stops on disconnect and unsubscribes", async () => {
     const url = await start();
     client = await connect(url, SPOTIFY_ORIGIN);

@@ -13,6 +13,7 @@ import type {
   SCREEN_SHARE_BUTTON_SELECTOR,
   QueueState,
   SpotifyTrack,
+  SpotifyAnalysis,
   SpotifyMusicFrame,
   SpotifyPlaybackRequest,
   SpotifyPlaybackState,
@@ -36,6 +37,7 @@ const toggles: Partial<Record<"toggle-microphone" | "toggle-camera", () => void>
 let requestStatus: ((request: StatusRequest) => void) | undefined;
 let requestEnvironment: ((request: EnvironmentRequest) => void) | undefined;
 let onSpotifyMusic: ((frame: SpotifyMusicFrame | null) => void) | undefined;
+let onSpotifyAnalysis: ((analysis: SpotifyAnalysis | null) => void) | undefined;
 let onSpotifyTrack: ((track: SpotifyTrack | null) => void) | undefined;
 let onListenAlongAvailable: ((available: boolean) => void) | undefined;
 let onQueueRequest: ((uris: string[]) => void) | undefined;
@@ -51,6 +53,16 @@ contextBridge.exposeInMainWorld("WAD", {
       if (onSpotifyMusic !== callback) return;
       onSpotifyMusic = undefined;
       send("content:spotify-music-watch", false);
+    };
+  },
+  // The karaoke builds the melody of the playing track from Spotify's analysis (goyan/workadventure#280).
+  watchSpotifyAnalysis: (callback: (analysis: SpotifyAnalysis | null) => void): (() => void) => {
+    onSpotifyAnalysis = callback;
+    send("content:spotify-analysis-watch", true);
+    return () => {
+      if (onSpotifyAnalysis !== callback) return;
+      onSpotifyAnalysis = undefined;
+      send("content:spotify-analysis-watch", false);
     };
   },
   onEnvironmentRequest: (callback: (request: EnvironmentRequest) => void) => {
@@ -138,6 +150,9 @@ contextBridge.exposeInMainWorld("WAD", {
   },
 });
 
+ipcRenderer.on("content:spotify-analysis" satisfies ContentChannel, (_event, analysis: SpotifyAnalysis | null) => {
+  onSpotifyAnalysis?.(analysis);
+});
 ipcRenderer.on("content:spotify-music" satisfies ContentChannel, (_event, frame: SpotifyMusicFrame | null) => {
   onSpotifyMusic?.(frame);
 });

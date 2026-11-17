@@ -45,6 +45,9 @@ export const CONTENT_CHANNELS = {
   spotifyTrack: "content:spotify-track",
   spotifyMusicWatch: "content:spotify-music-watch",
   spotifyMusic: "content:spotify-music",
+  /** The karaoke asks for the analysis of the playing track (window.WAD.watchSpotifyAnalysis), to build its melody. */
+  spotifyAnalysisWatch: "content:spotify-analysis-watch",
+  spotifyAnalysis: "content:spotify-analysis",
   /** What the user shares about their listening, whatever its source (window.WAD.reportListening). */
   listening: "content:listening",
   /** Page → main: WorkAdventure wants to know whether listening along is possible (window.WAD.onListenAlongAvailable). */
@@ -212,6 +215,18 @@ export interface SpotifyMusicFrame {
   attack?: number | undefined;
   brightness?: number | undefined;
   barStartMs?: number | undefined;
+}
+
+/**
+ * Spotify's analysis of a track, and its synced lyrics, as the extension sends them: one entry per segment (about 0.2 s), its start and
+ * duration in milliseconds, its loudest level in dB, and the strength of the 12 notes of the scale (C to B), each 0 to
+ * 9. No sound: only these numbers.
+ */
+export interface SpotifyAnalysis {
+  uri: string;
+  segments: [startMs: number, durationMs: number, loudness: number, pitches: string][];
+  /** The synced lyrics Spotify shows for the track, line by line: absent when it has none synced. */
+  lyrics?: [startMs: number, text: string][] | undefined;
 }
 
 export enum SpotifyPlaybackCommand {
