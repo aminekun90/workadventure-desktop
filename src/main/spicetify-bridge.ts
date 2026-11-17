@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import { z } from "zod";
 import type { EnqueueRequest, FollowTarget, HomeJam, QueueMove, QueueState, SpotifyTrack, SpotifyMusicFrame } from "../shared/content-api.js";
+import type { SpotifyAnalysis } from "../shared/content-api.js";
 import type { SpotifyPlaybackRequest, SpotifyPlaybackState } from "../shared/content-api.js";
 import { logger } from "./logger.js";
 import { queueRequestSchema, queueSchema } from "./workadventure-controls.js";
@@ -51,6 +52,29 @@ const musicSchema = z.object({
     attack: z.number().min(0).max(1).optional(),
     brightness: z.number().min(0).max(1).optional(),
     barStartMs: z.number().int().nonnegative().optional(),
+  }).nullable(),
+});
+/** At most an hour of segments: Spotify cuts a track in about five a second. */
+const MAX_SEGMENTS = 20_000;
+const analysisSchema = z.object({
+  type: z.literal("analysis"),
+  analysis: z.object({
+    uri: z.string().regex(/^spotify:track:[A-Za-z0-9]+$/),
+    segments: z
+      .array(
+        z.tuple([
+          z.number().int().nonnegative().max(86_400_000),
+          z.number().int().positive().max(60_000),
+          z.number().min(-100).max(10),
+          z.string().regex(/^[0-9]{12}$/),
+        ]),
+      )
+      .max(MAX_SEGMENTS),
+    // Extension with lyrics: the synced lines Spotify shows, [startMs, text]. Absent when Spotify has none synced.
+    lyrics: z
+      .array(z.tuple([z.number().int().nonnegative().max(86_400_000), z.string().max(300)]))
+      .max(1000)
+      .optional(),
   }).nullable(),
 });
 const playbackSchema = z.object({
@@ -113,6 +137,28 @@ function setMusic(frame: SpotifyMusicFrame | null): void {
   for (const listener of musicListeners) listener(frame);
 }
 
+let analysis: SpotifyAnalysis | null = null;
+const analysisListeners = new Set<(analysis: SpotifyAnalysis | null) => void>();
+
+/** Spotify's analysis of the playing track while the karaoke watches: the extension sends it once per track. */
+export function onSpicetifyAnalysis(listener: (analysis: SpotifyAnalysis | null) => void): () => void {
+  analysisListeners.add(listener);
+  if (analysisListeners.size === 1) extension?.send(JSON.stringify({ type: "analysis-watch", watching: true }));
+  else if (analysis) listener(analysis);
+  return () => {
+    analysisListeners.delete(listener);
+    if (analysisListeners.size === 0) {
+      analysis = null;
+      extension?.send(JSON.stringify({ type: "analysis-watch", watching: false }));
+    }
+  };
+}
+
+function setAnalysis(next: SpotifyAnalysis | null): void {
+  analysis = next;
+  for (const listener of analysisListeners) listener(next);
+}
+
 let extension: WebSocket | undefined;
 let track: SpotifyTrack | null = null;
 const listeners = new Set<() => void>();
@@ -170,6 +216,7 @@ export function startSpicetifyBridge(port = SPICETIFY_BRIDGE_PORT): WebSocketSer
     socket.on("error", (error) => logger.warn({ err: error }, "Spicetify connection failed"));
     if (musicListeners.size > 0) socket.send(JSON.stringify({ type: "music-watch", watching: true }));
     if (playbackListeners.size > 0) socket.send(JSON.stringify({ type: "playback-watch", watching: true }));
+    if (analysisListeners.size > 0) socket.send(JSON.stringify({ type: "analysis-watch", watching: true }));
     logger.info("Spicetify extension connected");
     if (homeJam) socket.send(JSON.stringify({ type: "home-jam", hostName: homeJam.hostName }));
     notify();
@@ -179,6 +226,7 @@ export function startSpicetifyBridge(port = SPICETIFY_BRIDGE_PORT): WebSocketSer
       extension = undefined;
       track = null;
       setMusic(null);
+      setAnalysis(null);
       setPlayback(null);
       setQueue(EMPTY_QUEUE);
       logger.info("Spicetify extension disconnected");
@@ -275,6 +323,11 @@ function receive(socket: WebSocket, raw: string): void {
   const reportedMusic = musicSchema.safeParse(json);
   if (reportedMusic.success) {
     if (musicListeners.size > 0) setMusic(reportedMusic.data.frame);
+    return;
+  }
+  const reportedAnalysis = analysisSchema.safeParse(json);
+  if (reportedAnalysis.success) {
+    if (analysisListeners.size > 0) setAnalysis(reportedAnalysis.data.analysis);
     return;
   }
   const reportedPlayback = playbackSchema.safeParse(json);

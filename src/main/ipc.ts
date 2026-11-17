@@ -32,6 +32,7 @@ import { SpotifyPlaybackCommand } from "../shared/content-api.js";
 import { watchSpotify } from "./spotify-player.js";
 import {
   controlSpicetifyPlayback,
+  onSpicetifyAnalysis,
   onSpicetifyPlayback,
   spicetifyPlayback,
   dequeueOnSpicetify,
@@ -399,6 +400,20 @@ function registerContentChannels(): void {
       if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyMusic, frame);
     });
     musicSubscriptions.set(page, stop);
+    page.once("destroyed", stop);
+  });
+  const analysisSubscriptions = new WeakMap<WebContents, () => void>();
+  ipcMain.on(CONTENT_CHANNELS.spotifyAnalysisWatch, (event, payload: unknown) => {
+    const watching = z.boolean().safeParse(payload);
+    if (!watching.success || !isWorkAdventureContent(event.sender)) return;
+    const page = event.sender;
+    analysisSubscriptions.get(page)?.();
+    analysisSubscriptions.delete(page);
+    if (!watching.data) return;
+    const stop = onSpicetifyAnalysis((analysis) => {
+      if (!page.isDestroyed()) page.send(CONTENT_CHANNELS.spotifyAnalysis, analysis);
+    });
+    analysisSubscriptions.set(page, stop);
     page.once("destroyed", stop);
   });
   const queueSubscriptions = new WeakMap<WebContents, () => void>();
