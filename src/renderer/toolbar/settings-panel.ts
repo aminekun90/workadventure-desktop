@@ -72,7 +72,7 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
     });
   }
   let environment: EnvironmentState | null = null;
-  const lights = mountLightControls((group) => panel.querySelector<HTMLElement>(`[data-light-group="${group}"]`), (name, value) => {
+  const lights = mountLightControls((group, section) => panel.querySelector<HTMLElement>(`[data-light-group="${group}"][data-light-section="${section}"]`), (name, value) => {
     status.textContent = "";
     void api.setEnvironment({ setting: "light", value: { name, value } } as EnvironmentRequest).catch(showError);
   });
@@ -170,6 +170,11 @@ function mountSearch(panel: HTMLElement, input: HTMLInputElement, empty: HTMLEle
   };
 }
 
+/** Atmosphere choices leave render quality and GPU effects in the graphics tab. */
+export function lightControlSection(name: string): "ambiance" | "graphics" {
+  return ["nightDarkness", "nightRealistic", "nightKeptInEditor", "moonPhaseCurve"].includes(name) ? "ambiance" : "graphics";
+}
+
 const LIGHT_GROUPS: Readonly<Record<LightControl["group"], string>> = { night: "Éclairage de nuit", sky: "Soleil et lune", shadows: "Ombres", other: "Réglages de performance" };
 
 /**
@@ -203,53 +208,55 @@ export function splitLightLabel(control: Pick<LightControl, "label" | "kind" | "
  * rebuilt only when that list changes, so a slider being dragged keeps its place. Texts go in as textContent. Each
  * group goes in the section of the panel it belongs to (`containerOf`), folded.
  */
-function mountLightControls(containerOf: (group: string) => HTMLElement | null, send: (name: string, value: number | boolean | string) => void): (state: EnvironmentState | null) => void {
+function mountLightControls(containerOf: (group: string, section: "ambiance" | "graphics") => HTMLElement | null, send: (name: string, value: number | boolean | string) => void): (state: EnvironmentState | null) => void {
   let signature = "";
   const rows = new Map<string, { row: HTMLElement; label: HTMLElement; input: HTMLInputElement | HTMLSelectElement }>();
   const build = (controls: readonly LightControl[]): void => {
     rows.clear();
-    for (const [group, title] of Object.entries(LIGHT_GROUPS)) {
-      const container = containerOf(group);
-      container?.replaceChildren();
-      const items = controls.filter((control) => control.group === group);
-      if (!container || !items.length) continue;
-      const section = document.createElement("details");
-      section.className = "light-group";
-      const heading = document.createElement("summary");
-      const count = document.createElement("small");
-      heading.textContent = title;
-      count.textContent = `${items.filter((control) => !control.dependsOn).length}`;
-      heading.append(count);
-      section.append(heading);
-      for (const control of items) {
-        const row = document.createElement("label");
-        row.className = control.dependsOn ? "setting-row setting-detail" : "setting-row";
-        const label = document.createElement("span");
-        const input = control.kind === "choice" ? document.createElement("select") : document.createElement("input");
-        if (input instanceof HTMLSelectElement) {
-          for (const choice of control.choices ?? []) {
-            const option = document.createElement("option");
-            option.value = choice.value;
-            option.textContent = choice.label;
-            input.append(option);
+    for (const sectionName of ["ambiance", "graphics"] as const) {
+      for (const [group, title] of Object.entries(LIGHT_GROUPS)) {
+        const container = containerOf(group, sectionName);
+        container?.replaceChildren();
+        const items = controls.filter((control) => control.group === group && lightControlSection(control.name) === sectionName);
+        if (!container || !items.length) continue;
+        const section = document.createElement("details");
+        section.className = "light-group";
+        const heading = document.createElement("summary");
+        const count = document.createElement("small");
+        heading.textContent = title;
+        count.textContent = `${items.filter((control) => !control.dependsOn).length || items.length}`;
+        heading.append(count);
+        section.append(heading);
+        for (const control of items) {
+          const row = document.createElement("label");
+          row.className = control.dependsOn ? "setting-row setting-detail" : "setting-row";
+          const label = document.createElement("span");
+          const input = control.kind === "choice" ? document.createElement("select") : document.createElement("input");
+          if (input instanceof HTMLSelectElement) {
+            for (const choice of control.choices ?? []) {
+              const option = document.createElement("option");
+              option.value = choice.value;
+              option.textContent = choice.label;
+              input.append(option);
+            }
+            input.addEventListener("change", () => send(control.name, input.value));
+          } else if (control.kind === "switch") {
+            input.type = "checkbox";
+            input.setAttribute("role", "switch");
+            input.addEventListener("change", () => send(control.name, input.checked));
+          } else {
+            input.type = "range";
+            input.min = String(control.min ?? 0);
+            input.max = String(control.max ?? 1);
+            input.step = String(control.step ?? 0.05);
+            input.addEventListener("change", () => send(control.name, Number(input.value)));
           }
-          input.addEventListener("change", () => send(control.name, input.value));
-        } else if (control.kind === "switch") {
-          input.type = "checkbox";
-          input.setAttribute("role", "switch");
-          input.addEventListener("change", () => send(control.name, input.checked));
-        } else {
-          input.type = "range";
-          input.min = String(control.min ?? 0);
-          input.max = String(control.max ?? 1);
-          input.step = String(control.step ?? 0.05);
-          input.addEventListener("change", () => send(control.name, Number(input.value)));
+          row.append(label, input);
+          section.append(row);
+          rows.set(control.name, { row, label, input });
         }
-        row.append(label, input);
-        section.append(row);
-        rows.set(control.name, { row, label, input });
+        container.append(section);
       }
-      container.append(section);
     }
   };
   return (state) => {

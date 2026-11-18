@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { searchText, splitLightLabel } from "../src/renderer/toolbar/settings-panel.js";
+import { lightControlSection, searchText, splitLightLabel } from "../src/renderer/toolbar/settings-panel.js";
 
 describe("light settings in the panel", () => {
   it("keeps a short label and moves the explanation to the tooltip", () => {
@@ -16,6 +16,11 @@ describe("light settings in the panel", () => {
     expect(splitLightLabel({ label: "Obscurité de la nuit : 60 %", kind: "number" })).toEqual({ label: "Obscurité de la nuit : 60 %", hint: "" });
     expect(splitLightLabel({ label: "Bords des lumières adoucis sur 8 px (0 : nets)", kind: "number", dependsOn: "soft" }))
       .toEqual({ label: "Bords des lumières adoucis sur 8 px", hint: "0 : nets" });
+  });
+
+  it("separates the atmosphere from render quality without requiring newer WA metadata", () => {
+    for (const name of ["nightDarkness", "nightRealistic", "nightKeptInEditor", "moonPhaseCurve"]) expect(lightControlSection(name)).toBe("ambiance");
+    for (const name of ["sunShown", "moonShown", "ambienceOn", "ambienceStrength", "lightSoftEdgeOn", "lightBounceOn", "lightSecondBounceOn", "shadowTrees", "perfCounter"]) expect(lightControlSection(name)).toBe("graphics");
   });
 
   it("searches without case nor accents", () => {
