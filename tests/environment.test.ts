@@ -39,6 +39,21 @@ describe("direct environment controls", () => {
       { setting: "unknown", value: true },
     ]) expect(environmentRequestSchema.safeParse(request).success).toBe(false);
   });
+  it("accepts the light settings WA describes, drops a malformed list, and forwards only described ones", () => {
+    const bounce = { name: "lightBounce", group: "night", label: "Rebond sur les murs : 40 %", kind: "number", value: 0.4, min: 0, max: 1, step: 0.05, dependsOn: "lightBounceOn" };
+    expect(environmentSchema.parse({ ...state, lightControls: [bounce] })?.lightControls).toEqual([bounce]);
+    expect(environmentSchema.parse({ ...state, lightControls: [{ ...bounce, kind: "slider" }] })?.lightControls).toBeUndefined();
+    expect(environmentRequestSchema.safeParse({ setting: EnvironmentSetting.Light, value: { name: "lightBounce", value: 0.6 } }).success).toBe(true);
+    expect(environmentRequestSchema.safeParse({ setting: EnvironmentSetting.Light, value: { name: "", value: 0.6 } }).success).toBe(false);
+    const { content, send } = fixture();
+    updateControls(content, { environment: { ...state, lightControls: [{ ...bounce, group: "night", kind: "number" }] } });
+    sendCommand(content, { type: "set-environment", request: { setting: EnvironmentSetting.Light, value: { name: "unknown", value: 1 } } });
+    expect(send).not.toHaveBeenCalled();
+    sendCommand(content, { type: "set-environment", request: { setting: EnvironmentSetting.Light, value: { name: "lightBounce", value: 0.6 } } });
+    expect(send).toHaveBeenCalledOnce();
+    resetControls(content);
+  });
+
   it("selects the music source and rejects stale unsupported clicks", () => {
     const { content, send } = fixture();
     updateControls(content, { environment: { ...state, lampEffects: true, lampMusicSource: LampMusicSource.Rooms } });

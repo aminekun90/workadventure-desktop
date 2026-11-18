@@ -1,6 +1,6 @@
 import type { Appearance } from "./appearance-api.js";
 /** Wire values match the existing WorkAdventure settings. */
-export enum EnvironmentSetting { Jungle = "jungle", SoundPreview = "soundPreview", Appearance = "appearance", Weather = "weather", Night = "night", Seasonal = "seasonal", Ground = "ground", Christmas = "christmas", Effects = "effects", LampEffects = "lampEffects", LampDemo = "lampDemo", LampMusicSource = "lampMusicSource", Sounds = "sounds", Clouds = "clouds", CloudsHeight = "cloudsHeight", WeatherAuto = "weatherAuto" }
+export enum EnvironmentSetting { Jungle = "jungle", SoundPreview = "soundPreview", Appearance = "appearance", Weather = "weather", Night = "night", Seasonal = "seasonal", Ground = "ground", Christmas = "christmas", Effects = "effects", LampEffects = "lampEffects", LampDemo = "lampDemo", LampMusicSource = "lampMusicSource", Sounds = "sounds", Clouds = "clouds", CloudsHeight = "cloudsHeight", WeatherAuto = "weatherAuto", Light = "light" }
 export enum LampMusicSource { Rooms = "rooms", Personal = "personal" }
 export enum SoundSetting { Footsteps = "footstepVolume", Skateboard = "skateboardVolume", Weather = "weatherVolume", Doors = "doorVolume", Nerf = "nerfVolume", Jungle = "jungleVolume", Map = "mapSoundsVolume", Notifications = "notificationSoundVolume" }
 export enum Weather { Automatic = "automatic", Clear = "clear", Rain = "rain", Snow = "snow", Storm = "storm", Cloudy = "cloudy", Fog = "fog", Real = "real" }
@@ -23,7 +23,25 @@ export type EnvironmentRequest =
   | { setting: EnvironmentSetting.LampMusicSource; value: LampMusicSource }
   | { setting: EnvironmentSetting.CloudsHeight; value: number }
   | { setting: EnvironmentSetting.WeatherAuto; value: AutoWeather }
-  | { setting: EnvironmentSetting.Sounds; value: { sound: SoundSetting; volume: number } };
+  | { setting: EnvironmentSetting.Sounds; value: { sound: SoundSetting; volume: number } }
+  | { setting: EnvironmentSetting.Light; value: { name: string; value: number | boolean | string } };
+
+/**
+ * A light setting of WorkAdventure (night, sun and moon, shadows), described by WA itself: its label, bounds and the
+ * switch it depends on. The panel draws whatever WA sends, so a new setting there shows here without an app update.
+ */
+export interface LightControl {
+  name: string;
+  group: "night" | "sky" | "shadows" | "other";
+  label: string;
+  kind: "number" | "switch" | "choice";
+  value: number | boolean | string;
+  min?: number | undefined;
+  max?: number | undefined;
+  step?: number | undefined;
+  choices?: { value: string; label: string }[] | undefined;
+  dependsOn?: string | undefined;
+}
 
 export interface EnvironmentState {
   appearance?: Appearance | undefined;
@@ -46,6 +64,8 @@ export interface EnvironmentState {
   lampMusicSource?: LampMusicSource | undefined;
   jungle?: boolean | undefined;
   sounds?: Partial<Record<SoundSetting, number>> | undefined;
+  /** WA fronts with the light settings bridge (goyan/workadventure, desktop light controls). */
+  lightControls?: LightControl[] | undefined;
   canEditWeather: boolean;
   busy: boolean;
   error: string;

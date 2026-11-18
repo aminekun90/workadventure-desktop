@@ -1,6 +1,6 @@
 import type { Appearance } from "../../shared/appearance-api.js";
 import type { ToolbarApi } from "../../shared/toolbar-api.js";
-import type { EnvironmentRequest, EnvironmentState, SoundSetting } from "../../shared/environment-api.js";
+import type { EnvironmentRequest, EnvironmentState, LightControl, SoundSetting } from "../../shared/environment-api.js";
 import { byId } from "../dom.js";
 
 export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "settingsPanel" | "setEnvironment" | "onEnvironment">): void {
@@ -67,6 +67,10 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
     });
   }
   let environment: EnvironmentState | null = null;
+  const lights = mountLightControls(byId("light-controls", HTMLDivElement), (name, value) => {
+    status.textContent = "";
+    void api.setEnvironment({ setting: "light", value: { name, value } } as EnvironmentRequest).catch(showError);
+  });
   const previews = Array.from(panel.querySelectorAll<HTMLButtonElement>("[data-preview-sound]"));
   for (const button of previews) button.addEventListener("click", () => {
     void api.setEnvironment({ setting: "soundPreview", value: button.dataset["previewSound"] as SoundSetting } as EnvironmentRequest).catch(showError);
@@ -97,10 +101,83 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
       if (control instanceof HTMLInputElement && control.type === "range") renderRange(control);
     }
     for (const button of previews) button.disabled = !state || state.busy || state.sounds?.[button.dataset["previewSound"] as SoundSetting] === undefined;
+    lights(state);
     byId("music-source-description", HTMLParagraphElement).textContent = !state ? "La source sera affichée une fois dans une carte." : state.lampMusicSource === "personal" ? "Les lumières suivent le Spotify de cet ordinateur." : "Chaque lampe suit le salon musical de sa zone, même si je suis dans un autre salon.";
   };
   api.appearance.onChange((value) => { appearance = value; render(); });
   void api.appearance.get().then((value) => { appearance = value; render(); }).catch(showError);
   api.onEnvironment((state) => { environment = state; render(); });
   render();
+}
+
+const LIGHT_GROUPS: Readonly<Record<LightControl["group"], string>> = { night: "Nuit", sky: "Soleil et lune", shadows: "Ombres", other: "Divers" };
+
+/**
+ * The light settings of WorkAdventure, drawn from the list WA sends (labels, bounds, the switch a detail depends on):
+ * rebuilt only when that list changes, so a slider being dragged keeps its place. Texts go in as textContent.
+ */
+function mountLightControls(container: HTMLElement, send: (name: string, value: number | boolean | string) => void): (state: EnvironmentState | null) => void {
+  let signature = "";
+  const rows = new Map<string, { row: HTMLElement; label: HTMLElement; input: HTMLInputElement | HTMLSelectElement }>();
+  const build = (controls: readonly LightControl[]): void => {
+    container.replaceChildren();
+    rows.clear();
+    for (const [group, title] of Object.entries(LIGHT_GROUPS)) {
+      const items = controls.filter((control) => control.group === group);
+      if (!items.length) continue;
+      const section = document.createElement("div");
+      section.className = "light-group";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      section.append(heading);
+      for (const control of items) {
+        const row = document.createElement("label");
+        row.className = control.dependsOn ? "setting-row setting-detail" : "setting-row";
+        const label = document.createElement("span");
+        const input = control.kind === "choice" ? document.createElement("select") : document.createElement("input");
+        if (input instanceof HTMLSelectElement) {
+          for (const choice of control.choices ?? []) {
+            const option = document.createElement("option");
+            option.value = choice.value;
+            option.textContent = choice.label;
+            input.append(option);
+          }
+          input.addEventListener("change", () => send(control.name, input.value));
+        } else if (control.kind === "switch") {
+          input.type = "checkbox";
+          input.setAttribute("role", "switch");
+          input.addEventListener("change", () => send(control.name, input.checked));
+        } else {
+          input.type = "range";
+          input.min = String(control.min ?? 0);
+          input.max = String(control.max ?? 1);
+          input.step = String(control.step ?? 0.05);
+          input.addEventListener("change", () => send(control.name, Number(input.value)));
+        }
+        row.append(label, input);
+        section.append(row);
+        rows.set(control.name, { row, label, input });
+      }
+      container.append(section);
+    }
+  };
+  return (state) => {
+    const controls = state?.lightControls ?? [];
+    const next = controls.map((control) => `${control.name}:${control.kind}`).join("|");
+    if (next !== signature) {
+      signature = next;
+      build(controls);
+    }
+    const values = new Map(controls.map((control) => [control.name, control.value]));
+    for (const control of controls) {
+      const entry = rows.get(control.name);
+      if (!entry) continue;
+      entry.label.textContent = control.label;
+      entry.row.hidden = control.dependsOn !== undefined && values.get(control.dependsOn) !== true;
+      entry.input.disabled = !state || state.busy;
+      if (document.activeElement === entry.input) continue;
+      if (entry.input instanceof HTMLInputElement && entry.input.type === "checkbox") entry.input.checked = control.value === true;
+      else entry.input.value = String(control.value);
+    }
+  };
 }

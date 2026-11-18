@@ -15,6 +15,17 @@ export const environmentSchema = z.object({
   lampEffects: z.boolean().optional(), lampDemo: z.boolean().optional(),
   lampMusicSource: z.enum(LampMusicSource).optional(),
   sounds: z.object(Object.fromEntries(Object.values(SoundSetting).map((sound) => [sound, z.number().min(0).max(1).optional()]))).optional(),
+  // Texts shown in the panel with textContent only; a malformed list drops the light controls, not the whole state.
+  lightControls: z.array(z.object({
+    name: z.string().min(1).max(100),
+    group: z.enum(["night", "sky", "shadows", "other"]),
+    label: z.string().max(200),
+    kind: z.enum(["number", "switch", "choice"]),
+    value: z.union([z.number().finite(), z.boolean(), z.string().max(100)]),
+    min: z.number().finite().optional(), max: z.number().finite().optional(), step: z.number().positive().optional(),
+    choices: z.array(z.object({ value: z.string().max(100), label: z.string().max(200) })).max(20).optional(),
+    dependsOn: z.string().max(100).optional(),
+  })).max(100).optional().catch(undefined),
 }).nullable() satisfies z.ZodType<EnvironmentState | null>;
 
 export const environmentRequestSchema = z.discriminatedUnion("setting", [
@@ -30,9 +41,10 @@ export const environmentRequestSchema = z.discriminatedUnion("setting", [
   z.object({ setting: z.literal(EnvironmentSetting.CloudsHeight), value: z.number().min(0).max(1) }),
   z.object({ setting: z.literal(EnvironmentSetting.WeatherAuto), value: z.object({ frequency: z.enum(WeatherFrequency), include: z.array(z.enum(Weather)), clouds: z.boolean().optional() }) }),
   z.object({ setting: z.literal(EnvironmentSetting.Sounds), value: z.object({ sound: z.enum(SoundSetting), volume: z.number().min(0).max(1) }) }),
+  z.object({ setting: z.literal(EnvironmentSetting.Light), value: z.object({ name: z.string().min(1).max(100), value: z.union([z.number().finite(), z.boolean(), z.string().max(100)]) }) }),
 ]) satisfies z.ZodType<EnvironmentRequest>;
 
-const choices: readonly { label: string; request: Exclude<EnvironmentRequest, { setting: EnvironmentSetting.SoundPreview }> }[] = [
+const choices: readonly { label: string; request: Exclude<EnvironmentRequest, { setting: EnvironmentSetting.SoundPreview | EnvironmentSetting.Light }> }[] = [
   { label: "Automatique", request: { setting: EnvironmentSetting.Weather, value: Weather.Automatic } },
   { label: "Beau temps", request: { setting: EnvironmentSetting.Weather, value: Weather.Clear } },
   { label: "Nuageux", request: { setting: EnvironmentSetting.Weather, value: Weather.Cloudy } },
@@ -63,7 +75,7 @@ const soundLabels: Record<SoundSetting, string> = {
 /** A native menu stays above the remote game view; selecting a value applies it immediately. */
 export function showEnvironmentMenu(window: BrowserWindow, content: WebContents, setting: EnvironmentSetting, anchor: { x: number; y: number }): void {
   const state = controlsOf(content).environment;
-  if (!state || state.busy || setting === EnvironmentSetting.SoundPreview) return;
+  if (!state || state.busy || setting === EnvironmentSetting.SoundPreview || setting === EnvironmentSetting.Light) return;
   if (state[setting] === undefined) return;
   if (state.seasonal !== undefined && (setting === EnvironmentSetting.Ground || setting === EnvironmentSetting.Christmas)) return;
   if (setting === EnvironmentSetting.Effects) {

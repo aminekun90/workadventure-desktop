@@ -148,7 +148,11 @@ body[data-loading="true"] .dot {
 .settings-panel svg { flex: none; width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .setting-row > span, .sound-row > span { display: flex; align-items: center; gap: 0.625rem; }
 .choice-group { margin: 1.25rem 0; }
-.choice-group h3 { font: 500 0.875rem var(--font-pixel); margin: 0 0 0.75rem; }
+.choice-group h3, .light-group h3 { font: 500 0.875rem var(--font-pixel); margin: 0 0 0.75rem; }
+.light-group { margin: 1.25rem 0 0; }
+.setting-row.setting-detail { padding-left: 1.5rem; }
+.setting-row[hidden] { display: none; }
+.setting-row.setting-detail > span { color: var(--muted); }
 .choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; }
 .choice-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; min-width: 0; padding: 0.875rem; border: 0.0625rem solid var(--line); border-radius: var(--radius-m); cursor: default; font-size: 0.8125rem; background: var(--slate); }
 .choice-card:hover { background: var(--slate-raised); }
