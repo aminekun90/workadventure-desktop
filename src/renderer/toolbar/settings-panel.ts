@@ -1,7 +1,9 @@
 import type { Appearance } from "../../shared/appearance-api.js";
 import type { ToolbarApi } from "../../shared/toolbar-api.js";
-import type { EnvironmentRequest, EnvironmentState, LightControl, SoundSetting } from "../../shared/environment-api.js";
+import type { EnvironmentRequest, EnvironmentState, GraphicsQuality, LightControl, SoundSetting } from "../../shared/environment-api.js";
 import { byId } from "../dom.js";
+
+const QUALITY_LABELS: Readonly<Record<GraphicsQuality, string>> = { low: "Bas", medium: "Moyen", high: "Haut", ultra: "Ultra", custom: "Personnalisé" };
 
 export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "settingsPanel" | "setEnvironment" | "onEnvironment">): void {
   const panel = byId("settings-panel", HTMLElement);
@@ -106,6 +108,9 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
       if (control instanceof HTMLInputElement && control.type === "range") renderRange(control);
     }
     for (const button of previews) button.disabled = !state || state.busy || state.sounds?.[button.dataset["previewSound"] as SoundSetting] === undefined;
+    byId("graphics-quality-current", HTMLParagraphElement).textContent = state?.graphicsQuality === undefined ? "Disponible avec une carte compatible." : `Préréglage actuel : ${QUALITY_LABELS[state.graphicsQuality]}`;
+    const stats = state?.graphicsMonitoring ? state.graphicsStats : undefined;
+    byId("graphics-metrics", HTMLParagraphElement).textContent = stats ? `${Math.round(stats.fps)} FPS · Image CPU : ${(stats.updateMs + stats.renderMs).toFixed(1)} ms · Plus longue image : ${stats.worstMs.toFixed(1)} ms` : state?.graphicsMonitoring ? "Mesure de cette scène…" : "";
     lights(state);
     search.refresh();
     byId("music-source-description", HTMLParagraphElement).textContent = !state ? "La source sera affichée une fois dans une carte." : state.lampMusicSource === "personal" ? "Les lumières suivent le Spotify de cet ordinateur." : "Chaque lampe suit le salon musical de sa zone, même si je suis dans un autre salon.";

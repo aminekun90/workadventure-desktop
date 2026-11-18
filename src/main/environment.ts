@@ -1,10 +1,13 @@
 import { Menu, type BrowserWindow, type WebContents, type MenuItemConstructorOptions } from "electron";
 import { z } from "zod";
-import { Christmas, EnvironmentSetting, Ground, LampMusicSource, Night, Seasonal, SoundSetting, Weather, WeatherFrequency, type EnvironmentRequest, type EnvironmentState } from "../shared/environment-api.js";
+import { Christmas, EnvironmentSetting, GraphicsQuality, Ground, LampMusicSource, Night, Seasonal, SoundSetting, Weather, WeatherFrequency, type EnvironmentRequest, type EnvironmentState } from "../shared/environment-api.js";
 import { appearanceSchema } from "../shared/appearance-api.js";
 import { controlsOf, sendCommand } from "./workadventure-controls.js";
 
 export const environmentSchema = z.object({
+  graphicsQuality: z.enum(GraphicsQuality).optional(),
+  graphicsMonitoring: z.boolean().optional(), animations: z.boolean().optional(),
+  graphicsStats: z.object({ fps: z.number().finite().nonnegative(), worstMs: z.number().finite().nonnegative(), updateMs: z.number().finite().nonnegative(), renderMs: z.number().finite().nonnegative() }).optional().catch(undefined),
   appearance: appearanceSchema.optional(),
   weather: z.enum(Weather), displayWeather: z.enum(Weather), night: z.enum(Night), seasonal: z.enum(Seasonal).optional(), ground: z.enum(Ground).optional(), christmas: z.enum(Christmas).optional(),
   isNight: z.boolean(), effects: z.boolean(), canEditWeather: z.boolean(), busy: z.boolean(), error: z.string().max(200),
@@ -29,6 +32,8 @@ export const environmentSchema = z.object({
 }).nullable() satisfies z.ZodType<EnvironmentState | null>;
 
 export const environmentRequestSchema = z.discriminatedUnion("setting", [
+  z.object({ setting: z.literal(EnvironmentSetting.GraphicsQuality), value: z.enum([GraphicsQuality.Low, GraphicsQuality.Medium, GraphicsQuality.High, GraphicsQuality.Ultra]) }),
+  ...([EnvironmentSetting.GraphicsMonitoring, EnvironmentSetting.Animations] as const).map((setting) => z.object({ setting: z.literal(setting), value: z.boolean() })),
   z.object({ setting: z.literal(EnvironmentSetting.SoundPreview), value: z.enum(SoundSetting) }),
   z.object({ setting: z.literal(EnvironmentSetting.Appearance), value: appearanceSchema }),
   z.object({ setting: z.literal(EnvironmentSetting.Weather), value: z.enum(Weather) }),

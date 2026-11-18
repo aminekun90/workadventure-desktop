@@ -1,6 +1,8 @@
 import type { Appearance } from "./appearance-api.js";
 /** Wire values match the existing WorkAdventure settings. */
-export enum EnvironmentSetting { Jungle = "jungle", SoundPreview = "soundPreview", Appearance = "appearance", Weather = "weather", Night = "night", Seasonal = "seasonal", Ground = "ground", Christmas = "christmas", Effects = "effects", LampEffects = "lampEffects", LampDemo = "lampDemo", LampMusicSource = "lampMusicSource", Sounds = "sounds", Clouds = "clouds", CloudsHeight = "cloudsHeight", WeatherAuto = "weatherAuto", Light = "light" }
+export enum EnvironmentSetting { GraphicsQuality = "graphicsQuality", GraphicsMonitoring = "graphicsMonitoring", Animations = "animations", Jungle = "jungle", SoundPreview = "soundPreview", Appearance = "appearance", Weather = "weather", Night = "night", Seasonal = "seasonal", Ground = "ground", Christmas = "christmas", Effects = "effects", LampEffects = "lampEffects", LampDemo = "lampDemo", LampMusicSource = "lampMusicSource", Sounds = "sounds", Clouds = "clouds", CloudsHeight = "cloudsHeight", WeatherAuto = "weatherAuto", Light = "light" }
+export enum GraphicsQuality { Low = "low", Medium = "medium", High = "high", Ultra = "ultra", Custom = "custom" }
+export type GraphicsPreset = Exclude<GraphicsQuality, GraphicsQuality.Custom>;
 export enum LampMusicSource { Rooms = "rooms", Personal = "personal" }
 export enum SoundSetting { Footsteps = "footstepVolume", Skateboard = "skateboardVolume", Weather = "weatherVolume", Doors = "doorVolume", Nerf = "nerfVolume", Jungle = "jungleVolume", Map = "mapSoundsVolume", Notifications = "notificationSoundVolume" }
 export enum Weather { Automatic = "automatic", Clear = "clear", Rain = "rain", Snow = "snow", Storm = "storm", Cloudy = "cloudy", Fog = "fog", Real = "real" }
@@ -12,6 +14,8 @@ export enum Christmas { Auto = "auto", Always = "always", Never = "never" }
 export enum Seasonal { Auto = "auto", Autumn = "autumn", Christmas = "christmas", None = "none" }
 
 export type EnvironmentRequest =
+  | { setting: EnvironmentSetting.GraphicsQuality; value: GraphicsPreset }
+  | { setting: EnvironmentSetting.GraphicsMonitoring | EnvironmentSetting.Animations; value: boolean }
   | { setting: EnvironmentSetting.SoundPreview; value: SoundSetting }
   | { setting: EnvironmentSetting.Appearance; value: Appearance }
   | { setting: EnvironmentSetting.Weather; value: Weather }
@@ -44,6 +48,10 @@ export interface LightControl {
 }
 
 export interface EnvironmentState {
+  graphicsQuality?: GraphicsQuality | undefined;
+  graphicsMonitoring?: boolean | undefined;
+  graphicsStats?: { fps: number; worstMs: number; updateMs: number; renderMs: number } | undefined;
+  animations?: boolean | undefined;
   appearance?: Appearance | undefined;
   weather: Weather;
   displayWeather: Weather;
