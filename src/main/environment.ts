@@ -1,10 +1,13 @@
 import { Menu, type BrowserWindow, type WebContents, type MenuItemConstructorOptions } from "electron";
 import { z } from "zod";
-import { Christmas, EnvironmentSetting, Ground, LampMusicSource, Night, Seasonal, SoundSetting, Weather, WeatherFrequency, type EnvironmentRequest, type EnvironmentState } from "../shared/environment-api.js";
+import { Christmas, EnvironmentSetting, GraphicsQuality, Ground, LampMusicSource, Night, Seasonal, SoundSetting, Weather, WeatherFrequency, type EnvironmentRequest, type EnvironmentState } from "../shared/environment-api.js";
 import { appearanceSchema } from "../shared/appearance-api.js";
 import { controlsOf, sendCommand } from "./workadventure-controls.js";
 
 export const environmentSchema = z.object({
+  graphicsQuality: z.enum(GraphicsQuality).optional(),
+  graphicsMonitoring: z.boolean().optional(), animations: z.boolean().optional(),
+  graphicsStats: z.object({ fps: z.number().finite().nonnegative(), worstMs: z.number().finite().nonnegative(), updateMs: z.number().finite().nonnegative(), renderMs: z.number().finite().nonnegative() }).optional().catch(undefined),
   appearance: appearanceSchema.optional(),
   weather: z.enum(Weather), displayWeather: z.enum(Weather), night: z.enum(Night), seasonal: z.enum(Seasonal).optional(), ground: z.enum(Ground).optional(), christmas: z.enum(Christmas).optional(),
   isNight: z.boolean(), effects: z.boolean(), canEditWeather: z.boolean(), busy: z.boolean(), error: z.string().max(200),
@@ -15,9 +18,22 @@ export const environmentSchema = z.object({
   lampEffects: z.boolean().optional(), lampDemo: z.boolean().optional(),
   lampMusicSource: z.enum(LampMusicSource).optional(),
   sounds: z.object(Object.fromEntries(Object.values(SoundSetting).map((sound) => [sound, z.number().min(0).max(1).optional()]))).optional(),
+  // Texts shown in the panel with textContent only; a malformed list drops the light controls, not the whole state.
+  lightControls: z.array(z.object({
+    name: z.string().min(1).max(100),
+    group: z.enum(["night", "sky", "shadows", "other"]),
+    label: z.string().max(200),
+    kind: z.enum(["number", "switch", "choice"]),
+    value: z.union([z.number().finite(), z.boolean(), z.string().max(100)]),
+    min: z.number().finite().optional(), max: z.number().finite().optional(), step: z.number().positive().optional(),
+    choices: z.array(z.object({ value: z.string().max(100), label: z.string().max(200) })).max(20).optional(),
+    dependsOn: z.string().max(100).optional(),
+  })).max(100).optional().catch(undefined),
 }).nullable() satisfies z.ZodType<EnvironmentState | null>;
 
 export const environmentRequestSchema = z.discriminatedUnion("setting", [
+  z.object({ setting: z.literal(EnvironmentSetting.GraphicsQuality), value: z.enum([GraphicsQuality.Low, GraphicsQuality.Medium, GraphicsQuality.High, GraphicsQuality.Ultra]) }),
+  ...([EnvironmentSetting.GraphicsMonitoring, EnvironmentSetting.Animations] as const).map((setting) => z.object({ setting: z.literal(setting), value: z.boolean() })),
   z.object({ setting: z.literal(EnvironmentSetting.SoundPreview), value: z.enum(SoundSetting) }),
   z.object({ setting: z.literal(EnvironmentSetting.Appearance), value: appearanceSchema }),
   z.object({ setting: z.literal(EnvironmentSetting.Weather), value: z.enum(Weather) }),
@@ -30,9 +46,10 @@ export const environmentRequestSchema = z.discriminatedUnion("setting", [
   z.object({ setting: z.literal(EnvironmentSetting.CloudsHeight), value: z.number().min(0).max(1) }),
   z.object({ setting: z.literal(EnvironmentSetting.WeatherAuto), value: z.object({ frequency: z.enum(WeatherFrequency), include: z.array(z.enum(Weather)), clouds: z.boolean().optional() }) }),
   z.object({ setting: z.literal(EnvironmentSetting.Sounds), value: z.object({ sound: z.enum(SoundSetting), volume: z.number().min(0).max(1) }) }),
+  z.object({ setting: z.literal(EnvironmentSetting.Light), value: z.object({ name: z.string().min(1).max(100), value: z.union([z.number().finite(), z.boolean(), z.string().max(100)]) }) }),
 ]) satisfies z.ZodType<EnvironmentRequest>;
 
-const choices: readonly { label: string; request: Exclude<EnvironmentRequest, { setting: EnvironmentSetting.SoundPreview }> }[] = [
+const choices: readonly { label: string; request: Exclude<EnvironmentRequest, { setting: EnvironmentSetting.SoundPreview | EnvironmentSetting.Light }> }[] = [
   { label: "Automatique", request: { setting: EnvironmentSetting.Weather, value: Weather.Automatic } },
   { label: "Beau temps", request: { setting: EnvironmentSetting.Weather, value: Weather.Clear } },
   { label: "Nuageux", request: { setting: EnvironmentSetting.Weather, value: Weather.Cloudy } },
@@ -44,6 +61,7 @@ const choices: readonly { label: string; request: Exclude<EnvironmentRequest, { 
   { label: "Heure du serveur", request: { setting: EnvironmentSetting.Night, value: Night.Server } },
   { label: "Heure de l’ordinateur", request: { setting: EnvironmentSetting.Night, value: Night.Computer } },
   { label: "Toujours jour", request: { setting: EnvironmentSetting.Night, value: Night.Disabled } },
+  { label: "Toujours nuit", request: { setting: EnvironmentSetting.Night, value: Night.Always } },
   { label: "Automatique (calendrier)", request: { setting: EnvironmentSetting.Seasonal, value: Seasonal.Auto } },
   { label: "Automne", request: { setting: EnvironmentSetting.Seasonal, value: Seasonal.Autumn } },
   { label: "Noël", request: { setting: EnvironmentSetting.Seasonal, value: Seasonal.Christmas } },
@@ -63,7 +81,7 @@ const soundLabels: Record<SoundSetting, string> = {
 /** A native menu stays above the remote game view; selecting a value applies it immediately. */
 export function showEnvironmentMenu(window: BrowserWindow, content: WebContents, setting: EnvironmentSetting, anchor: { x: number; y: number }): void {
   const state = controlsOf(content).environment;
-  if (!state || state.busy || setting === EnvironmentSetting.SoundPreview) return;
+  if (!state || state.busy || setting === EnvironmentSetting.SoundPreview || setting === EnvironmentSetting.Light) return;
   if (state[setting] === undefined) return;
   if (state.seasonal !== undefined && (setting === EnvironmentSetting.Ground || setting === EnvironmentSetting.Christmas)) return;
   if (setting === EnvironmentSetting.Effects) {

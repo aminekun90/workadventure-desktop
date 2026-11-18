@@ -1,6 +1,6 @@
 import type { BrowserWindow, WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
-import { Christmas, EnvironmentSetting, Ground, LampMusicSource, Night, Seasonal, SoundSetting, Weather, WeatherFrequency, type EnvironmentState } from "../src/shared/environment-api.js";
+import { Christmas, EnvironmentSetting, GraphicsQuality, Ground, LampMusicSource, Night, Seasonal, SoundSetting, Weather, WeatherFrequency, type EnvironmentState } from "../src/shared/environment-api.js";
 import { controlsOf, resetControls, sendCommand, updateControls } from "../src/main/workadventure-controls.js";
 
 const buildMenu = vi.hoisted(() => vi.fn());
@@ -15,6 +15,30 @@ function fixture(): { content: WebContents; send: ReturnType<typeof vi.fn> } {
 }
 
 describe("direct environment controls", () => {
+  it("validates graphical presets and forwards them only to a compatible live front", () => {
+    const { content, send } = fixture();
+    const request = { setting: EnvironmentSetting.GraphicsQuality, value: GraphicsQuality.Low } as const;
+    expect(environmentRequestSchema.parse(request)).toEqual(request);
+    expect(environmentRequestSchema.safeParse({ ...request, value: GraphicsQuality.Custom }).success).toBe(false);
+    expect(environmentRequestSchema.safeParse({ setting: EnvironmentSetting.GraphicsMonitoring, value: "true" }).success).toBe(false);
+    updateControls(content, { environment: state });
+    sendCommand(content, { type: "set-environment", request });
+    expect(send).not.toHaveBeenCalled();
+    const stats = { fps: 60, worstMs: 18, updateMs: 3, renderMs: 2 };
+    const modern = environmentSchema.parse({ ...state, graphicsQuality: GraphicsQuality.High, animations: true, graphicsMonitoring: false, graphicsStats: stats });
+    expect(modern?.graphicsStats).toEqual(stats);
+    expect(environmentSchema.parse({ ...state, graphicsStats: { ...stats, fps: -1 } })?.graphicsStats).toBeUndefined();
+    updateControls(content, { environment: modern });
+    sendCommand(content, { type: "set-environment", request });
+    sendCommand(content, { type: "set-environment", request: { setting: EnvironmentSetting.Animations, value: false } });
+    sendCommand(content, { type: "set-environment", request: { setting: EnvironmentSetting.GraphicsMonitoring, value: true } });
+    expect(send).toHaveBeenCalledTimes(3);
+    expect(send).toHaveBeenNthCalledWith(1, "content:command", { type: "set-environment", request });
+    updateControls(content, { environment: null });
+    sendCommand(content, { type: "set-environment", request });
+    expect(send).toHaveBeenCalledTimes(3);
+    resetControls(content);
+  });
   it("keeps the map detected when a newer front reports unknown sound families", () => {
     const parsed = environmentSchema.parse({ ...state, sounds: { [SoundSetting.Jungle]: 0.15, futureSoundVolume: 0.2 } });
     expect(parsed?.sounds).toEqual({ [SoundSetting.Jungle]: 0.15 });
@@ -39,6 +63,21 @@ describe("direct environment controls", () => {
       { setting: "unknown", value: true },
     ]) expect(environmentRequestSchema.safeParse(request).success).toBe(false);
   });
+  it("accepts the light settings WA describes, drops a malformed list, and forwards only described ones", () => {
+    const bounce = { name: "lightBounce", group: "night", label: "Rebond sur les murs : 40 %", kind: "number", value: 0.4, min: 0, max: 1, step: 0.05, dependsOn: "lightBounceOn" };
+    expect(environmentSchema.parse({ ...state, lightControls: [bounce] })?.lightControls).toEqual([bounce]);
+    expect(environmentSchema.parse({ ...state, lightControls: [{ ...bounce, kind: "slider" }] })?.lightControls).toBeUndefined();
+    expect(environmentRequestSchema.safeParse({ setting: EnvironmentSetting.Light, value: { name: "lightBounce", value: 0.6 } }).success).toBe(true);
+    expect(environmentRequestSchema.safeParse({ setting: EnvironmentSetting.Light, value: { name: "", value: 0.6 } }).success).toBe(false);
+    const { content, send } = fixture();
+    updateControls(content, { environment: { ...state, lightControls: [{ ...bounce, group: "night", kind: "number" }] } });
+    sendCommand(content, { type: "set-environment", request: { setting: EnvironmentSetting.Light, value: { name: "unknown", value: 1 } } });
+    expect(send).not.toHaveBeenCalled();
+    sendCommand(content, { type: "set-environment", request: { setting: EnvironmentSetting.Light, value: { name: "lightBounce", value: 0.6 } } });
+    expect(send).toHaveBeenCalledOnce();
+    resetControls(content);
+  });
+
   it("selects the music source and rejects stale unsupported clicks", () => {
     const { content, send } = fixture();
     updateControls(content, { environment: { ...state, lampEffects: true, lampMusicSource: LampMusicSource.Rooms } });
