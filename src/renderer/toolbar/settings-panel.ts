@@ -72,7 +72,7 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
     });
   }
   let environment: EnvironmentState | null = null;
-  const lights = mountLightControls(byId("light-controls", HTMLDivElement), (name, value) => {
+  const lights = mountLightControls((group) => panel.querySelector<HTMLElement>(`[data-light-group="${group}"]`), (name, value) => {
     status.textContent = "";
     void api.setEnvironment({ setting: "light", value: { name, value } } as EnvironmentRequest).catch(showError);
   });
@@ -118,6 +118,8 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
 
 /** Rows of every tab that a search looks through; a light row also matches the explanation in its tooltip. */
 const SEARCHABLE = ".setting-row, .choice-group, .sound-row";
+/** Groups of rows: one with nothing left to show hides while searching. */
+const GROUPS = ".sound-group, .light-group, .settings-section";
 
 /** Normalised for search: lower case, without accents, so « ombre » finds « Ombres » and « eclairage » « Éclairage ». */
 export function searchText(text: string): string {
@@ -141,12 +143,12 @@ function mountSearch(panel: HTMLElement, input: HTMLInputElement, empty: HTMLEle
       const items = Array.from(section.querySelectorAll<HTMLElement>(SEARCHABLE));
       let shown = 0;
       for (const item of items) {
-        const text = searchText(`${item.textContent ?? ""} ${item.dataset["search"] ?? ""} ${item.closest(".sound-group, .light-group")?.querySelector("h3, summary")?.textContent ?? ""}`);
+        const text = searchText(`${item.textContent ?? ""} ${item.dataset["search"] ?? ""} ${item.closest(".sound-group, .light-group")?.querySelector("h3, summary")?.textContent ?? ""} ${item.closest(".settings-section")?.querySelector("h2")?.textContent ?? ""}`);
         const match = !searching || words.every((word) => text.includes(word));
         item.classList.toggle("search-miss", !match);
         if (match && !item.hidden) shown++;
       }
-      for (const group of Array.from(section.querySelectorAll<HTMLElement>(".sound-group, .light-group"))) {
+      for (const group of Array.from(section.querySelectorAll<HTMLElement>(GROUPS))) {
         const visible = Array.from(group.querySelectorAll<HTMLElement>(SEARCHABLE)).some((item) => !item.classList.contains("search-miss") && !item.hidden);
         group.classList.toggle("search-miss", searching && !visible);
         if (group instanceof HTMLDetailsElement && searching && visible) group.open = true;
@@ -168,7 +170,7 @@ function mountSearch(panel: HTMLElement, input: HTMLInputElement, empty: HTMLEle
   };
 }
 
-const LIGHT_GROUPS: Readonly<Record<LightControl["group"], string>> = { night: "Éclairage de nuit", sky: "Soleil et lune", shadows: "Ombres", other: "Performances" };
+const LIGHT_GROUPS: Readonly<Record<LightControl["group"], string>> = { night: "Éclairage de nuit", sky: "Soleil et lune", shadows: "Ombres", other: "Réglages de performance" };
 
 /**
  * A short label for a row, the rest in its tooltip (still found by the search): WA's labels explain themselves at
@@ -198,17 +200,19 @@ export function splitLightLabel(control: Pick<LightControl, "label" | "kind" | "
 
 /**
  * The light settings of WorkAdventure, drawn from the list WA sends (labels, bounds, the switch a detail depends on):
- * rebuilt only when that list changes, so a slider being dragged keeps its place. Texts go in as textContent.
+ * rebuilt only when that list changes, so a slider being dragged keeps its place. Texts go in as textContent. Each
+ * group goes in the section of the panel it belongs to (`containerOf`), folded.
  */
-function mountLightControls(container: HTMLElement, send: (name: string, value: number | boolean | string) => void): (state: EnvironmentState | null) => void {
+function mountLightControls(containerOf: (group: string) => HTMLElement | null, send: (name: string, value: number | boolean | string) => void): (state: EnvironmentState | null) => void {
   let signature = "";
   const rows = new Map<string, { row: HTMLElement; label: HTMLElement; input: HTMLInputElement | HTMLSelectElement }>();
   const build = (controls: readonly LightControl[]): void => {
-    container.replaceChildren();
     rows.clear();
     for (const [group, title] of Object.entries(LIGHT_GROUPS)) {
+      const container = containerOf(group);
+      container?.replaceChildren();
       const items = controls.filter((control) => control.group === group);
-      if (!items.length) continue;
+      if (!container || !items.length) continue;
       const section = document.createElement("details");
       section.className = "light-group";
       const heading = document.createElement("summary");

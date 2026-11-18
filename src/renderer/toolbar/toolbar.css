@@ -191,3 +191,6 @@ mark.search-hit { background: none; color: var(--window-light); }
 .cloud-height input[type="range"] { width: 100%; }
 .cloud-height small { color: var(--muted); font-size: 0.75rem; line-height: 1.6; }
 .settings-panel.searching section .settings-hint { display: none; }
+.settings-section { margin: 0 0 1.75rem; }
+.settings-section > h2 { margin: 0 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 0.0625rem solid var(--line); }
+.settings-section[data-dynamic-section]:not(:has(.light-group)) { display: none; }
