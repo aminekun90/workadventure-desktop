@@ -56,6 +56,7 @@ const choices: readonly { label: string; request: Exclude<EnvironmentRequest, { 
   { label: "Heure du serveur", request: { setting: EnvironmentSetting.Night, value: Night.Server } },
   { label: "Heure de l’ordinateur", request: { setting: EnvironmentSetting.Night, value: Night.Computer } },
   { label: "Toujours jour", request: { setting: EnvironmentSetting.Night, value: Night.Disabled } },
+  { label: "Toujours nuit", request: { setting: EnvironmentSetting.Night, value: Night.Always } },
   { label: "Automatique (calendrier)", request: { setting: EnvironmentSetting.Seasonal, value: Seasonal.Auto } },
   { label: "Automne", request: { setting: EnvironmentSetting.Seasonal, value: Seasonal.Autumn } },
   { label: "Noël", request: { setting: EnvironmentSetting.Seasonal, value: Seasonal.Christmas } },

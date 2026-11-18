@@ -6,7 +6,7 @@ export enum SoundSetting { Footsteps = "footstepVolume", Skateboard = "skateboar
 export enum Weather { Automatic = "automatic", Clear = "clear", Rain = "rain", Snow = "snow", Storm = "storm", Cloudy = "cloudy", Fog = "fog", Real = "real" }
 export enum WeatherFrequency { Calm = "calm", Normal = "normal", Stormy = "stormy" }
 export interface AutoWeather { frequency: WeatherFrequency; include: Weather[]; clouds?: boolean | undefined }
-export enum Night { Server = "server", Computer = "computer", Disabled = "disabled" }
+export enum Night { Server = "server", Computer = "computer", Disabled = "disabled", Always = "always" }
 export enum Ground { Seasonal = "seasonal", Green = "green" }
 export enum Christmas { Auto = "auto", Always = "always", Never = "never" }
 export enum Seasonal { Auto = "auto", Autumn = "autumn", Christmas = "christmas", None = "none" }
