@@ -30,6 +30,7 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
     });
   }
   const status = byId("settings-status", HTMLParagraphElement);
+  const search = mountSearch(panel, byId("settings-search", HTMLInputElement), byId("settings-search-empty", HTMLParagraphElement));
 
   const controls = Array.from(panel.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-setting], [data-sound], [data-appearance]"));
   const showError = (error: unknown): void => { status.textContent = `Le réglage n’a pas été appliqué : ${error instanceof Error ? error.message : String(error)}`; };
@@ -43,7 +44,11 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
   };
   openButton.addEventListener("click", () => void toggle(panel.hidden));
   closeButton.addEventListener("click", () => void toggle(false));
-  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !panel.hidden) void toggle(false); });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || panel.hidden) return;
+    if (search.clear()) return;
+    void toggle(false);
+  });
   const renderRange = (control: HTMLInputElement): void => {
     const volume = panel.querySelector<HTMLOutputElement>(`[data-volume="${control.dataset["sound"]}"]`);
     if (volume) volume.value = `${Math.round(Number(control.value) * 100)} %`;
@@ -102,6 +107,7 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
     }
     for (const button of previews) button.disabled = !state || state.busy || state.sounds?.[button.dataset["previewSound"] as SoundSetting] === undefined;
     lights(state);
+    search.refresh();
     byId("music-source-description", HTMLParagraphElement).textContent = !state ? "La source sera affichée une fois dans une carte." : state.lampMusicSource === "personal" ? "Les lumières suivent le Spotify de cet ordinateur." : "Chaque lampe suit le salon musical de sa zone, même si je suis dans un autre salon.";
   };
   api.appearance.onChange((value) => { appearance = value; render(); });
@@ -110,7 +116,85 @@ export function mountSettingsPanel(api: Pick<ToolbarApi, "appearance" | "setting
   render();
 }
 
-const LIGHT_GROUPS: Readonly<Record<LightControl["group"], string>> = { night: "Nuit", sky: "Soleil et lune", shadows: "Ombres", other: "Divers" };
+/** Rows of every tab that a search looks through; a light row also matches the explanation in its tooltip. */
+const SEARCHABLE = ".setting-row, .choice-group, .sound-row";
+
+/** Normalised for search: lower case, without accents, so « ombre » finds « Ombres » and « eclairage » « Éclairage ». */
+export function searchText(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+/**
+ * A search at the top of the panel: while it holds text, every tab shows only its matching rows (the tab bar hides),
+ * folded groups open, and a section with nothing left disappears. Escape clears it first, then closes the panel.
+ */
+function mountSearch(panel: HTMLElement, input: HTMLInputElement, empty: HTMLElement): { refresh: () => void; clear: () => boolean } {
+  const sections = Array.from(panel.querySelectorAll<HTMLElement>("[role=tabpanel]"));
+  const refresh = (): void => {
+    const words = searchText(input.value).split(/\s+/).filter(Boolean);
+    const searching = words.length > 0;
+    panel.classList.toggle("searching", searching);
+    let found = 0;
+    for (const section of sections) {
+      // Every tab while searching; the selected one again once the search is cleared.
+      section.hidden = !searching && panel.querySelector(`[aria-controls="${section.id}"]`)?.getAttribute("aria-selected") !== "true";
+      const items = Array.from(section.querySelectorAll<HTMLElement>(SEARCHABLE));
+      let shown = 0;
+      for (const item of items) {
+        const text = searchText(`${item.textContent ?? ""} ${item.dataset["search"] ?? ""} ${item.closest(".sound-group, .light-group")?.querySelector("h3, summary")?.textContent ?? ""}`);
+        const match = !searching || words.every((word) => text.includes(word));
+        item.classList.toggle("search-miss", !match);
+        if (match && !item.hidden) shown++;
+      }
+      for (const group of Array.from(section.querySelectorAll<HTMLElement>(".sound-group, .light-group"))) {
+        const visible = Array.from(group.querySelectorAll<HTMLElement>(SEARCHABLE)).some((item) => !item.classList.contains("search-miss") && !item.hidden);
+        group.classList.toggle("search-miss", searching && !visible);
+        if (group instanceof HTMLDetailsElement && searching && visible) group.open = true;
+      }
+      section.classList.toggle("search-miss", searching && shown === 0);
+      found += shown;
+    }
+    empty.hidden = !searching || found > 0;
+  };
+  input.addEventListener("input", refresh);
+  return {
+    refresh: () => { if (input.value) refresh(); },
+    clear: () => {
+      if (!input.value) return false;
+      input.value = "";
+      refresh();
+      return true;
+    },
+  };
+}
+
+const LIGHT_GROUPS: Readonly<Record<LightControl["group"], string>> = { night: "Éclairage de nuit", sky: "Soleil et lune", shadows: "Ombres", other: "Performances" };
+
+/**
+ * A short label for a row, the rest in its tooltip (still found by the search): WA's labels explain themselves at
+ * length, which made the panel heavy. A detail drops the name of the switch it belongs to.
+ */
+export function splitLightLabel(control: Pick<LightControl, "label" | "kind" | "dependsOn">): { label: string; hint: string } {
+  let label = control.label.replace(/^\d+\s*·\s*/, "");
+  let hint = "";
+  const parenthesis = label.indexOf(" (");
+  if (parenthesis > 0) {
+    hint = label.slice(parenthesis + 2).replace(/\)/, "").replace(/\s+/g, " ").trim();
+    label = label.slice(0, parenthesis).trim();
+  }
+  const colon = label.indexOf(" : ");
+  if (colon > 0 && control.kind !== "number") {
+    const [head, tail] = [label.slice(0, colon), label.slice(colon + 3)];
+    if (control.dependsOn) label = tail.charAt(0).toUpperCase() + tail.slice(1);
+    else { label = head; hint = [tail, hint].filter(Boolean).join(" ; "); }
+  }
+  const comma = label.indexOf(", ");
+  if (comma > 0 && control.kind === "switch" && label.length > 40) {
+    hint = [label.slice(comma + 2), hint].filter(Boolean).join(" ; ");
+    label = label.slice(0, comma);
+  }
+  return { label, hint };
+}
 
 /**
  * The light settings of WorkAdventure, drawn from the list WA sends (labels, bounds, the switch a detail depends on):
@@ -125,10 +209,13 @@ function mountLightControls(container: HTMLElement, send: (name: string, value: 
     for (const [group, title] of Object.entries(LIGHT_GROUPS)) {
       const items = controls.filter((control) => control.group === group);
       if (!items.length) continue;
-      const section = document.createElement("div");
+      const section = document.createElement("details");
       section.className = "light-group";
-      const heading = document.createElement("h3");
+      const heading = document.createElement("summary");
+      const count = document.createElement("small");
       heading.textContent = title;
+      count.textContent = `${items.filter((control) => !control.dependsOn).length}`;
+      heading.append(count);
       section.append(heading);
       for (const control of items) {
         const row = document.createElement("label");
@@ -172,7 +259,10 @@ function mountLightControls(container: HTMLElement, send: (name: string, value: 
     for (const control of controls) {
       const entry = rows.get(control.name);
       if (!entry) continue;
-      entry.label.textContent = control.label;
+      const { label, hint } = splitLightLabel(control);
+      entry.label.textContent = label;
+      entry.row.title = hint;
+      entry.row.dataset["search"] = `${label} ${hint} ${control.choices?.map((choice) => choice.label).join(" ") ?? ""}`;
       entry.row.hidden = control.dependsOn !== undefined && values.get(control.dependsOn) !== true;
       entry.input.disabled = !state || state.busy;
       if (document.activeElement === entry.input) continue;
