@@ -237,8 +237,11 @@ function watchUnreadBadge(): void {
 // names, the microphone and camera toggles, and the way back. Main allows this window only (navigation.ts) and
 // gives it its options and the app's styles (mini-window.ts).
 const MINI_WINDOW = "wa-desktop-mini-window" satisfies typeof MINI_WINDOW_NAME;
-/** A participant's tile in WorkAdventure's camera strip (VideoMediaBox.svelte), the user's own included. */
-const TILE = ".camera-box";
+/**
+ * A participant's tile, the user's own included: in WorkAdventure's camera strip (VideoMediaBox.svelte), or the video
+ * bubble over their avatar (AvatarVideoBubble.svelte), which starts with their name too.
+ */
+const TILE = '.camera-box, [data-testid="avatar-video-bubble"]';
 /** WorkAdventure's picture-in-picture button (PictureInPictureMenuItem.svelte), shown in a remote conversation only. */
 const IN_CONVERSATION = '[data-testid="pictureInPictureButton"]';
 /** WorkAdventure's screen share button (ScreenSharingMenuItem), clicked by main for the mini window. */
