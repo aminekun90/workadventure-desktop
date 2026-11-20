@@ -494,14 +494,25 @@ function setAutoOpen(auto: boolean): void {
 }
 
 function readParticipants(): Participant[] {
-  return [...document.querySelectorAll<HTMLElement>(TILE)].map((tile) => {
-    const name = tile.innerText.trim().split("\n")[0]?.trim() ?? "";
+  const participants: Participant[] = [];
+  for (const tile of document.querySelectorAll<HTMLElement>(TILE)) {
+    // The bubble over the avatar of someone whose camera is off is hidden (display: none): innerText is then empty,
+    // its name is in its aria-label and title. A tile shown reads its first line of text.
+    const name = (tile.getAttribute("aria-label") || tile.title || tile.innerText.trim().split("\n")[0] || "").trim();
+    if (!name) continue;
     const video = tile.querySelector("video");
     const stream = video?.srcObject instanceof MediaStream ? video.srcObject : null;
     // WorkAdventure labels the muted icon "<name> est en sourdine." (video.user_is_muted).
     const muted = [...tile.querySelectorAll("[aria-label]")].some((element) => element.getAttribute("aria-label")?.startsWith(name));
-    return { name, muted, stream };
-  });
+    // Someone shown twice (a tile and the bubble over the avatar): once, with the video when one of them has it.
+    const known = participants.find((participant) => participant.name === name);
+    if (!known) participants.push({ name, muted, stream });
+    else {
+      known.muted ||= muted;
+      known.stream ??= stream;
+    }
+  }
+  return participants;
 }
 
 /** WorkAdventure re-reads its visibility: shown while kept visible, the real state afterwards. */
