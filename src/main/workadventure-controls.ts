@@ -139,6 +139,9 @@ export function sendCommand(content: WebContents, command: ContentCommand): void
       // Only a light setting the page described: an older WA front receives nothing it cannot apply.
       const name = command.request.value.name;
       if (!state.environment.lightControls?.some((control) => control.name === name)) return;
+    } else if (command.request.setting === EnvironmentSetting.OpenSettings) {
+      // Opening the settings of WA: only for a page that says it can (older fronts would reject the request).
+      if (state.environment.canOpenSettings !== true) return;
     } else if (state.environment[command.request.setting] === undefined) return;
     if (command.request.setting === EnvironmentSetting.Sounds && state.environment.sounds?.[command.request.value.sound] === undefined) return;
     if (state.environment.seasonal !== undefined && (command.request.setting === EnvironmentSetting.Ground || command.request.setting === EnvironmentSetting.Christmas)) return;

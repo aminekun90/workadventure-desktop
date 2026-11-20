@@ -6,6 +6,7 @@ import { controlsOf, sendCommand } from "./workadventure-controls.js";
 
 export const environmentSchema = z.object({
   graphicsQuality: z.enum(GraphicsQuality).optional(),
+  canOpenSettings: z.boolean().optional().catch(undefined),
   graphicsMonitoring: z.boolean().optional(), animations: z.boolean().optional(),
   graphicsStats: z.object({ fps: z.number().finite().nonnegative(), worstMs: z.number().finite().nonnegative(), updateMs: z.number().finite().nonnegative(), renderMs: z.number().finite().nonnegative() }).optional().catch(undefined),
   appearance: appearanceSchema.optional(),
@@ -47,9 +48,10 @@ export const environmentRequestSchema = z.discriminatedUnion("setting", [
   z.object({ setting: z.literal(EnvironmentSetting.WeatherAuto), value: z.object({ frequency: z.enum(WeatherFrequency), include: z.array(z.enum(Weather)), clouds: z.boolean().optional() }) }),
   z.object({ setting: z.literal(EnvironmentSetting.Sounds), value: z.object({ sound: z.enum(SoundSetting), volume: z.number().min(0).max(1) }) }),
   z.object({ setting: z.literal(EnvironmentSetting.Light), value: z.object({ name: z.string().min(1).max(100), value: z.union([z.number().finite(), z.boolean(), z.string().max(100)]) }) }),
+  z.object({ setting: z.literal(EnvironmentSetting.OpenSettings), value: z.literal(true) }),
 ]) satisfies z.ZodType<EnvironmentRequest>;
 
-const choices: readonly { label: string; request: Exclude<EnvironmentRequest, { setting: EnvironmentSetting.SoundPreview | EnvironmentSetting.Light }> }[] = [
+const choices: readonly { label: string; request: Exclude<EnvironmentRequest, { setting: EnvironmentSetting.SoundPreview | EnvironmentSetting.Light | EnvironmentSetting.OpenSettings }> }[] = [
   { label: "Automatique", request: { setting: EnvironmentSetting.Weather, value: Weather.Automatic } },
   { label: "Beau temps", request: { setting: EnvironmentSetting.Weather, value: Weather.Clear } },
   { label: "Nuageux", request: { setting: EnvironmentSetting.Weather, value: Weather.Cloudy } },
@@ -81,7 +83,7 @@ const soundLabels: Record<SoundSetting, string> = {
 /** A native menu stays above the remote game view; selecting a value applies it immediately. */
 export function showEnvironmentMenu(window: BrowserWindow, content: WebContents, setting: EnvironmentSetting, anchor: { x: number; y: number }): void {
   const state = controlsOf(content).environment;
-  if (!state || state.busy || setting === EnvironmentSetting.SoundPreview || setting === EnvironmentSetting.Light) return;
+  if (!state || state.busy || setting === EnvironmentSetting.SoundPreview || setting === EnvironmentSetting.Light || setting === EnvironmentSetting.OpenSettings) return;
   if (state[setting] === undefined) return;
   if (state.seasonal !== undefined && (setting === EnvironmentSetting.Ground || setting === EnvironmentSetting.Christmas)) return;
   if (setting === EnvironmentSetting.Effects) {

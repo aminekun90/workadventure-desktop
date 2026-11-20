@@ -1,6 +1,6 @@
 import type { Appearance } from "./appearance-api.js";
 /** Wire values match the existing WorkAdventure settings. */
-export enum EnvironmentSetting { GraphicsQuality = "graphicsQuality", GraphicsMonitoring = "graphicsMonitoring", Animations = "animations", Jungle = "jungle", SoundPreview = "soundPreview", Appearance = "appearance", Weather = "weather", Night = "night", Seasonal = "seasonal", Ground = "ground", Christmas = "christmas", Effects = "effects", LampEffects = "lampEffects", LampDemo = "lampDemo", LampMusicSource = "lampMusicSource", Sounds = "sounds", Clouds = "clouds", CloudsHeight = "cloudsHeight", WeatherAuto = "weatherAuto", Light = "light" }
+export enum EnvironmentSetting { GraphicsQuality = "graphicsQuality", GraphicsMonitoring = "graphicsMonitoring", Animations = "animations", Jungle = "jungle", SoundPreview = "soundPreview", Appearance = "appearance", Weather = "weather", Night = "night", Seasonal = "seasonal", Ground = "ground", Christmas = "christmas", Effects = "effects", LampEffects = "lampEffects", LampDemo = "lampDemo", LampMusicSource = "lampMusicSource", Sounds = "sounds", Clouds = "clouds", CloudsHeight = "cloudsHeight", WeatherAuto = "weatherAuto", Light = "light", OpenSettings = "openSettings" }
 export enum GraphicsQuality { Low = "low", Medium = "medium", High = "high", Ultra = "ultra", Custom = "custom" }
 export type GraphicsPreset = Exclude<GraphicsQuality, GraphicsQuality.Custom>;
 export enum LampMusicSource { Rooms = "rooms", Personal = "personal" }
@@ -28,7 +28,9 @@ export type EnvironmentRequest =
   | { setting: EnvironmentSetting.CloudsHeight; value: number }
   | { setting: EnvironmentSetting.WeatherAuto; value: AutoWeather }
   | { setting: EnvironmentSetting.Sounds; value: { sound: SoundSetting; volume: number } }
-  | { setting: EnvironmentSetting.Light; value: { name: string; value: number | boolean | string } };
+  | { setting: EnvironmentSetting.Light; value: { name: string; value: number | boolean | string } }
+  /** Opens the settings of WorkAdventure, for a page that says it can (EnvironmentState.canOpenSettings). */
+  | { setting: EnvironmentSetting.OpenSettings; value: true };
 
 /**
  * A light setting of WorkAdventure (night, sun and moon, shadows), described by WA itself: its label, bounds and the
@@ -49,6 +51,8 @@ export interface LightControl {
 
 export interface EnvironmentState {
   graphicsQuality?: GraphicsQuality | undefined;
+  /** The page opens its own settings when asked: the panel then offers « Tous les réglages ». */
+  canOpenSettings?: boolean | undefined;
   graphicsMonitoring?: boolean | undefined;
   graphicsStats?: { fps: number; worstMs: number; updateMs: number; renderMs: number } | undefined;
   animations?: boolean | undefined;
