@@ -271,4 +271,8 @@ describe("direct environment controls", () => {
     items.find((item) => item.label === "Orage")?.click();
     expect(send).toHaveBeenCalledTimes(1);
   });
+  it("opens the settings of WorkAdventure only for a page that says it can", () => {
+    expect(environmentRequestSchema.safeParse({ setting: EnvironmentSetting.OpenSettings, value: true }).success).toBe(true);
+    expect(environmentRequestSchema.safeParse({ setting: EnvironmentSetting.OpenSettings, value: false }).success).toBe(false);
+  });
 });
