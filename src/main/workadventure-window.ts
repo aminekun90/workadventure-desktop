@@ -6,7 +6,7 @@ import { TOOLBAR_CHANNELS, type ToolbarState } from "../shared/toolbar-api.js";
 import { logger } from "./logger.js";
 import { currentMapPath, fetchMaps, mapUrl } from "./maps.js";
 import { controlsOf, resetControls, sendCommand } from "./workadventure-controls.js";
-import { showEnvironmentMenu } from "./environment.js";
+import { ensureGraphicsMonitoring, showEnvironmentMenu } from "./environment.js";
 import type { EnvironmentRequest, EnvironmentSetting, EnvironmentState } from "../shared/environment-api.js";
 import { isAllowedUrl, isMeetingBar, isMiniWindow, isSpotifyAuthorizationWindow, isSpotifyLoginUrl, type NavigationPolicy } from "./navigation.js";
 import { closeFloatingWindows, meetingBarOptions, miniWindowOptions, prepareMeetingBar, prepareMiniWindow } from "./mini-window.js";
@@ -173,6 +173,7 @@ export function reloadContent(toolbar: WebContents): void {
 }
 
 export function reportEnvironment(content: WebContents, state: EnvironmentState | null): void {
+  ensureGraphicsMonitoring(content, state);
   liveWindowOf(content)?.webContents.send(TOOLBAR_CHANNELS.environment, state);
 }
 

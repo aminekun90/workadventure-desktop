@@ -80,6 +80,13 @@ const soundLabels: Record<SoundSetting, string> = {
   [SoundSetting.Jungle]: "Animaux de la jungle", [SoundSetting.Doors]: "Portes", [SoundSetting.Nerf]: "Nerf", [SoundSetting.Map]: "Sons de la carte", [SoundSetting.Notifications]: "Notifications",
 };
 
+/** The toolbar displays game measurements even when the graphics settings panel is closed. */
+export function ensureGraphicsMonitoring(content: WebContents, state: EnvironmentState | null): void {
+  if (state?.graphicsMonitoring === false && !state.busy) {
+    sendCommand(content, { type: "set-environment", request: { setting: EnvironmentSetting.GraphicsMonitoring, value: true } });
+  }
+}
+
 /** A native menu stays above the remote game view; selecting a value applies it immediately. */
 export function showEnvironmentMenu(window: BrowserWindow, content: WebContents, setting: EnvironmentSetting, anchor: { x: number; y: number }): void {
   const state = controlsOf(content).environment;

@@ -9,6 +9,7 @@ declare global { interface Window { toolbarBridge: ToolbarApi } }
 const api = window.toolbarBridge;
 const homeButton = byId("home", HTMLButtonElement);
 const mapsButton = byId("maps", HTMLButtonElement);
+const fpsLabel = byId("fps", HTMLSpanElement);
 const weatherButton = byId("weather", HTMLButtonElement);
 document.body.dataset["platform"] = api.platform;
 mountUpdateStatus(api.update);
@@ -38,6 +39,9 @@ const weatherIcons: Record<EnvironmentState["weather"], string> = {
 };
 
 api.onEnvironment((state) => {
+  const fps = state?.graphicsStats?.fps;
+  fpsLabel.textContent = fps === undefined ? "— FPS" : `${Math.round(fps)} FPS`;
+  fpsLabel.title = fps === undefined ? "Images par seconde mesurées par le jeu — mesure indisponible" : "Images par seconde mesurées par le jeu";
   weatherButton.disabled = !state || state.busy || !state.canEditWeather;
   weatherButton.querySelector("svg path")?.setAttribute("d", weatherIcons[state?.mapDisplayWeather ?? state?.displayWeather ?? "automatic"]);
   weatherButton.title = `Météo : ${labels[state?.mapDisplayWeather ?? state?.displayWeather ?? "automatic"]} (réglage : ${labels[state?.mapWeather ?? state?.weather ?? "automatic"]}) — changer la météo pour tout le salon`;

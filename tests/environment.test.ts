@@ -5,7 +5,7 @@ import { controlsOf, resetControls, sendCommand, updateControls } from "../src/m
 
 const buildMenu = vi.hoisted(() => vi.fn());
 vi.mock("electron", () => ({ Menu: { buildFromTemplate: buildMenu } }));
-const { environmentRequestSchema, environmentSchema, showEnvironmentMenu } = await import("../src/main/environment.js");
+const { ensureGraphicsMonitoring, environmentRequestSchema, environmentSchema, showEnvironmentMenu } = await import("../src/main/environment.js");
 const state: EnvironmentState = { weather: Weather.Rain, displayWeather: Weather.Rain, night: Night.Server, ground: Ground.Seasonal,
   christmas: Christmas.Auto, isNight: false, effects: true, canEditWeather: false, busy: false, error: "" };
 
@@ -15,6 +15,23 @@ function fixture(): { content: WebContents; send: ReturnType<typeof vi.fn> } {
 }
 
 describe("direct environment controls", () => {
+  it("requests game measurements once supported and ready, including after a map reload", () => {
+    const { content, send } = fixture();
+    for (const environment of [null, state, { ...state, graphicsMonitoring: true }, { ...state, graphicsMonitoring: false, busy: true }]) {
+      updateControls(content, { environment });
+      ensureGraphicsMonitoring(content, environment);
+    }
+    expect(send).not.toHaveBeenCalled();
+    const environment = { ...state, graphicsMonitoring: false };
+    updateControls(content, { environment });
+    ensureGraphicsMonitoring(content, environment);
+    expect(send).toHaveBeenCalledExactlyOnceWith("content:command", { type: "set-environment", request: { setting: EnvironmentSetting.GraphicsMonitoring, value: true } });
+    resetControls(content);
+    updateControls(content, { environment });
+    ensureGraphicsMonitoring(content, environment);
+    expect(send).toHaveBeenCalledTimes(2);
+    resetControls(content);
+  });
   it("validates graphical presets and forwards them only to a compatible live front", () => {
     const { content, send } = fixture();
     const request = { setting: EnvironmentSetting.GraphicsQuality, value: GraphicsQuality.Low } as const;
