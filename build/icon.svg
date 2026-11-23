@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2=".8" y2="1">
+      <stop stop-color="#6170ff" />
+      <stop offset=".55" stop-color="#4f5ff0" />
+      <stop offset="1" stop-color="#141a29" />
+    </linearGradient>
+    <linearGradient id="ceramic" x1="0" y1="0" x2="1" y2=".4">
+      <stop stop-color="#e9edf7" />
+      <stop offset=".6" stop-color="#e9edf7" />
+      <stop offset="1" stop-color="#94a0bd" />
+    </linearGradient>
+    <radialGradient id="light" cx=".25" cy="0" r="1">
+      <stop stop-color="#e9edf7" stop-opacity=".18" />
+      <stop offset="1" stop-color="#e9edf7" stop-opacity="0" />
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feGaussianBlur stdDeviation="22" />
+    </filter>
+  </defs>
+  <!-- The WorkAdventure cup, redrawn on a distinct desktop tile in theme.css colours. -->
+  <rect x="80" y="92" width="864" height="852" rx="192" fill="#0e1320" opacity=".2" />
+  <rect x="80" y="80" width="864" height="864" rx="192" fill="url(#tile)" />
+  <rect x="80" y="80" width="864" height="864" rx="192" fill="url(#light)" />
+  <rect x="84" y="84" width="856" height="856" rx="188" fill="none" stroke="#e9edf7" stroke-opacity=".16" stroke-width="8" />
+  <path d="M240 444h424v256h-24v32h-36v28H300v-24h-36v-28h-24z" fill="#0e1320" opacity=".3" filter="url(#shadow)" />
+  <g shape-rendering="crispEdges">
+    <g fill="#e9edf7" opacity=".85">
+      <path d="M332 260h24v32h24v32h-24v32h-24v-32h24v-32h-24z" />
+      <path d="M444 260h24v32h24v32h-24v32h-24v-32h24v-32h-24z" />
+      <path d="M556 260h24v32h24v32h-24v32h-24v-32h24v-32h-24z" />
+    </g>
+    <path d="M664 452h108v24h28v132h-28v28h-60v24h-48v-32h72v-36h24v-96h-56v-12h-40z" fill="#94a0bd" />
+    <path d="M664 452h108v24h-68v12h-40z M760 476h24v132h-24z M712 612h48v24h-48z" fill="#e9edf7" />
+    <path d="M240 408h424v256h-24v32h-36v28H300v-24h-36v-28h-24z" fill="url(#ceramic)" />
+    <path d="M240 408h424v28H240z" fill="#e9edf7" />
+    <path d="M240 436h424v12H240z" fill="#94a0bd" opacity=".3" />
+    <path d="M280 472h28v144h-28z" fill="#e9edf7" />
+    <path d="M612 448h28v208h-24v32h-36v16H312v-16h248v-24h28v-24h24z" fill="#94a0bd" opacity=".3" />
+  </g>
+</svg>

@@ -138,7 +138,9 @@ Points d'entrée pour modifier :
 | Windows | installeur NSIS |
 | Linux | AppImage et .deb ; sur Ubuntu ≥ 23.10, `run.sh` indique la commande pour activer la sandbox Chromium |
 
-Icône : `build/icon.png`, logo WorkAdventure servi par l'instance (`/static/images/favicons/icon-512x512.png`).
+Icône Desktop : la tasse WorkAdventure redessinée sur un fond indigo, source dans `build/icon.svg`.
+Le PNG 1024 × 1024 utilisé par les installeurs et À propos se régénère avec
+`rsvg-convert -w 1024 -h 1024 build/icon.svg -o build/icon.png` (librsvg).
 Police des titres : Pixelify Sans, SIL Open Font License (`src/renderer/fonts/OFL.txt`).
 Logs de l'app installée : `~/Library/Logs/WorkAdventure/main.log` (macOS), bouton « Ouvrir les logs » dans À propos.
 
