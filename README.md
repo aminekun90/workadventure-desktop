@@ -2,6 +2,10 @@
 
 Client desktop (Windows, macOS, Linux) pour l'instance WorkAdventure de goyan.fr.
 
+Sur macOS, l'app s'appelle **WorkAdventure Desktop** dans Finder et Spotlight, pour la distinguer des PWA Chrome
+« WorkAdventure ». Si elle est déjà installée sous le nom `WorkAdventure.app`, les mises à jour conservent ce nom :
+quitter l'app, puis la renommer une fois en `WorkAdventure Desktop.app` dans Finder. La session et les réglages sont conservés.
+
 **Pourquoi un client ?** Safari et les navigateurs mettent en veille les onglets en arrière-plan : le
 WebSocket vers le pusher décroche, on passe hors ligne et la page ne se reconnecte plus. Ce client
 embarque Chromium : la connexion et les timers restent actifs en arrière-plan, mais le rendu du jeu
@@ -134,7 +138,9 @@ Points d'entrée pour modifier :
 | Windows | installeur NSIS |
 | Linux | AppImage et .deb ; sur Ubuntu ≥ 23.10, `run.sh` indique la commande pour activer la sandbox Chromium |
 
-Icône : `build/icon.png`, logo WorkAdventure servi par l'instance (`/static/images/favicons/icon-512x512.png`).
+Icône Desktop : la tasse WorkAdventure redessinée sur un fond indigo, source dans `build/icon.svg`.
+Le PNG 1024 × 1024 utilisé par les installeurs et À propos se régénère avec
+`rsvg-convert -w 1024 -h 1024 build/icon.svg -o build/icon.png` (librsvg).
 Police des titres : Pixelify Sans, SIL Open Font License (`src/renderer/fonts/OFL.txt`).
 Logs de l'app installée : `~/Library/Logs/WorkAdventure/main.log` (macOS), bouton « Ouvrir les logs » dans À propos.
 
