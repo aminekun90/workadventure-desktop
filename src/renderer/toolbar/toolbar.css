@@ -31,6 +31,15 @@ body:not([data-platform="darwin"]) .toolbar {
   gap: 0.25rem;
 }
 
+.fps {
+  min-width: 4rem;
+  padding: 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  -webkit-app-region: no-drag;
+}
+
 .toolbar .button {
   height: 1.875rem;
   padding: 0 0.6rem;
