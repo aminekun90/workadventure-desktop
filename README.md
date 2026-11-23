@@ -2,6 +2,10 @@
 
 Client desktop (Windows, macOS, Linux) pour l'instance WorkAdventure de goyan.fr.
 
+Sur macOS, l'app s'appelle **WorkAdventure Desktop** dans Finder et Spotlight, pour la distinguer des PWA Chrome
+« WorkAdventure ». Si elle est déjà installée sous le nom `WorkAdventure.app`, les mises à jour conservent ce nom :
+quitter l'app, puis la renommer une fois en `WorkAdventure Desktop.app` dans Finder. La session et les réglages sont conservés.
+
 **Pourquoi un client ?** Safari et les navigateurs mettent en veille les onglets en arrière-plan : le
 WebSocket vers le pusher décroche, on passe hors ligne et la page ne se reconnecte plus. Ce client
 embarque Chromium : la connexion et les timers restent actifs en arrière-plan, mais le rendu du jeu

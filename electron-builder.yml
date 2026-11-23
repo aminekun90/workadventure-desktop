@@ -30,6 +30,8 @@ electronFuses:
 
 afterSign: scripts/sign-mac-stable.cjs
 mac:
+  # Spotlight uses the bundle filename; productName keeps profiles and release asset names stable.
+  executableName: WorkAdventure Desktop
   category: public.app-category.business
   target: [dmg, zip]
   hardenedRuntime: true
@@ -39,6 +41,7 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
+    CFBundleDisplayName: WorkAdventure Desktop
     NSCameraUsageDescription: WorkAdventure utilise la caméra pour la vidéo de proximité et les réunions.
     NSMicrophoneUsageDescription: WorkAdventure utilise le micro pour l'audio de proximité et les réunions.
     NSAppleEventsUsageDescription: WorkAdventure lit le morceau joué par Spotify pour le partager avec vos collègues, si vous l'activez.

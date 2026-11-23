@@ -46,5 +46,6 @@ jobs:
       - run: yarn build && yarn electron-builder --mac dir --arm64 --publish never
       - name: The app is signed with the project certificate
         run: |
-          codesign --verify --deep --strict release/mac-arm64/WorkAdventure.app
-          codesign --display --requirements - release/mac-arm64/WorkAdventure.app 2>&1 | tee /dev/stderr | grep -q "certificate leaf"
+          app="release/mac-arm64/WorkAdventure Desktop.app"
+          codesign --verify --deep --strict "$app"
+          codesign --display --requirements - "$app" 2>&1 | tee /dev/stderr | grep -q "certificate leaf"

@@ -50,6 +50,14 @@ describe("with a fake install folder", () => {
       expect(locateBundle(join(bundle, "Contents", "MacOS", "WorkAdventure"))).toEqual({ kind: "writable", bundle });
     });
 
+    it("locates WorkAdventure Desktop bundles and executables with spaces in their names", () => {
+      const desktopBundle = join(root, "Applications", "WorkAdventure Desktop.app");
+      mkdirSync(join(desktopBundle, "Contents", "MacOS"), { recursive: true });
+      expect(locateBundle(join(desktopBundle, "Contents", "MacOS", "WorkAdventure Desktop"))).toEqual({
+        kind: "writable", bundle: desktopBundle,
+      });
+    });
+
     it("needs an administrator password when the folder is not writable (standard account, managed Mac)", () => {
       chmodSync(join(root, "Applications"), 0o555);
       expect(locateBundle(join(bundle, "Contents", "MacOS", "WorkAdventure"))).toEqual({ kind: "admin", bundle });
@@ -115,12 +123,12 @@ describe("with a fake install folder", () => {
       ).rejects.toThrow(/checksum mismatch/);
     });
 
-    it.runIf(IS_MAC)("unpacks the verified zip next to the running app, reporting progress", async () => {
+    it.runIf(IS_MAC)("unpacks a renamed bundle while keeping the current installation path, reporting progress", async () => {
       const source = join(root, "build");
-      mkdirSync(join(source, "WorkAdventure.app", "Contents"), { recursive: true });
-      writeFileSync(join(source, "WorkAdventure.app", "Contents", "version.txt"), "0.2.0");
+      mkdirSync(join(source, "WorkAdventure Desktop.app", "Contents"), { recursive: true });
+      writeFileSync(join(source, "WorkAdventure Desktop.app", "Contents", "version.txt"), "0.2.0");
       const zipPath = join(root, "update.zip");
-      execFileSync("/usr/bin/ditto", ["-c", "-k", "--keepParent", join(source, "WorkAdventure.app"), zipPath]);
+      execFileSync("/usr/bin/ditto", ["-c", "-k", "--keepParent", join(source, "WorkAdventure Desktop.app"), zipPath]);
       const zip = readFileSync(zipPath);
       const progress: number[] = [];
 
@@ -134,7 +142,7 @@ describe("with a fake install folder", () => {
 
       expect(prepared.bundle).toBe(bundle);
       expect(prepared.asAdministrator).toBe(false);
-      expect(prepared.newBundle).toBe(join(root, "Applications", ".WorkAdventure-update", "WorkAdventure.app"));
+      expect(prepared.newBundle).toBe(join(root, "Applications", ".WorkAdventure-update", "WorkAdventure Desktop.app"));
       expect(readFileSync(join(prepared.newBundle, "Contents", "version.txt"), "utf8")).toBe("0.2.0");
       expect(progress.at(-1)).toBe(100);
       expect(existsSync(bundle)).toBe(true);
