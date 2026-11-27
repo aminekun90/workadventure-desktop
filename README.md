@@ -47,6 +47,14 @@ Sous Windows, passer par Git Bash.
 - **Raccourcis globaux**, même quand l'app n'est pas au premier plan : <kbd>⌘</kbd><kbd>⇧</kbd><kbd>M</kbd>
   micro, <kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd> caméra.
 - **Écran verrouillé ou Mac en veille** : micro et caméra coupés automatiquement (jamais rallumés seuls).
+- **Incrustation de WorkAdventure** (comme dans Chrome) : la mini-fenêtre affiche l'incrustation de WorkAdventure
+  lui-même, avec les caméras, **les partages d'écran** et ses boutons chat, micro, caméra et partage. Electron ne sait
+  pas ouvrir de fenêtre « Document Picture-in-Picture » (la sienne échoue) : la page reçoit à la place
+  `documentPictureInPicture.requestWindow`, qui ouvre la mini-fenêtre, et seulement quand l'app l'a demandé (le réglage
+  ci-dessous décide). L'app y ajoute une barre : poignée pour la déplacer, **musique** (Spotify, comme ci-dessous),
+  « Revenir » et ✕. Si WorkAdventure ne l'ouvre pas (picture-in-picture désactivé dans ses réglages), la mini-fenêtre
+  de l'app prend le relais pour la conversation. Avant, la mini-fenêtre recopiait le bandeau des caméras : un partage
+  d'écran n'y apparaissait jamais, et en plein écran le bandeau caché la laissait vide.
 - **Mini-fenêtre** : pendant une conversation, quand WorkAdventure **n'est plus visible** (réduit, sur un autre bureau,
   ou entièrement recouvert par d'autres fenêtres), une petite fenêtre s'ouvre, toujours au premier plan, sur tous les
   bureaux, avec les vidéos et les noms de la bulle, les boutons micro et caméra, et « Revenir ». Tant qu'une partie de

@@ -200,6 +200,12 @@ contextBridge.exposeInMainWorld("workadventureDesktop", {
     syncMeetingBar();
     refreshMiniWindow();
   },
+  // The page shim opens WorkAdventure's own picture-in-picture only when the preload asked for it (see below).
+  pictureInPictureWanted: () => pictureInPictureAsked,
+  pictureInPictureOpened: (bar: unknown) => {
+    if (typeof bar === "object" && bar !== null && "ownerDocument" in bar) attachPictureInPicture(bar as HTMLElement);
+  },
+  pictureInPictureClosed: () => detachPictureInPicture(),
 });
 
 function reportMedia(): void {
@@ -281,13 +287,7 @@ const STATUS_CHOICES: readonly { request: StatusRequest; name: string; label: st
   { request: "do-not-disturb", name: "DO_NOT_DISTURB", label: "Ne pas déranger" },
   { request: "back-in-a-moment", name: "BACK_IN_A_MOMENT", label: "De retour bientôt" },
 ];
-const MINI_WINDOW_HTML = `
-  <header class="mini-header">
-    <span class="mini-title">En réunion</span><span class="mini-count"></span>
-    <select class="mini-status" aria-label="Statut" hidden></select>
-    <button class="mini-close" type="button" aria-label="Fermer et ne plus ouvrir automatiquement" title="Fermer et ne plus ouvrir automatiquement (le bouton picture-in-picture de WorkAdventure la remet)">${ICONS.close}</button>
-  </header>
-  <main class="mini-grid"></main>
+const MUSIC_SECTION_HTML = `
   <section class="mini-music" hidden>
     ${ICONS.music}
     <div class="mini-music-text"><span class="mini-music-title"></span><span class="mini-music-detail"></span></div>
@@ -299,7 +299,16 @@ const MINI_WINDOW_HTML = `
       <button class="mini-track" type="button" aria-label="Aller à cette position"><span class="mini-track-fill"></span></button>
       <span class="mini-time"></span>
     </div>
-  </section>
+  </section>`;
+
+const MINI_WINDOW_HTML = `
+  <header class="mini-header">
+    <span class="mini-title">En réunion</span><span class="mini-count"></span>
+    <select class="mini-status" aria-label="Statut" hidden></select>
+    <button class="mini-close" type="button" aria-label="Fermer et ne plus ouvrir automatiquement" title="Fermer et ne plus ouvrir automatiquement (le bouton picture-in-picture de WorkAdventure la remet)">${ICONS.close}</button>
+  </header>
+  <main class="mini-grid"></main>
+  ${MUSIC_SECTION_HTML}
   <footer class="mini-controls">
     <span class="mini-grip" aria-hidden="true" title="Déplacer"></span>
     <button class="mini-toggle" type="button" data-action="toggle-microphone"></button>
@@ -309,6 +318,48 @@ const MINI_WINDOW_HTML = `
     <button class="button primary mini-back" type="button" data-action="back" aria-label="Revenir dans WorkAdventure">${ICONS.back}<span>Revenir</span></button>
     <button class="mini-close mini-close-compact" type="button" aria-label="Fermer et ne plus ouvrir automatiquement" title="Fermer et ne plus ouvrir automatiquement (le bouton picture-in-picture de WorkAdventure la remet)">${ICONS.close}</button>
   </footer>`;
+
+/**
+ * The bar the app adds over WorkAdventure's own picture-in-picture (Chrome shows its title bar instead): a grip to move
+ * the frameless window, the music, the way back and ✕.
+ */
+const PICTURE_IN_PICTURE_BAR_HTML = `
+  <div class="pip-bar-row">
+    <span class="pip-grip" aria-hidden="true" title="Déplacer"></span>
+    <button class="mini-toggle" type="button" data-action="music" aria-label="Afficher la musique" aria-pressed="false" hidden>${ICONS.music}</button>
+    <button class="button primary mini-back" type="button" data-action="back" aria-label="Revenir dans WorkAdventure">${ICONS.back}<span>Revenir</span></button>
+    <button class="mini-close" type="button" aria-label="Fermer et ne plus ouvrir automatiquement" title="Fermer et ne plus ouvrir automatiquement (le bouton picture-in-picture de WorkAdventure la remet)">${ICONS.close}</button>
+  </div>
+  ${MUSIC_SECTION_HTML}`;
+
+/** WorkAdventure lays its picture-in-picture out over the whole window: under the bar, it takes the rest. */
+const PICTURE_IN_PICTURE_CSS = `
+  body { justify-content: flex-start !important; align-items: stretch !important; }
+  body > :not(.pip-bar) { flex: 1 1 0 !important; min-height: 0 !important; width: 100% !important; position: relative; }
+  /* Beside a shared screen, WorkAdventure sizes its layout on the whole window (100vh) above its fixed actions: here,
+     on what the bar leaves. Otherwise its actions are part of the layout, which already fills what is left. */
+  .presentation-layout[style*="100vh"] { height: calc(100% - 80px) !important; }
+  /* Beside a shared screen, WorkAdventure gives the cameras a fifth of the width: the faces cropped, the names cut.
+     A third here (WorkAdventure itself, in Chrome, is left as it is). */
+  .presentation-layout > [style*="max-width: 20%"] { flex: 0 0 34% !important; max-width: 34% !important; min-width: 34% !important; }
+  .presentation-layout > [style*="max-width: 80%"] { flex: 0 0 66% !important; max-width: 66% !important; min-width: 66% !important; }
+  /* Over WorkAdventure's fixed backdrop, which covers the whole window and would take the bar's clicks. */
+  .pip-bar { position: relative; z-index: 1000; flex: none; width: 100%; display: flex; flex-direction: column; background: var(--night); color: var(--text); }
+  .pip-bar-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; -webkit-app-region: drag; }
+  .pip-bar-row button { -webkit-app-region: no-drag; }
+  .pip-grip { flex: 1; align-self: stretch; }
+  .pip-bar .mini-music { padding: 0 8px 8px; }`;
+
+/** WorkAdventure does not open its picture-in-picture within that delay (turned off in its settings): the mini window. */
+const PICTURE_IN_PICTURE_OPEN_TIMEOUT_MS = 1500;
+/** WorkAdventure asks for its window at once: not within that delay, its button was switched off (see askPictureInPicture). */
+const PICTURE_IN_PICTURE_RETRY_MS = 400;
+
+/**
+ * Taller than wide under the bar and WorkAdventure's actions: WorkAdventure then lays the cameras in a row under the
+ * shared screen. Wider, it squeezes them into a narrow column beside it (a fifth of the width), the faces stretched.
+ */
+const PICTURE_IN_PICTURE_MIN_HEIGHT = 600;
 
 interface Participant {
   name: string;
@@ -352,6 +403,16 @@ let spotifyInstalled = false;
 /** The last track this computer's Spotify shared: shown, paused, once WorkAdventure no longer shares anything. */
 let lastSpotifyTrack: MiniListening | undefined;
 let miniWindow: Window | null = null;
+/**
+ * WorkAdventure's own picture-in-picture, opened in the mini window (as in Chrome: the faces, the screen shares and its
+ * buttons): the bar the app added on top, while it is open; whether the preload asked WorkAdventure to open it; and
+ * whether WorkAdventure did not, in this conversation (the app's own mini window then).
+ */
+let pictureInPictureBar: HTMLElement | null = null;
+let pictureInPictureAsked = false;
+let pictureInPictureFailed = false;
+/** Lets a click of the preload on WorkAdventure's picture-in-picture button through (see the listener below). */
+let pictureInPictureClick = false;
 /** Closed by hand: stays closed until the user comes back to WorkAdventure. */
 let dismissed = false;
 /** Opened by WorkAdventure's picture-in-picture button: stays while WorkAdventure is shown, until closed. */
@@ -376,13 +437,16 @@ window.addEventListener(
   "click",
   (event) => {
     if (!(event.target instanceof Element) || !event.target.closest(IN_CONVERSATION)) return;
+    if (pictureInPictureClick) return;
     event.stopImmediatePropagation();
     event.preventDefault();
     // A switch: open, it closes the mini window and turns its opening off; closed, it turns it on and opens it.
-    if (miniWindow && !miniWindow.closed && autoOpen) turnMiniWindowOff();
+    if (((miniWindow && !miniWindow.closed) || pictureInPictureBar) && autoOpen) turnMiniWindowOff();
     else {
       setAutoOpen(true);
       openedByHand = true;
+      // Asked again by hand: WorkAdventure's picture-in-picture gets another chance after one that did not open.
+      pictureInPictureFailed = false;
       closedForCall = false;
       dismissed = false;
     }
@@ -435,6 +499,7 @@ function syncMiniWindow(): void {
   if (!inConversation) {
     openedByHand = false;
     closedForCall = false;
+    pictureInPictureFailed = false;
   }
   setKeepVisible(inConversation && !closedForCall && (autoOpen || openedByHand));
   // WorkAdventure cannot be seen: minimized, hidden, or (macOS) covered by other apps' windows on every screen. Having
@@ -523,6 +588,14 @@ function setKeepVisible(value: boolean): void {
 }
 
 function showMiniWindow(participants: Participant[]): void {
+  if (pictureInPictureBar) {
+    renderPictureInPicture();
+    return;
+  }
+  if (!miniWindow && !pictureInPictureFailed) {
+    askPictureInPicture();
+    return;
+  }
   if (!miniWindow) {
     miniWindow = window.open("about:blank", MINI_WINDOW);
     if (!miniWindow) return;
@@ -543,6 +616,7 @@ function showVideos(target: Window): void {
 }
 
 function closeMiniWindow(): void {
+  closePictureInPicture();
   const closing = miniWindow;
   forgetMiniWindow();
   closing?.close();
@@ -574,6 +648,16 @@ function buildMiniWindow(doc: Document): void {
     if (screenSharing) window.dispatchEvent(new Event(STOP_SHARE_EVENT));
     else send("content:start-share");
   });
+  wireMusic(doc);
+  const status = doc.querySelector("select");
+  status?.addEventListener("change", () => {
+    const choice = STATUS_CHOICES.find(({ request }) => request === status.value);
+    if (choice) requestStatus?.(choice.request);
+  });
+}
+
+/** The music button and Spotify's controls, in the mini window or the bar over WorkAdventure's picture-in-picture. */
+function wireMusic(doc: Document): void {
   doc.querySelector('[data-action="music"]')?.addEventListener("click", () => {
     musicOpen = !musicOpen;
     renderListening(doc);
@@ -596,15 +680,99 @@ function buildMiniWindow(doc: Document): void {
     if (!spotifyConnected) send("content:spotify-start");
     else send("content:spotify-playback", { command: playing ? "pause" : "play" });
   });
-  const status = doc.querySelector("select");
-  status?.addEventListener("change", () => {
-    const choice = STATUS_CHOICES.find(({ request }) => request === status.value);
-    if (choice) requestStatus?.(choice.request);
+}
+
+/**
+ * Asks WorkAdventure to open its own picture-in-picture: a click on its button, let through, which the page shim
+ * answers with the mini window (see PAGE_SHIM). WorkAdventure refuses when turned off in its settings: the app's own
+ * mini window then, for this conversation.
+ */
+function askPictureInPicture(): void {
+  if (pictureInPictureAsked) return;
+  const button = document.querySelector<HTMLElement>(IN_CONVERSATION);
+  if (!button) {
+    pictureInPictureFailed = true;
+    syncMiniWindow();
+    return;
+  }
+  pictureInPictureAsked = true;
+  clickPictureInPictureButton(button);
+  // WorkAdventure's button is a switch over its own request, which can stay on after its window closed: the click then
+  // turned it off, and nothing opened. A second click turns it back on.
+  setTimeout(() => {
+    if (pictureInPictureBar || !pictureInPictureAsked) return;
+    const again = document.querySelector<HTMLElement>(IN_CONVERSATION);
+    if (again) clickPictureInPictureButton(again);
+  }, PICTURE_IN_PICTURE_RETRY_MS);
+  setTimeout(() => {
+    if (pictureInPictureBar || !pictureInPictureAsked) return;
+    pictureInPictureAsked = false;
+    pictureInPictureFailed = true;
+    syncMiniWindow();
+  }, PICTURE_IN_PICTURE_OPEN_TIMEOUT_MS);
+}
+
+function clickPictureInPictureButton(button: HTMLElement): void {
+  pictureInPictureClick = true;
+  try {
+    button.click();
+  } finally {
+    pictureInPictureClick = false;
+  }
+}
+
+/** The page shim opened WorkAdventure's picture-in-picture: the app's bar on top of it. */
+function attachPictureInPicture(bar: HTMLElement): void {
+  pictureInPictureAsked = false;
+  pictureInPictureBar = bar;
+  const doc = bar.ownerDocument;
+  const style = doc.createElement("style");
+  style.textContent = PICTURE_IN_PICTURE_CSS;
+  doc.head.append(style);
+  bar.className = "pip-bar";
+  bar.innerHTML = PICTURE_IN_PICTURE_BAR_HTML;
+  bar.querySelector(".mini-close")?.addEventListener("click", () => turnMiniWindowOff());
+  bar.querySelector('[data-action="back"]')?.addEventListener("click", () => {
+    openedByHand = false;
+    send("content:focus");
+    syncMiniWindow();
   });
+  wireMusic(doc);
+  refreshTimer ??= setInterval(syncMiniWindow, MINI_WINDOW_REFRESH_MS);
+  renderPictureInPicture();
+}
+
+/** Closed by WorkAdventure or by the user: not opened again by itself until the user comes back to WorkAdventure. */
+function detachPictureInPicture(): void {
+  if (!pictureInPictureBar) return;
+  pictureInPictureBar = null;
+  dismissed = true;
+  if (!miniWindow) forgetMiniWindow();
+  syncMiniWindow();
+}
+
+function closePictureInPicture(): void {
+  pictureInPictureAsked = false;
+  const bar = pictureInPictureBar;
+  if (!bar) return;
+  pictureInPictureBar = null;
+  if (!miniWindow) forgetMiniWindow();
+  bar.ownerDocument.defaultView?.close();
+}
+
+function renderPictureInPicture(): void {
+  const doc = pictureInPictureBar?.ownerDocument;
+  if (!doc) return;
+  if (appearance) {
+    doc.documentElement.dataset["palette"] = appearance.palette;
+    doc.documentElement.dataset["font"] = appearance.font;
+  }
+  renderListening(doc);
 }
 
 /** Status and listening changes show right away, without waiting for the next refresh. */
 function refreshMiniWindow(): void {
+  renderPictureInPicture();
   if (miniWindow && !miniWindow.closed) renderMiniWindow(miniWindow.document, readParticipants());
 }
 
@@ -934,6 +1102,41 @@ const PAGE_SHIM = `(() => {
   });
   window.addEventListener("visibilitychange", (event) => {
     if (event.isTrusted && desktop.keepVisible()) event.stopImmediatePropagation();
+  }, true);
+
+  // Electron cannot open a Document Picture-in-Picture window: WorkAdventure's own one (the faces, the screen shares and its buttons,
+  // as in Chrome) opens in the app's floating mini window, when the preload asks for it only (its setting decides).
+  const pictureInPicture = new EventTarget();
+  pictureInPicture.window = null;
+  pictureInPicture.requestWindow = async (options = {}) => {
+    if (pictureInPicture.window && !pictureInPicture.window.closed) return pictureInPicture.window;
+    if (!desktop.pictureInPictureWanted()) throw new DOMException("Picture-in-picture not asked", "NotAllowedError");
+    const opened = window.open("about:blank", ${JSON.stringify(MINI_WINDOW)});
+    if (!opened) throw new DOMException("Picture-in-picture refused", "NotAllowedError");
+    pictureInPicture.window = opened;
+    const width = Math.max(opened.innerWidth, Number(options.width) || 400);
+    const height = Math.max(opened.innerHeight, (Number(options.height) || 400) + 48, ${PICTURE_IN_PICTURE_MIN_HEIGHT});
+    if (width !== opened.innerWidth || height !== opened.innerHeight) opened.resizeTo(width, height);
+    opened.document.title = "WorkAdventure";
+    const bar = opened.document.createElement("div");
+    opened.document.body.append(bar);
+    opened.addEventListener("pagehide", () => {
+      if (pictureInPicture.window === opened) pictureInPicture.window = null;
+      desktop.pictureInPictureClosed();
+    });
+    desktop.pictureInPictureOpened(bar);
+    const enter = new Event("enter");
+    enter.window = opened;
+    pictureInPicture.dispatchEvent(enter);
+    return opened;
+  };
+  // Chromium's own one exists in Electron but fails ("no window"), and is read-only: replaced, not assigned.
+  Object.defineProperty(window, "documentPictureInPicture", { configurable: true, value: pictureInPicture });
+  // WorkAdventure closes its picture-in-picture when its window gets the focus back (in Chrome, a click on it). Here
+  // the picture-in-picture is a real window: opening it moves the focus back and forth, WorkAdventure closed it, the
+  // preload asked again, and so on. The preload closes it (Revenir, ✕, end of the conversation): WorkAdventure does not.
+  window.addEventListener("focus", (event) => {
+    if (event.target === window && pictureInPicture.window && !pictureInPicture.window.closed) event.stopImmediatePropagation();
   }, true);
 
   const shares = new Set();
